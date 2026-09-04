@@ -239,6 +239,10 @@ export function Cell({
       <div className="char-bottom">
         <div className="char-name truncate">{character.name}</div>
 
+{/*
+          좁은 칸에서는 아크그리드가 스탯과 같은 줄 오른쪽에 붙어 한 줄을 아낀다.
+          넓어지면 아래로 내려가 제자리를 찾는다(globals.css).
+        */}
         <div className="char-stat-line">
           <div className="char-stat">
             <span className="char-label">템렙</span>
@@ -248,13 +252,11 @@ export function Cell({
             <span className="char-label">전투력</span>
             <span className="char-value char-dim">{format(character.combatPower)}</span>
           </div>
-        </div>
 
-        {character.arkGridSummary && (
-          <div className="char-arkgrid char-faint truncate text-[10px] tabular">
-            {character.arkGridSummary}
-          </div>
-        )}
+          {character.arkGridSummary && (
+            <div className="char-arkgrid char-faint tabular">{character.arkGridSummary}</div>
+          )}
+        </div>
       </div>
 
       {(cell.warnings.length > 0 || error) && (
