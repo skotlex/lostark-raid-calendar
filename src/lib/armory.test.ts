@@ -202,9 +202,10 @@ describe("normalizeArkGrid", () => {
     expect(result?.effects[0]).toEqual({ name: "공격력", level: 28, text: "공격력 +1.02%" });
   });
 
-  it("요약은 질서·혼돈별 코어 단계를 보여준다", () => {
+  it("요약은 등급 구성을 보여준다", () => {
+    // 길드에서 쓰는 "질서 222" 표기는 API에 단계 정보가 없어 아직 계산할 수 없다.
     const data = normalizeArkGrid(SAMPLE.ArkGrid);
-    expect(summarizeArkGrid(data)).toBe("질서 3 · 혼돈 3");
+    expect(summarizeArkGrid(data)).toBe("고대1·유물1");
   });
 
   it("아크그리드를 안 낀 캐릭터는 null이다", () => {

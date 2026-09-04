@@ -285,29 +285,35 @@ export function normalizeArkGrid(raw: ArkGrid | null | undefined): ArkGridData |
 }
 
 /**
- * 편성 칸에 넣을 짧은 뱃지. `"질서 333 · 혼돈 332"`
+ * 편성 칸에 넣을 짧은 뱃지. `"고대6"` / `"고대3·유물3"`
  *
- * 포인트 합계가 아니라 **코어 단계**를 보여준다. 편성을 볼 때 실제로 궁금한 건
- * 코어가 몇 단계까지 열렸는지다.
+ * 길드에서 쓰는 `질서 222 · 혼돈 111` 표기는 **아직 계산할 수 없다.**
+ * 그 숫자는 코어 아이템의 종류에 붙어 있는데, API 응답에는 그 단계 정보가 없다.
+ * 확인해본 것들:
+ *
+ *   - 젬 포인트/임계값: 같은 캐릭터의 질서(20·18·20)와 혼돈(18·20·20)이 거의 같은데
+ *     실제 표기는 222와 111로 갈린다. 포인트로는 설명되지 않는다
+ *   - 등급: 여섯 코어가 모두 `고대`인데도 질서와 혼돈이 다르다
+ *   - 아이콘: 해/달/별 위치만 나타낸다(96~101 고정)
+ *   - 코어 공급 의지력: 여섯 개 모두 같다
+ *
+ * 남은 단서는 코어 이름(`연회의 잔향`, `현란한 공격` …)뿐인데 각인마다 달라서
+ * 이름→단계 표가 있어야 한다. 그때까지 **틀린 숫자를 보여주느니 등급 구성만 보여준다.**
  */
 export function summarizeArkGrid(data: ArkGridData | null | undefined): string | null {
   if (!data || data.cores.length === 0) return null;
 
-  const groups = new Map<string, number[]>();
+  const counts = new Map<string, number>();
   for (const core of data.cores) {
-    // stage가 없는 예전 데이터도 포인트로 되살린다. 갱신 전까지 빈칸으로 보이지 않게.
-    const stage = core.stage ?? DEFAULT_THRESHOLDS.filter((t) => core.point >= t).length;
-    // "질서의 해 코어 : 그림자 주먹" → "질서"
-    const set = core.name.startsWith("혼돈") ? "혼돈" : "질서";
-    const list = groups.get(set);
-    if (list) list.push(stage);
-    else groups.set(set, [stage]);
+    const grade = core.grade ?? "미상";
+    counts.set(grade, (counts.get(grade) ?? 0) + 1);
   }
 
-  return ["질서", "혼돈"]
-    .filter((set) => groups.has(set))
-    .map((set) => `${set} ${groups.get(set)!.join("")}`)
-    .join(" · ");
+  const order = ["고대", "유물", "영웅", "희귀", "미상"];
+  return [...counts.entries()]
+    .sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]))
+    .map(([grade, count]) => `${grade}${count}`)
+    .join("·");
 }
 
 // --- 캐릭터 레코드 -----------------------------------------------------------

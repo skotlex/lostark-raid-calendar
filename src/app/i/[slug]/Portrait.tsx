@@ -6,20 +6,34 @@ import { useState } from "react";
 import { classColor } from "@/lib/classColors";
 
 /**
- * 캐릭터 초상.
+ * 캐릭터 초상 — 증명사진 크기로 잘라낸 썸네일.
  *
- * 전신 렌더를 칸 배경에 깔면 두 가지가 문제였다.
- *   1. 좁은 칸에 전신을 맞추느라 인물이 알아볼 수 없을 만큼 작아진다
- *   2. 이미지의 어두운 배경이 카드 바탕과 부딪혀 경계가 날카롭게 잘린다
+ * 로아가 주는 `CharacterImage`는 **612×708 전신 렌더**다(여러 캐릭터로 확인).
+ * 인물이 늘 같은 자리에 서 있어서 잘라낼 영역을 비율로 고정할 수 있다.
  *
- * 그래서 배경으로 깔지 않고 **증명사진처럼 머리부터 상체까지 잘라낸 썸네일**로 둔다.
- * 확대와 기준점은 로아 렌더가 인물을 가운데 위쪽에 두는 것에 맞췄다.
- * 모서리를 둥글리고 테두리를 줘서 잘린 경계가 의도된 것으로 읽히게 한다.
+ * 실제 이미지를 잘라 확인한 결과 머리부터 상체 중간까지는 다음 구간이다.
+ *   가로 34% ~ 66%   (인물이 가운데 정렬돼 있다)
+ *   세로 8.5% ~ 42.4% (머리 꼭대기가 12% 근처)
+ *
+ * `object-cover`로는 이만큼 확대되지 않는다. cover는 "칸을 덮는" 최소 배율까지만
+ * 키우기 때문이다. 그래서 이미지를 칸보다 크게 늘려 놓고 위치를 밀어 원하는 구간만
+ * 보이게 한다.
  */
 
+/** 잘라낼 구간. 이미지 크기와 무관한 비율이라 해상도가 바뀌어도 유지된다. */
+const CROP = { x: 0.34, y: 0.085, w: 0.32, h: 0.339 };
+
+/** 늘릴 배율과 밀어낼 거리. 칸 크기에 대한 비율이라 크기가 달라져도 같은 구도가 나온다. */
+const IMAGE_STYLE = {
+  width: `${(1 / CROP.w) * 100}%`,
+  height: "auto",
+  left: `${-(CROP.x / CROP.w) * 100}%`,
+  top: `${-(CROP.y / CROP.h) * 100}%`,
+} as const;
+
 const SIZES = {
-  sm: { box: "h-16 w-[3.25rem]", px: "52px" },
-  md: { box: "h-20 w-16", px: "64px" },
+  sm: { box: "w-[3.25rem]", px: "52px" },
+  md: { box: "w-16", px: "64px" },
 } as const;
 
 export function Portrait({
@@ -36,10 +50,13 @@ export function Portrait({
   const spec = SIZES[size];
   const color = classColor(className);
 
+  // 칸 비율을 잘라낼 구간의 비율과 맞춰야 인물이 찌그러지지 않는다.
+  const box = `${spec.box} aspect-[49/60] shrink-0 overflow-hidden rounded border border-border`;
+
   if (!src || broken) {
     return (
       <div
-        className={`${spec.box} flex shrink-0 items-center justify-center overflow-hidden rounded border border-border text-xs font-medium text-white/80`}
+        className={`${box} flex items-center justify-center text-xs font-medium text-white/80`}
         style={{ backgroundColor: color }}
         aria-hidden
       >
@@ -49,20 +66,16 @@ export function Portrait({
   }
 
   return (
-    <div
-      className={`${spec.box} relative shrink-0 overflow-hidden rounded border border-border`}
-      style={{ backgroundColor: color }}
-      aria-hidden
-    >
+    <div className={`${box} relative`} style={{ backgroundColor: color }} aria-hidden>
       <Image
         src={src}
         alt=""
-        fill
+        width={612}
+        height={708}
         sizes={spec.px}
-        className="object-cover"
-        // 원본은 대략 머리부터 허벅지까지 담겨 있다. 위쪽 15% 지점을 기준으로
-        // 2.4배 확대하면 머리부터 상체 중간까지가 남는다.
-        style={{ transform: "scale(2.4)", transformOrigin: "50% 15%" }}
+        // Tailwind가 img에 max-width:100%를 걸어두므로 풀어야 확대가 먹는다.
+        className="absolute max-w-none"
+        style={IMAGE_STYLE}
         onError={() => setBroken(true)}
       />
     </div>
