@@ -173,8 +173,11 @@ export async function getBoard(
   const now = Date.now();
 
   return slots.map((slot) => {
-    const view = toSlotView(slot);
-    const byPosition = new Map(slot.assignments.map((a) => [a.position, a]));
+    // 배정을 떼어내고 슬롯 필드만 넘긴다. 통째로 넘기면 원본 배정(Prisma Decimal이 든
+    // 캐릭터 행)이 그대로 딸려 와 클라이언트 컴포넌트로 실려 간다.
+    const { assignments, ...slotRow } = slot;
+    const view = toSlotView(slotRow);
+    const byPosition = new Map(assignments.map((a) => [a.position, a]));
 
     function toCell(position: string): CellView {
       const assignment = byPosition.get(position);

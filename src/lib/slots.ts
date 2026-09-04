@@ -43,8 +43,23 @@ type SlotRow = {
   sortOrder: number;
 };
 
+/**
+ * 화면에 넘길 필드만 골라 담는다.
+ *
+ * 스프레드(`{...row}`)를 쓰면 호출부가 관계를 함께 조회했을 때 그 원본까지 딸려 간다.
+ * Prisma의 Decimal은 클라이언트 컴포넌트로 넘길 수 없어 그대로 터진다.
+ */
 export function toSlotView(row: SlotRow): SlotView {
-  return { ...row };
+  return {
+    id: row.id,
+    dayOfWeek: row.dayOfWeek,
+    startTime: row.startTime,
+    raidName: row.raidName,
+    difficulty: row.difficulty,
+    partyLabel: row.partyLabel,
+    keepRoster: row.keepRoster,
+    sortOrder: row.sortOrder,
+  };
 }
 
 /** 보관 처리한 슬롯은 뺀다. 과거 주차 기록은 남지만 요일표에는 나오지 않는다. */
