@@ -13,6 +13,7 @@ import {
   toWeekParam,
 } from "@/lib/week";
 
+import { RememberDay } from "./lastDay";
 import { SlotCard } from "./SlotCard";
 
 export const dynamic = "force-dynamic";
@@ -60,6 +61,9 @@ export default async function BoardPage({
 
   return (
     <div className="space-y-4">
+      {/* 다른 화면에 갔다 돌아왔을 때 보던 요일로 열리게 한다. */}
+      <RememberDay day={day} />
+
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <nav className="flex flex-wrap gap-1">
           {DAYS.map((d) => {

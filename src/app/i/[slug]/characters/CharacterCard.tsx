@@ -70,7 +70,7 @@ export function CharacterCard({
             </div>
           </div>
 
-          <div className="char-faint mt-1.5 space-y-0.5 text-[11px]">
+          <div className="char-faint mt-1.5 space-y-0.5 text-[12px]">
             {character.arkGridSummary && (
               <div className="truncate tabular">아크그리드 {character.arkGridSummary}</div>
             )}
@@ -99,7 +99,6 @@ export function CharacterCard({
 
           <form
             action={remove}
-            className="ml-auto"
             onSubmit={(e) => {
               if (!confirm(`${character.name} 캐릭터를 삭제한다. 편성 기록도 함께 사라진다.`)) {
                 e.preventDefault();

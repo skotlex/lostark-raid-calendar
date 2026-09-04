@@ -132,7 +132,12 @@ export function PortraitBleed({
           src={src}
           alt=""
           fill
-          sizes="120px"
+          /*
+           * 실제로 보이는 폭보다 훨씬 큰 그림을 받아야 한다. 확대해서 일부만 쓰므로
+           * 칸 폭에 맞춘 크기를 받으면 그만큼 늘어나 뭉개진다. 원본이 612px이니
+           * 그보다 큰 값을 주면 사실상 원본을 그대로 받는다.
+           */
+          sizes="400px"
           className="object-cover"
           style={{ objectPosition: BLEED_ORIGIN, transform: `scale(${BLEED_SCALE})`, transformOrigin: BLEED_ORIGIN }}
           onError={() => setBroken(true)}

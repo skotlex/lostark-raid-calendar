@@ -4,11 +4,30 @@ import { useActionState } from "react";
 
 import type { BoardSlotView, PartyView } from "@/lib/board";
 import { raidLabel } from "@/lib/raids";
+import type { SynergyKind } from "@/lib/synergy";
 
 import { Cell } from "./Cell";
 import { type CellState, keepRosterAction } from "./actions";
 
 const IDLE: CellState = { status: "idle", message: "" };
+
+/**
+ * 시너지 종류별 색.
+ *
+ * 파티마다 붙는 칩이 전부 같은 회색이면 무엇이 들어왔는지 세어봐야 안다. 색을 나눠
+ * 두면 편성표를 훑는 것만으로 빠진 시너지가 눈에 걸린다. 색값은 globals.css에 있다.
+ *
+ * 모든 종류를 요구하는 Record라 시너지가 새로 생기면 여기서 컴파일이 막힌다.
+ */
+const SYNERGY_CLASS: Record<SynergyKind, string> = {
+  공증: "syn-atk",
+  받피증: "syn-taken",
+  방깍: "syn-def",
+  치적: "syn-crit",
+  치피증: "syn-critdmg",
+  백헤드: "syn-back",
+  서폿: "syn-sup",
+};
 
 export function SlotCard({
   slug,
@@ -111,13 +130,15 @@ function Party({
           party.synergies.map((synergy) => (
             <span
               key={synergy.kind}
-              className="rounded bg-surface-2 px-1.5 py-0.5 text-[11px] text-text-dim"
+              className={`syn ${SYNERGY_CLASS[synergy.kind]}`}
               title={synergy.label}
             >
-              {synergy.kind}
-              {synergy.count > 1 && (
-                <span className="ml-0.5 text-text-faint">×{synergy.count}</span>
-              )}
+              <span>
+                {synergy.kind}
+                {/* 수치는 종류마다 고정이라 함께 보여준다. 서폿은 딜러마다 달라 비어 있다. */}
+                {synergy.value && ` ${synergy.value}`}
+              </span>
+              {synergy.count > 1 && <span className="syn-count">×{synergy.count}</span>}
             </span>
           ))
         )}

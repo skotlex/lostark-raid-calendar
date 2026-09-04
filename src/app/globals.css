@@ -157,6 +157,13 @@ body {
   color: var(--c-accent);
 }
 
+/* 자리 고정. 각인 칩 옆에 붙어 이 자리가 리셋에 남는다는 것을 알린다. */
+.char-chip--pinned {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgb(226 179 84 / 45%);
+  color: var(--c-accent);
+}
+
 /* 딜/서폿. 판정이 데이터에서 나오므로 표시만 한다. */
 .char-chip--dps {
   background: rgb(220 144 112 / 16%);
@@ -174,8 +181,8 @@ body {
 }
 
 .char-label {
-  font-size: 10px;
-  line-height: 1.1;
+  font-size: 11px;
+  line-height: 1.15;
   color: var(--c-faint);
 }
 
@@ -279,4 +286,95 @@ body {
 .char-notice--danger {
   background: rgb(120 40 36 / 45%);
   color: var(--c-danger);
+}
+
+/* 드래그로 옮길 때 받는 칸. 어디에 떨어지는지 미리 보인다. */
+.char-card--dropping {
+  border-color: var(--c-accent);
+  box-shadow: inset 0 0 0 1px var(--c-accent);
+}
+.char-card--dragging {
+  opacity: 0.4;
+}
+.char-card[draggable="true"] {
+  cursor: grab;
+}
+
+/*
+ * 시너지 색.
+ *
+ * 파티 요약에서 무엇이 들어왔는지 한눈에 구분하려면 종류마다 색이 달라야 한다.
+ * 이 칩은 카드가 아니라 **테마를 따르는 배경 위**에 놓이므로 라이트/다크 값을 따로 둔다.
+ * 배경 톤은 글자색에서 뽑아내(color-mix) 색마다 따로 정의하지 않는다.
+ */
+:root {
+  --syn-atk: #a83c26;
+  --syn-taken: #a82f60;
+  --syn-def: #6a3fae;
+  --syn-crit: #8a6410;
+  --syn-critdmg: #9c521a;
+  --syn-back: #1d6b50;
+  --syn-sup: #26608a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --syn-atk: #e58b6d;
+    --syn-taken: #e97fa6;
+    --syn-def: #b79ae8;
+    --syn-crit: #e0bf5a;
+    --syn-critdmg: #e0a05a;
+    --syn-back: #5fc39a;
+    --syn-sup: #6aa9d9;
+  }
+}
+
+:root[data-theme="dark"] {
+  --syn-atk: #e58b6d;
+  --syn-taken: #e97fa6;
+  --syn-def: #b79ae8;
+  --syn-crit: #e0bf5a;
+  --syn-critdmg: #e0a05a;
+  --syn-back: #5fc39a;
+  --syn-sup: #6aa9d9;
+}
+
+.syn {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, currentcolor 14%, transparent);
+  padding: 0 0.375rem;
+  font-size: 11px;
+  line-height: 1.35rem;
+  white-space: nowrap;
+}
+
+/* 겹친 인원 수. 시너지는 겹쳐도 한 번만 들어가므로 눈에 덜 띄게 둔다. */
+.syn-count {
+  font-size: 10px;
+  opacity: 0.75;
+}
+
+.syn-atk {
+  color: var(--syn-atk);
+}
+.syn-taken {
+  color: var(--syn-taken);
+}
+.syn-def {
+  color: var(--syn-def);
+}
+.syn-crit {
+  color: var(--syn-crit);
+}
+.syn-critdmg {
+  color: var(--syn-critdmg);
+}
+.syn-back {
+  color: var(--syn-back);
+}
+.syn-sup {
+  color: var(--syn-sup);
 }

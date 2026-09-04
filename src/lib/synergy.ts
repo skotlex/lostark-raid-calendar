@@ -24,6 +24,14 @@ export interface Synergy {
   kind: SynergyKind;
   /** 칸에 그대로 찍는 짧은 문구 */
   label: string;
+  /**
+   * 파티 요약 칩에 종류와 나란히 붙는 수치.
+   *
+   * `label`은 서폿처럼 계산식이 되기도 해서 칩에 넣으면 한 줄을 다 먹는다.
+   * 칩은 "무엇이 몇 %"만 보이면 되므로 수치만 따로 둔다. 서폿은 딜러마다 값이
+   * 달라 하나로 못 적으니 비워두고 종류만 보여준다.
+   */
+  value: string;
 }
 
 export interface ClassInfo {
@@ -31,13 +39,13 @@ export interface ClassInfo {
   synergies: Synergy[];
 }
 
-const 공증: Synergy = { kind: "공증", label: "공증 6%" };
-const 받피증: Synergy = { kind: "받피증", label: "받피증 6%" };
-const 방깍: Synergy = { kind: "방깍", label: "방깍 12%" };
-const 치적: Synergy = { kind: "치적", label: "치적 10%" };
-const 치피증: Synergy = { kind: "치피증", label: "치피증 8%" };
-const 백헤드: Synergy = { kind: "백헤드", label: "백/헤드 9%" };
-const 서폿버프: Synergy = { kind: "서폿", label: "딜러공 + 서폿공15% × 6%" };
+const 공증: Synergy = { kind: "공증", label: "공증 6%", value: "6%" };
+const 받피증: Synergy = { kind: "받피증", label: "받피증 6%", value: "6%" };
+const 방깍: Synergy = { kind: "방깍", label: "방깍 12%", value: "12%" };
+const 치적: Synergy = { kind: "치적", label: "치적 10%", value: "10%" };
+const 치피증: Synergy = { kind: "치피증", label: "치피증 8%", value: "8%" };
+const 백헤드: Synergy = { kind: "백헤드", label: "백/헤드 9%", value: "9%" };
+const 서폿버프: Synergy = { kind: "서폿", label: "딜러공 + 서폿공15% × 6%", value: "" };
 
 /**
  * 로스트아크 전 클래스 30개.
@@ -210,6 +218,7 @@ export function synergyLabel(className: string | null | undefined, role?: Role):
 export interface PartySynergy {
   kind: SynergyKind;
   label: string;
+  value: string;
   /** 이 시너지를 주는 인원 수. 2 이상이면 겹친다 */
   count: number;
 }
