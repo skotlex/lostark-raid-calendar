@@ -32,9 +32,12 @@ export function SlotForm({
     IDLE,
   );
 
-  // 액션이 끝나면 폼이 초기화된다. 같은 요일에 레이드를 연달아 넣는 것이 보통이라
-  // 요일만 직접 들고 있는다. 시간·레이드는 매번 달라 비워지는 편이 낫다.
+  // 액션이 끝나면 폼이 통째로 초기화된다. 추가 폼은 연달아 입력하라고 열어두는 곳이라
+  // 방금 고른 값이 매번 날아갔다. 네 칸 모두 직접 들고 있어 입력을 유지한다.
   const [dayOfWeek, setDayOfWeek] = useState(slot?.dayOfWeek ?? defaultDay ?? 3);
+  const [startTime, setStartTime] = useState(slot?.startTime ?? "20:00");
+  const [raidName, setRaidName] = useState(slot?.raidName ?? "");
+  const [difficulty, setDifficulty] = useState(slot?.difficulty ?? "");
 
   return (
     <form
@@ -68,7 +71,8 @@ export function SlotForm({
           name="startTime"
           type="time"
           required
-          defaultValue={slot?.startTime ?? "20:00"}
+          value={startTime}
+          onChange={(e) => setStartTime(e.target.value)}
           className="rounded border border-border bg-bg px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
         />
       </Field>
@@ -78,7 +82,8 @@ export function SlotForm({
           name="raidName"
           required
           list="raid-presets"
-          defaultValue={slot?.raidName ?? ""}
+          value={raidName}
+          onChange={(e) => setRaidName(e.target.value)}
           placeholder="벨가르딘"
           className="w-32 rounded border border-border bg-bg px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
         />
@@ -88,7 +93,8 @@ export function SlotForm({
         <input
           name="difficulty"
           list="difficulty-presets"
-          defaultValue={slot?.difficulty ?? ""}
+          value={difficulty}
+          onChange={(e) => setDifficulty(e.target.value)}
           placeholder="하드"
           className="w-24 rounded border border-border bg-bg px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
         />
