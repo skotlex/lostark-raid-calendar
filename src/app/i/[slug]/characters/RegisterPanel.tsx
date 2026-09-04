@@ -78,19 +78,19 @@ function SingleForm({ slug }: { slug: string }) {
 
   return (
     <form action={submit} className="flex flex-wrap items-end gap-2">
-      <Field label="캐릭터 닉네임">
+      <Field label="캐릭터 닉네임" className="w-48">
         <input
           name="name"
           required
           placeholder="정확한 닉네임"
-          className="w-48 rounded border border-border bg-bg px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
+          className="w-full rounded border border-border bg-bg px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
         />
       </Field>
       <input type="hidden" name="slug" value={slug} />
       <button
         type="submit"
         disabled={pending}
-        className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-bg transition-opacity hover:opacity-90 disabled:opacity-50"
+        className="btn-inline rounded bg-accent px-3 py-1.5 text-sm font-medium text-bg transition-opacity hover:opacity-90 disabled:opacity-50"
       >
         {pending ? "조회 중…" : "등록"}
       </button>
@@ -138,19 +138,20 @@ function SiblingsForm({ slug }: { slug: string }) {
   return (
     <div className="space-y-3">
       <form action={searchSubmit} className="flex flex-wrap items-end gap-2">
-        <Field label="대표 캐릭터 닉네임" hint="같은 원정대의 아무 캐릭터나">
+        {/* 힌트를 라벨 옆에 두면 좁은 칸에서 줄이 갈린다. 자리표시자가 같은 일을 한다. */}
+        <Field label="대표 캐릭터 닉네임" className="w-48">
           <input
             name="name"
             required
-            placeholder="본캐 닉네임"
-            className="w-48 rounded border border-border bg-bg px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
+            placeholder="원정대의 아무 캐릭터"
+            className="w-full rounded border border-border bg-bg px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
           />
         </Field>
         <input type="hidden" name="slug" value={slug} />
         <button
           type="submit"
           disabled={searching}
-          className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-bg transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="btn-inline rounded bg-accent px-3 py-1.5 text-sm font-medium text-bg transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           {searching ? "조회 중…" : "원정대 조회"}
         </button>
@@ -218,7 +219,7 @@ function SiblingsForm({ slug }: { slug: string }) {
             <button
               type="submit"
               disabled={importing || selected.size === 0}
-              className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-bg transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="btn-inline rounded bg-accent px-3 py-1.5 text-sm font-medium text-bg transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {importing ? "등록 중…" : `${selected.size}개 등록`}
             </button>
@@ -243,17 +244,25 @@ function SiblingsForm({ slug }: { slug: string }) {
   );
 }
 
+/**
+ * 라벨 + 입력창 한 덩어리.
+ *
+ * 너비를 입력창이 아니라 여기에 준다. 라벨에만 맡기면 힌트 글자가 길 때 덩어리가
+ * 입력창보다 넓어져, 옆에 선 버튼이 그만큼 밀려 입력창과 뚝 떨어져 보인다.
+ */
 function Field({
   label,
   hint,
+  className = "",
   children,
 }: {
   label: string;
   hint?: string;
+  className?: string;
   children: React.ReactNode;
 }) {
   return (
-    <label className="flex flex-col gap-1">
+    <label className={`flex flex-col gap-1 ${className}`}>
       <span className="text-xs text-text-dim">
         {label}
         {hint && <span className="ml-1 text-text-faint">{hint}</span>}

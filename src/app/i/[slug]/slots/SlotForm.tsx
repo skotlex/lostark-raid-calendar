@@ -101,7 +101,7 @@ export function SlotForm({
       <button
         type="submit"
         disabled={pending}
-        className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-accent-contrast transition-opacity hover:opacity-90 disabled:opacity-50"
+        className="btn-inline rounded bg-accent px-3 py-1.5 text-sm font-medium text-accent-contrast transition-opacity hover:opacity-90 disabled:opacity-50"
       >
         {pending ? "저장 중…" : editing ? "저장" : "추가"}
       </button>
