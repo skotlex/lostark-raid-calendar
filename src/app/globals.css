@@ -120,6 +120,9 @@ body {
   --c-faint: #74818f;
   --c-accent: #e2b354;
   --c-danger: #f0867a;
+  --c-ok: #6fca8c;
+  --c-dps: #dc9070;
+  --c-support: #74b1de;
 
   position: relative;
   overflow: hidden;
@@ -152,6 +155,16 @@ body {
 .char-chip--engraving {
   background: rgb(226 179 84 / 14%);
   color: var(--c-accent);
+}
+
+/* 딜/서폿. 판정이 데이터에서 나오므로 표시만 한다. */
+.char-chip--dps {
+  background: rgb(220 144 112 / 16%);
+  color: var(--c-dps);
+}
+.char-chip--support {
+  background: rgb(116 177 222 / 16%);
+  color: var(--c-support);
 }
 
 .char-name {
@@ -215,4 +228,55 @@ body {
 .char-input:focus {
   border-color: var(--c-accent);
   outline: none;
+}
+
+.char-ok {
+  color: var(--c-ok);
+}
+
+/*
+ * 카드 위 버튼과 알림.
+ *
+ * 초상이 카드 오른쪽까지 깔려 있어 그 위로 지나갈 수 있다. 바탕을 깔지 않으면
+ * 인물과 겹치는 순간 글자가 읽히지 않는다.
+ */
+.char-btn {
+  border: 1px solid var(--c-border);
+  border-radius: 0.25rem;
+  background: rgb(10 14 20 / 60%);
+  padding: 0.25rem 0.5rem;
+  font-size: 12px;
+  color: var(--c-dim);
+  transition:
+    color 120ms,
+    border-color 120ms;
+}
+.char-btn:hover {
+  border-color: #46536a;
+  color: var(--c-text);
+}
+.char-btn:disabled {
+  opacity: 0.5;
+}
+
+.char-btn--danger {
+  border-color: transparent;
+  color: var(--c-faint);
+}
+.char-btn--danger:hover {
+  border-color: rgb(240 134 122 / 45%);
+  color: var(--c-danger);
+}
+
+.char-notice {
+  border-radius: 0.25rem;
+  background: rgb(10 14 20 / 70%);
+  padding: 0.25rem 0.5rem;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--c-faint);
+}
+.char-notice--danger {
+  background: rgb(120 40 36 / 45%);
+  color: var(--c-danger);
 }
