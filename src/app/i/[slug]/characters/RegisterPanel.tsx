@@ -24,10 +24,13 @@ const IMPORT_IDLE: ImportState = { status: "idle", message: "", result: null };
 const DEFAULT_MIN_LEVEL = 1600;
 
 /**
- * viewerLabel은 지금 들어와 있는 사람의 디스코드 닉네임이다. 부캐를 묶는 "사람 이름"의
- * 기본값으로 쓴다. 자기 원정대를 등록하는 경우가 대부분이라 이게 거의 맞다.
+ * 부캐를 묶는 "사람 이름"은 묻지 않는다. 들어와 있는 사람의 디스코드 닉네임으로
+ * 서버가 채운다(characters/actions.ts).
+ *
+ * 남의 캐릭터를 대신 등록하면 그 사람 것이 내 이름으로 묶여 중복 참여 경고가 엉뚱하게
+ * 뜬다. 경고일 뿐 막지는 않으므로 칸을 하나 더 두는 값보다 낫다고 봤다.
  */
-export function RegisterPanel({ slug, viewerLabel }: { slug: string; viewerLabel: string }) {
+export function RegisterPanel({ slug }: { slug: string }) {
   const [mode, setMode] = useState<"single" | "siblings">("siblings");
 
   return (
@@ -41,11 +44,7 @@ export function RegisterPanel({ slug, viewerLabel }: { slug: string; viewerLabel
         </ModeButton>
       </div>
 
-      {mode === "siblings" ? (
-        <SiblingsForm slug={slug} viewerLabel={viewerLabel} />
-      ) : (
-        <SingleForm slug={slug} viewerLabel={viewerLabel} />
-      )}
+      {mode === "siblings" ? <SiblingsForm slug={slug} /> : <SingleForm slug={slug} />}
     </section>
   );
 }
@@ -74,7 +73,7 @@ function ModeButton({
   );
 }
 
-function SingleForm({ slug, viewerLabel }: { slug: string; viewerLabel: string }) {
+function SingleForm({ slug }: { slug: string }) {
   const [state, submit, pending] = useActionState(registerAction, REGISTER_IDLE);
 
   return (
@@ -85,17 +84,6 @@ function SingleForm({ slug, viewerLabel }: { slug: string; viewerLabel: string }
           required
           placeholder="정확한 닉네임"
           className="w-48 rounded border border-border bg-bg px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
-        />
-      </Field>
-      {/*
-        들어와 있는 사람의 이름을 미리 채워 둔다. 자기 캐릭터를 등록하는 경우가
-        대부분이라 이게 거의 맞다. 남의 캐릭터라면 값이 보이니 고칠 수 있다.
-      */}
-      <Field label="사람 이름" hint="부캐를 묶는 이름. 남의 캐릭터면 바꿔 주세요">
-        <input
-          name="memberLabel"
-          defaultValue={viewerLabel}
-          className="w-36 rounded border border-border bg-bg px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
         />
       </Field>
       <input type="hidden" name="slug" value={slug} />
@@ -111,7 +99,7 @@ function SingleForm({ slug, viewerLabel }: { slug: string; viewerLabel: string }
   );
 }
 
-function SiblingsForm({ slug, viewerLabel }: { slug: string; viewerLabel: string }) {
+function SiblingsForm({ slug }: { slug: string }) {
   const [search, searchSubmit, searching] = useActionState(
     previewSiblingsAction,
     SIBLINGS_IDLE,
@@ -122,8 +110,6 @@ function SiblingsForm({ slug, viewerLabel }: { slug: string; viewerLabel: string
   );
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  // 처음부터 자기 이름으로 채워 둔다. 조회 결과를 기다릴 이유가 없다.
-  const [memberLabel, setMemberLabel] = useState(viewerLabel);
 
   // 조회 결과가 새로 오면 쓸 만한 것만 미리 골라 둔다.
   // 25개를 전부 등록하면 API 요청도 그만큼 나가고 목록도 저렙 부캐로 덮인다.
@@ -136,7 +122,6 @@ function SiblingsForm({ slug, viewerLabel }: { slug: string; viewerLabel: string
           .map((s) => s.name),
       ),
     );
-    setMemberLabel((current) => current || search.searched);
   }, [search]);
 
   function toggle(name: string) {
@@ -177,14 +162,6 @@ function SiblingsForm({ slug, viewerLabel }: { slug: string; viewerLabel: string
           <input type="hidden" name="slug" value={slug} />
 
           <div className="flex flex-wrap items-end gap-2">
-            <Field label="사람 이름" hint="한 사람으로 묶습니다. 남의 원정대면 바꿔 주세요">
-              <input
-                name="memberLabel"
-                value={memberLabel}
-                onChange={(e) => setMemberLabel(e.target.value)}
-                className="w-36 rounded border border-border bg-bg px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
-              />
-            </Field>
             <div className="flex gap-1 text-xs">
               <button
                 type="button"

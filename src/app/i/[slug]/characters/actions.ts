@@ -14,20 +14,20 @@ import {
   syncCharacter,
 } from "@/lib/characters";
 import { findInstance } from "@/lib/instance";
-import { requireSession } from "@/lib/session";
+import { type Session, requireSession } from "@/lib/session";
 
 /*
  * 서버 액션은 UI를 거치지 않고 POST로 직접 호출될 수 있다.
- * 1단계는 로그인이 없는 구조라 사용자 인증은 하지 않지만, **어떤 인스턴스의 데이터인지는
- * 반드시 서버에서 다시 확인한다.** 클라이언트가 보낸 id를 그대로 믿지 않는다.
+ *
+ * **레이아웃의 입장 검사를 거치지 않으므로 여기서 다시 확인한다.** 어떤 인스턴스의
+ * 데이터인지도 서버에서 다시 확인한다. 클라이언트가 보낸 id를 그대로 믿지 않는다.
  */
-async function resolveInstanceId(slug: unknown): Promise<string> {
-  // 레이아웃의 입장 검사를 거치지 않는 경로다. 여기서 다시 확인한다.
-  await requireSession();
+async function authorize(slug: unknown): Promise<{ instanceId: string; session: Session }> {
+  const session = await requireSession();
   if (typeof slug !== "string" || !slug) throw new CharacterError("잘못된 요청입니다");
   const instance = await findInstance(slug);
   if (!instance) throw new CharacterError("인스턴스를 찾을 수 없습니다");
-  return instance.id;
+  return { instanceId: instance.id, session };
 }
 
 function refresh(slug: string) {
@@ -54,11 +54,11 @@ export async function registerAction(
 ): Promise<RegisterState> {
   const slug = String(formData.get("slug") ?? "");
   const name = String(formData.get("name") ?? "");
-  const memberLabel = String(formData.get("memberLabel") ?? "");
 
   try {
-    const instanceId = await resolveInstanceId(slug);
-    const character = await registerCharacter(instanceId, name, memberLabel);
+    // 부캐를 묶는 이름은 들어와 있는 사람의 디스코드 닉네임이다. 물어보지 않는다.
+    const { instanceId, session } = await authorize(slug);
+    const character = await registerCharacter(instanceId, name, session.label);
     refresh(slug);
     return {
       status: "ok",
@@ -87,7 +87,7 @@ export async function previewSiblingsAction(
   const name = String(formData.get("name") ?? "");
 
   try {
-    const instanceId = await resolveInstanceId(slug);
+    const { instanceId } = await authorize(slug);
     const siblings = await previewSiblings(instanceId, name);
     return {
       status: "ok",
@@ -113,7 +113,6 @@ export async function importSiblingsAction(
   formData: FormData,
 ): Promise<ImportState> {
   const slug = String(formData.get("slug") ?? "");
-  const memberLabel = String(formData.get("memberLabel") ?? "");
   const names = formData.getAll("names").map(String).filter(Boolean);
 
   if (names.length === 0) {
@@ -121,8 +120,8 @@ export async function importSiblingsAction(
   }
 
   try {
-    const instanceId = await resolveInstanceId(slug);
-    const result = await registerCharacters(instanceId, names, memberLabel);
+    const { instanceId, session } = await authorize(slug);
+    const result = await registerCharacters(instanceId, names, session.label);
     refresh(slug);
 
     const parts = [`${result.added.length}개 등록됨`];
@@ -145,7 +144,7 @@ export async function syncAction(_prev: RowState, formData: FormData): Promise<R
   const id = String(formData.get("id") ?? "");
 
   try {
-    const instanceId = await resolveInstanceId(slug);
+    const { instanceId } = await authorize(slug);
     // 버튼을 눌렀다는 건 지금 최신값을 원한다는 뜻이므로 캐시를 무시한다.
     const character = await syncCharacter(instanceId, id, { force: true });
     refresh(slug);
@@ -162,7 +161,7 @@ export async function deleteAction(_prev: RowState, formData: FormData): Promise
   const id = String(formData.get("id") ?? "");
 
   try {
-    const instanceId = await resolveInstanceId(slug);
+    const { instanceId } = await authorize(slug);
     await deleteCharacter(instanceId, id);
     refresh(slug);
     return { status: "ok", message: "삭제됨" };
@@ -181,7 +180,7 @@ export async function syncAllAction(
 ): Promise<ImportState> {
   const slug = String(formData.get("slug") ?? "");
   try {
-    const instanceId = await resolveInstanceId(slug);
+    const { instanceId } = await authorize(slug);
     const result = await syncAllCharacters(instanceId);
     refresh(slug);
 
