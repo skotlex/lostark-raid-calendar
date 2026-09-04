@@ -6,10 +6,10 @@ import {
   normalizeEngravings,
   parseArkPassiveNode,
   stripTags,
-  summarizeArkGrid,
   summarizeEngravings,
   toCharacterSpec,
 } from "./armory";
+import { summarizeArkGrid } from "./arkGridCores";
 import { pickClassEngraving } from "./classEngravings";
 import type { ArmoryResponse } from "./lostark";
 
@@ -168,7 +168,6 @@ describe("normalizeArkGrid", () => {
       name: "질서의 해 코어 : 그림자 주먹",
       grade: "유물",
       point: 17,
-      stage: 3,
       gemCount: 2,
       inactiveGemCount: 1,
     });
@@ -178,23 +177,9 @@ describe("normalizeArkGrid", () => {
     expect(JSON.stringify(result)).not.toContain("큰 문자열");
   });
 
-  it("총 포인트와 코어 단계를 계산한다", () => {
+  it("총 포인트를 계산한다", () => {
     const result = normalizeArkGrid(SAMPLE.ArkGrid);
     expect(result?.totalPoint).toBe(37);
-    // 임계값 10/14/17 기준: 17p → 3단계, 20p → 3단계
-    expect(result?.cores.map((c) => c.stage)).toEqual([3, 3]);
-  });
-
-  it("임계값에 못 미치면 단계가 낮아진다", () => {
-    const result = normalizeArkGrid({
-      Slots: [
-        { Index: 0, Icon: null, Name: "질서의 해 코어 : 시험", Point: 9, Grade: "영웅", Gems: [] },
-        { Index: 1, Icon: null, Name: "질서의 달 코어 : 시험", Point: 10, Grade: "영웅", Gems: [] },
-        { Index: 2, Icon: null, Name: "질서의 별 코어 : 시험", Point: 14, Grade: "영웅", Gems: [] },
-      ],
-      Effects: [],
-    });
-    expect(result?.cores.map((c) => c.stage)).toEqual([0, 1, 2]);
   });
 
   it("효과의 색상 태그를 벗긴다", () => {
@@ -202,10 +187,37 @@ describe("normalizeArkGrid", () => {
     expect(result?.effects[0]).toEqual({ name: "공격력", level: 28, text: "공격력 +1.02%" });
   });
 
-  it("요약은 등급 구성을 보여준다", () => {
-    // 길드에서 쓰는 "질서 222" 표기는 API에 단계 정보가 없어 아직 계산할 수 없다.
+  it("표에 없는 코어뿐이면 등급 구성으로 떨어진다", () => {
     const data = normalizeArkGrid(SAMPLE.ArkGrid);
     expect(summarizeArkGrid(data)).toBe("고대1·유물1");
+  });
+
+  it("코어 이름으로 단계를 찾아 보여준다", () => {
+    // 건슬링어 피스메이커 2단계 세트. loawa 통계 화면의 숫자와 같다.
+    const data = normalizeArkGrid({
+      Slots: [
+        { Index: 0, Icon: null, Name: "질서의 해 코어 : 연회의 잔향", Point: 20, Grade: "고대", Gems: [] },
+        { Index: 1, Icon: null, Name: "질서의 달 코어 : 체인지 암즈", Point: 18, Grade: "고대", Gems: [] },
+        { Index: 2, Icon: null, Name: "질서의 별 코어 : 블로우 백", Point: 20, Grade: "고대", Gems: [] },
+        { Index: 3, Icon: null, Name: "혼돈의 해 코어 : 현란한 공격", Point: 18, Grade: "고대", Gems: [] },
+        { Index: 4, Icon: null, Name: "혼돈의 달 코어 : 불타는 일격", Point: 20, Grade: "고대", Gems: [] },
+        { Index: 5, Icon: null, Name: "혼돈의 별 코어 : 공격", Point: 20, Grade: "고대", Gems: [] },
+      ],
+      Effects: [],
+    });
+    expect(summarizeArkGrid(data)).toBe("질서 222 · 혼돈 111");
+  });
+
+  it("모르는 코어는 물음표로 둔다", () => {
+    const data = normalizeArkGrid({
+      Slots: [
+        { Index: 0, Icon: null, Name: "질서의 해 코어 : 연회의 잔향", Point: 20, Grade: "고대", Gems: [] },
+        { Index: 1, Icon: null, Name: "질서의 달 코어 : 아직 모르는 코어", Point: 18, Grade: "고대", Gems: [] },
+        { Index: 2, Icon: null, Name: "질서의 별 코어 : 블로우 백", Point: 20, Grade: "고대", Gems: [] },
+      ],
+      Effects: [],
+    });
+    expect(summarizeArkGrid(data)).toBe("질서 2?2");
   });
 
   it("아크그리드를 안 낀 캐릭터는 null이다", () => {

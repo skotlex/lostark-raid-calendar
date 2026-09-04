@@ -17,10 +17,10 @@ import {
   normalizeArkGrid,
   normalizeArkPassive,
   normalizeEngravings,
-  summarizeArkGrid,
   summarizeEngravings,
   toCharacterSpec,
 } from "../src/lib/armory.ts";
+import { coreTier, summarizeArkGrid } from "../src/lib/arkGridCores.ts";
 import { fetchArmory, fetchSiblings } from "../src/lib/lostark.ts";
 
 const characterName = process.argv[2];
@@ -92,8 +92,8 @@ if (!arkPassive) {
 } else {
   console.log(`  포인트: ${JSON.stringify(arkPassive.points)}`);
   for (const n of arkPassive.nodes) {
-    const mark = n.category === "깨달음" && n.tier === 1 ? "   ← 직업 각인" : "";
-    console.log(`  ${n.category} ${n.tier}티어 ${n.name} Lv.${n.level}${mark}`);
+    // 직업 각인은 티어로 가릴 수 없다. 아크그리드 코어 조건에서 읽는다(1번 항목).
+    console.log(`  ${n.category} ${n.tier}티어 ${n.name} Lv.${n.level}`);
   }
 }
 
@@ -115,7 +115,10 @@ if (!arkGrid) {
 } else {
   for (const c of arkGrid.cores) {
     const inactive = c.inactiveGemCount > 0 ? ` (비활성 ${c.inactiveGemCount})` : "";
-    console.log(`  ${c.name} | ${c.grade} | ${c.point}p | 젬 ${c.gemCount}개${inactive}`);
+    const tier = coreTier(c.name);
+    console.log(
+      `  [${tier ?? "?"}단계] ${c.name} | ${c.grade} | ${c.point}p | 젬 ${c.gemCount}개${inactive}`,
+    );
   }
   for (const e of arkGrid.effects) {
     console.log(`  효과: ${e.text ?? e.name} (Lv.${e.level})`);

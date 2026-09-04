@@ -149,16 +149,6 @@ export interface ArkGridCore {
   name: string;
   grade: string | null;
   point: number;
-  /**
-   * 코어 단계 0~3.
-   *
-   * 코어 옵션은 젬 포인트 합계가 임계값을 넘을 때마다 열린다. 실측한 임계값은
-   * `[10, 14, 17, 18, 19, 20]`인데 뒤의 셋은 피해량 소폭 증가라 **앞의 세 단계만**
-   * 의미가 있다. 길드에서 "333", "222"라고 부르는 그 숫자다.
-   *
-   * 예전 버전이 저장한 데이터에는 없을 수 있어 optional이다.
-   */
-  stage?: number;
   gemCount: number;
   /** 비활성 젬이 있으면 세팅이 덜 끝난 것이다 */
   inactiveGemCount: number;
@@ -266,7 +256,6 @@ export function normalizeArkGrid(raw: ArkGrid | null | undefined): ArkGridData |
       name: slot.Name,
       grade: slot.Grade ?? null,
       point,
-      stage: thresholds.filter((t) => point >= t).length,
       gemCount: gems.length,
       inactiveGemCount: gems.filter((g) => !g.IsActive).length,
     };
@@ -282,38 +271,6 @@ export function normalizeArkGrid(raw: ArkGrid | null | undefined): ArkGridData |
     totalPoint: cores.reduce((sum, c) => sum + c.point, 0),
     classEngraving,
   };
-}
-
-/**
- * 편성 칸에 넣을 짧은 뱃지. `"고대6"` / `"고대3·유물3"`
- *
- * 길드에서 쓰는 `질서 222 · 혼돈 111` 표기는 **아직 계산할 수 없다.**
- * 그 숫자는 코어 아이템의 종류에 붙어 있는데, API 응답에는 그 단계 정보가 없다.
- * 확인해본 것들:
- *
- *   - 젬 포인트/임계값: 같은 캐릭터의 질서(20·18·20)와 혼돈(18·20·20)이 거의 같은데
- *     실제 표기는 222와 111로 갈린다. 포인트로는 설명되지 않는다
- *   - 등급: 여섯 코어가 모두 `고대`인데도 질서와 혼돈이 다르다
- *   - 아이콘: 해/달/별 위치만 나타낸다(96~101 고정)
- *   - 코어 공급 의지력: 여섯 개 모두 같다
- *
- * 남은 단서는 코어 이름(`연회의 잔향`, `현란한 공격` …)뿐인데 각인마다 달라서
- * 이름→단계 표가 있어야 한다. 그때까지 **틀린 숫자를 보여주느니 등급 구성만 보여준다.**
- */
-export function summarizeArkGrid(data: ArkGridData | null | undefined): string | null {
-  if (!data || data.cores.length === 0) return null;
-
-  const counts = new Map<string, number>();
-  for (const core of data.cores) {
-    const grade = core.grade ?? "미상";
-    counts.set(grade, (counts.get(grade) ?? 0) + 1);
-  }
-
-  const order = ["고대", "유물", "영웅", "희귀", "미상"];
-  return [...counts.entries()]
-    .sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]))
-    .map(([grade, count]) => `${grade}${count}`)
-    .join("·");
 }
 
 // --- 캐릭터 레코드 -----------------------------------------------------------

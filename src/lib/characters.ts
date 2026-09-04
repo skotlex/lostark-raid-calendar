@@ -3,7 +3,8 @@ import "server-only";
 import { Prisma } from "@/generated/prisma/client";
 
 import type { ArkGridData, ArkPassiveData, EngravingData } from "./armory";
-import { type CharacterSpec, enlightenmentNames, summarizeArkGrid, toCharacterSpec } from "./armory";
+import { type CharacterSpec, enlightenmentNames, toCharacterSpec } from "./armory";
+import { summarizeArkGrid } from "./arkGridCores";
 import { pickClassEngraving } from "./classEngravings";
 import { LostArkError, fetchArmory, fetchSiblings } from "./lostark";
 import { prisma } from "./prisma";
