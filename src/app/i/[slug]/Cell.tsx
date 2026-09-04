@@ -304,11 +304,14 @@ function PositionMark({ position }: { position: string }) {
     <div className="empty-mark" data-kind={kind ?? ""} aria-hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6}>
         {kind === "SUP" ? (
-          // 방패. 서폿은 지키는 자리다.
-          <path
-            d="M12 3l7 3v6c0 4.4-3.1 7.6-7 9-3.9-1.4-7-4.6-7-9V6z"
-            strokeLinejoin="round"
-          />
+          // 하트 + 십자. 서폿이 하는 일은 막아서는 것이 아니라 살리고 버프하는 것이라
+          // 방패보다 힐 표시가 맞다. 십자만 두면 "+"로 읽혀 자리를 추가하는 버튼처럼
+          // 보이므로 하트 안에 넣는다.
+          <g strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 21S2.75 15.5 2.75 9.25A5.25 5.25 0 0 1 12 6a5.25 5.25 0 0 1 9.25 3.25C21.25 15.5 12 21 12 21z" />
+            <path d="M12 9.1v4.8" />
+            <path d="M9.6 11.5h4.8" />
+          </g>
         ) : (
           // 검. 곧게 세우면 날과 가드가 십자가로 읽힌다. 비스듬히 눕히고 날에 두께를
           // 줘야 이 크기에서도 검으로 보인다.
