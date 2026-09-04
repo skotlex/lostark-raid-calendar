@@ -153,7 +153,7 @@ function SiblingsForm({ slug }: { slug: string }) {
           disabled={searching}
           className="btn-inline rounded bg-accent px-3 py-1.5 text-sm font-medium text-bg transition-opacity hover:opacity-90 disabled:opacity-50"
         >
-          {searching ? "조회 중…" : "원정대 조회"}
+          {searching ? "조회 중…" : "조회"}
         </button>
         <Feedback status={search.status} message={search.message} />
       </form>
