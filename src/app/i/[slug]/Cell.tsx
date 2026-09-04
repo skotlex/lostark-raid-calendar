@@ -29,6 +29,43 @@ function format(value: number | null): string {
   return value === null ? "-" : value.toFixed(2);
 }
 
+/**
+ * 소수점을 버린 표기. 좁은 칸에서 폭을 아끼려고 쓴다.
+ *
+ * 반올림이 아니라 버림이다. 템레벨은 구간 진입이 기준이라 1791.66을 1792로 올리면
+ * 아직 닿지 않은 구간에 든 것처럼 읽힌다.
+ */
+function formatShort(value: number | null): string {
+  return value === null ? "-" : String(Math.floor(value));
+}
+
+/**
+ * 템렙·전투력 한 칸.
+ *
+ * 두 표기를 모두 넣고 CSS가 고른다. 숫자를 자르는 것은 CSS가 못 하는 일이라
+ * 칸 폭에 따라 바꾸려면 둘 다 그려두는 수밖에 없다. 화면 낭독기가 같은 값을 두 번
+ * 읽지 않도록 숨는 쪽은 display로 지운다(globals.css).
+ */
+function Stat({
+  label,
+  value,
+  dim,
+}: {
+  label: string;
+  value: number | null;
+  dim?: boolean;
+}) {
+  return (
+    <div className="char-stat">
+      <span className="char-label">{label}</span>
+      <span className={`char-value ${dim ? "char-dim" : ""}`}>
+        <span className="char-num-full">{format(value)}</span>
+        <span className="char-num-short">{formatShort(value)}</span>
+      </span>
+    </div>
+  );
+}
+
 export function Cell({
   slug,
   slotId,
@@ -244,14 +281,8 @@ export function Cell({
           넓어지면 아래로 내려가 제자리를 찾는다(globals.css).
         */}
         <div className="char-stat-line">
-          <div className="char-stat">
-            <span className="char-label">템렙</span>
-            <span className="char-value">{format(character.itemLevel)}</span>
-          </div>
-          <div className="char-stat">
-            <span className="char-label">전투력</span>
-            <span className="char-value char-dim">{format(character.combatPower)}</span>
-          </div>
+          <Stat label="템렙" value={character.itemLevel} />
+          <Stat label="전투력" value={character.combatPower} dim />
 
           {character.arkGridSummary && (
             <div className="char-arkgrid char-faint tabular">{character.arkGridSummary}</div>

@@ -379,6 +379,11 @@ button:disabled,
   flex: 0 0 auto;
 }
 
+/* 좁은 칸에서는 소수점을 버린다. 폭을 아끼려는 것이다. */
+.char-num-full {
+  display: none;
+}
+
 .char-stat .char-label {
   display: none;
 }
@@ -478,13 +483,6 @@ button:disabled,
     background: none;
   }
 
-  /* 넓은 칸에서는 글자가 인물을 피해 왼쪽에 있다. 뱃지 바탕이 필요 없다. */
-  .char-bottom > *,
-  .char-stat-line > * {
-    background: none;
-    padding: 0;
-  }
-
   .char-top {
     padding-top: 0.5rem;
   }
@@ -506,8 +504,24 @@ button:disabled,
     margin-top: 0.25rem;
   }
 
+  /* 넓은 칸에서는 글자가 인물을 피해 왼쪽에 있다. 뱃지 바탕이 필요 없다. */
+  .char-bottom > *,
+  .char-stat-line > * {
+    background: none;
+    padding: 0;
+  }
+
   .char-stat .char-label {
     display: block;
+  }
+
+  /* 자리가 넉넉하면 소수점까지 보여준다. 템렙은 소수 둘째 자리까지가 기준이다. */
+  .char-num-full {
+    display: inline;
+  }
+
+  .char-num-short {
+    display: none;
   }
 
   /* 자리가 넉넉하니 제 줄로 내려간다. 오른쪽으로 밀 이유가 없다. */
