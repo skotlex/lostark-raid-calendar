@@ -1,0 +1,157 @@
+"use client";
+
+import {
+  createContext,
+  useContext,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
+
+/**
+ * 이미 등록된 캐릭터 이름.
+ *
+ * 칸마다 배열을 내려보내면 같은 목록이 칸 수만큼 직렬화된다. 한 번만 실어 보내고
+ * 컨텍스트로 꺼내 쓴다.
+ */
+const KnownNamesContext = createContext<readonly string[]>([]);
+
+export function KnownNamesProvider({
+  names,
+  children,
+}: {
+  names: readonly string[];
+  children: ReactNode;
+}) {
+  return <KnownNamesContext value={names}>{children}</KnownNamesContext>;
+}
+
+/** 입력한 글자로 후보를 좁힌다. 앞부분이 맞는 이름을 먼저 보여준다. */
+function suggest(names: readonly string[], query: string): string[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+
+  const starts: string[] = [];
+  const contains: string[] = [];
+  for (const name of names) {
+    const lower = name.toLowerCase();
+    if (lower === q) continue; // 이미 다 친 이름을 다시 권하지 않는다
+    if (lower.startsWith(q)) starts.push(name);
+    else if (lower.includes(q)) contains.push(name);
+    if (starts.length >= 8) break;
+  }
+  return [...starts, ...contains].slice(0, 8);
+}
+
+/**
+ * 닉네임 입력.
+ *
+ * `<datalist>`를 쓰면 브라우저가 오른쪽에 펼침 화살표를 그려 콤보박스처럼 보인다.
+ * 이 칸은 목록에서 고르는 자리가 아니라 이름을 치는 자리이고, 등록되지 않은 캐릭터도
+ * 그대로 받아야 한다. 그래서 친 글자에 맞는 후보만 아래에 띄운다.
+ */
+export function NameInput({
+  name,
+  disabled,
+  placeholder,
+}: {
+  name: string;
+  disabled?: boolean;
+  placeholder?: string;
+}) {
+  const names = useContext(KnownNamesContext);
+  const [value, setValue] = useState("");
+  const [active, setActive] = useState(-1);
+  const [open, setOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listId = useId();
+
+  const items = useMemo(() => suggest(names, value), [names, value]);
+  const showing = open && items.length > 0;
+
+  /** 후보를 고르면 그대로 넣고 폼을 보낸다. 한 번 더 엔터를 치게 하지 않는다. */
+  function choose(picked: string) {
+    setValue(picked);
+    setOpen(false);
+    setActive(-1);
+    // 값이 state로 반영된 뒤 제출되도록 다음 프레임으로 미룬다.
+    requestAnimationFrame(() => inputRef.current?.form?.requestSubmit());
+  }
+
+  function onKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Escape") {
+      if (showing) {
+        e.preventDefault();
+        setOpen(false);
+        setActive(-1);
+      } else {
+        setValue("");
+      }
+      return;
+    }
+    if (!showing) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActive((i) => (i + 1) % items.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActive((i) => (i <= 0 ? items.length - 1 : i - 1));
+    } else if (e.key === "Enter" && active >= 0) {
+      // 후보를 짚어둔 상태의 엔터는 그 후보를 고르는 것이다.
+      e.preventDefault();
+      choose(items[active]!);
+    }
+  }
+
+  return (
+    <div className="name-input">
+      <input
+        ref={inputRef}
+        name={name}
+        value={value}
+        required
+        disabled={disabled}
+        autoComplete="off"
+        placeholder={placeholder ?? "닉네임"}
+        role="combobox"
+        aria-expanded={showing}
+        aria-controls={listId}
+        aria-autocomplete="list"
+        onChange={(e) => {
+          setValue(e.target.value);
+          setOpen(true);
+          setActive(-1);
+        }}
+        onKeyDown={onKeyDown}
+        // 후보를 클릭하는 중에도 blur가 먼저 나므로 닫는 것을 조금 미룬다.
+        onBlur={() => setTimeout(() => setOpen(false), 120)}
+        onFocus={() => setOpen(true)}
+        className="char-input"
+      />
+
+      {showing && (
+        <ul id={listId} role="listbox" className="name-suggest">
+          {items.map((item, i) => (
+            <li key={item}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={i === active}
+                tabIndex={-1}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => choose(item)}
+                className={`name-suggest-item ${i === active ? "is-active" : ""}`}
+              >
+                {item}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}

@@ -1,17 +1,11 @@
 "use client";
 
-import {
-  type DragEvent,
-  startTransition,
-  useActionState,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { type DragEvent, startTransition, useActionState, useState } from "react";
 
 import type { CellView } from "@/lib/board";
 import { positionLabel } from "@/lib/positions";
 
+import { NameInput } from "./NameInput";
 import { readMyName } from "./MyNameField";
 import { PortraitBleed } from "./Portrait";
 import {
@@ -53,19 +47,8 @@ export function Cell({
   const [removeState, remove, removing] = useActionState(unassignAction, IDLE);
   const [pinState, pin, pinning] = useActionState(pinAction, IDLE);
   const [moveState, move, moving] = useActionState(moveAction, IDLE);
-  const [editing, setEditing] = useState(false);
   const [dropping, setDropping] = useState(false);
   const [dragging, setDragging] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  // 배치에 성공하면 입력창을 닫는다. 실패하면 열어둔 채 메시지를 보여준다.
-  useEffect(() => {
-    if (assignState.status === "ok") setEditing(false);
-  }, [assignState]);
-
-  useEffect(() => {
-    if (editing) inputRef.current?.focus();
-  }, [editing]);
 
   const busy = assigning || removing || pinning || moving;
   const error = [assignState, removeState, pinState, moveState].find(
@@ -147,43 +130,25 @@ export function Cell({
         {/* 빈 칸에는 자리 이름을 남긴다. 어느 자리를 채우는지 알 단서가 이것뿐이다. */}
         <div className="char-label">{positionLabel(cell.position)}</div>
 
+        {/*
+          입력창은 처음부터 보인다. 예전에는 "+ 닉네임 입력"을 눌러야 나타났는데,
+          누르기 전과 후의 높이가 달라 칸이 들썩였고 채우려면 클릭이 한 번 더 들었다.
+          시트에서 셀에 바로 치던 동작에 가깝게 둔다.
+        */}
         {!editable ? (
-          <div className="char-faint mt-1 text-xs">비어 있음</div>
-        ) : editing ? (
+          <div className="char-faint mt-auto mb-auto text-center text-xs">비어 있음</div>
+        ) : (
           <form
             action={(formData) => {
               formData.set("actorLabel", readMyName());
               assign(formData);
             }}
-            className="mt-2"
+            className="mt-auto mb-auto"
           >
             {hidden}
-            <input
-              ref={inputRef}
-              name="characterName"
-              list={`chars-${slug}`}
-              placeholder="닉네임"
-              required
-              disabled={assigning}
-              onBlur={(e) => {
-                // 값 없이 벗어나면 그냥 닫는다. 빈 입력창이 남지 않게.
-                if (!e.currentTarget.value) setEditing(false);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") setEditing(false);
-              }}
-              className="char-input"
-            />
+            <NameInput name="characterName" disabled={assigning} />
             {assigning && <div className="char-faint mt-1 text-[11px]">조회 중…</div>}
           </form>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            className="char-add-btn char-faint mt-1 flex-1 rounded text-xs transition-colors"
-          >
-            + 닉네임 입력
-          </button>
         )}
 
         {error && <p className="char-danger mt-1 text-[11px]">{error.message}</p>}

@@ -15,6 +15,7 @@ import {
   toWeekParam,
 } from "@/lib/week";
 
+import { KnownNamesProvider } from "./NameInput";
 import { RememberDay } from "./lastDay";
 import { SlotCard } from "./SlotCard";
 
@@ -41,6 +42,7 @@ export default async function BoardPage({
   const slots = board.filter((slot) => slot.dayOfWeek === day);
 
   // 칸 입력의 자동완성 목록. 이미 등록된 캐릭터는 API를 다시 부르지 않는다.
+  // 컨텍스트로 한 번만 실어 보낸다. 칸마다 넘기면 같은 목록이 칸 수만큼 직렬화된다.
   const known = await prisma.character.findMany({
     where: { instanceId: instance.id },
     select: { name: true },
@@ -127,25 +129,20 @@ export default async function BoardPage({
           </Link>
         </div>
       ) : (
-        <div className="space-y-4">
-          {slots.map((slot) => (
-            <SlotCard
-              key={slot.id}
-              slug={slug}
-              week={week}
-              slot={slot}
-              editable={editable}
-            />
-          ))}
-        </div>
+        <KnownNamesProvider names={knownNames}>
+          <div className="space-y-4">
+            {slots.map((slot) => (
+              <SlotCard
+                key={slot.id}
+                slug={slug}
+                week={week}
+                slot={slot}
+                editable={editable}
+              />
+            ))}
+          </div>
+        </KnownNamesProvider>
       )}
-
-      {/* 모든 칸이 공유하는 자동완성 목록. 칸마다 만들면 DOM이 무거워진다. */}
-      <datalist id={`chars-${slug}`}>
-        {knownNames.map((name) => (
-          <option key={name} value={name} />
-        ))}
-      </datalist>
     </div>
   );
 }
