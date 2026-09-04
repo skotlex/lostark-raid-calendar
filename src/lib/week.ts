@@ -56,7 +56,10 @@ export function isCurrentWeek(weekStart: Date, now: Date = new Date()): boolean 
 }
 
 /**
- * 주차 라벨. "2026-09-02(수) ~ 09-08(화)" 형태로 KST 기준 날짜를 보여준다.
+ * 주차 라벨. "2026.09.02(수) ~ 09.08(화)" 형태로 KST 기준 날짜를 보여준다.
+ *
+ * 점으로 끊는다. `?week=`에 실리는 하이픈 형식(toWeekParam)과 눈으로 구분되고,
+ * 하이픈이 기간의 "~"와 섞여 보이지 않는다.
  */
 export function formatWeekLabel(weekStart: Date): string {
   const end = new Date(weekStart.getTime() + WEEK_MS - DAY_MS);
@@ -107,7 +110,7 @@ function formatKstDate(utc: Date, withYear: boolean): string {
   const m = String(kst.getUTCMonth() + 1).padStart(2, "0");
   const d = String(kst.getUTCDate()).padStart(2, "0");
   const w = DAY_NAMES[kst.getUTCDay()];
-  return withYear ? `${y}-${m}-${d}(${w})` : `${m}-${d}(${w})`;
+  return withYear ? `${y}.${m}.${d}(${w})` : `${m}.${d}(${w})`;
 }
 
 /**

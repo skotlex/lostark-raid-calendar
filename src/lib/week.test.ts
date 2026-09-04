@@ -95,7 +95,7 @@ describe("URL 파라미터", () => {
 
 describe("formatWeekLabel", () => {
   it("수요일부터 화요일까지를 KST 날짜로 보여준다", () => {
-    expect(formatWeekLabel(WEEK_2026_09_02)).toBe("2026-09-02(수) ~ 09-08(화)");
+    expect(formatWeekLabel(WEEK_2026_09_02)).toBe("2026.09.02(수) ~ 09.08(화)");
   });
 });
 
