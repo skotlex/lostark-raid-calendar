@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import { RAID_PRESETS } from "@/lib/raids";
 import type { SlotView } from "@/lib/slots";
@@ -32,6 +32,10 @@ export function SlotForm({
     IDLE,
   );
 
+  // 액션이 끝나면 폼이 초기화된다. 같은 요일에 레이드를 연달아 넣는 것이 보통이라
+  // 요일만 직접 들고 있는다. 시간·레이드는 매번 달라 비워지는 편이 낫다.
+  const [dayOfWeek, setDayOfWeek] = useState(slot?.dayOfWeek ?? defaultDay ?? 3);
+
   return (
     <form
       action={(formData) => {
@@ -47,7 +51,8 @@ export function SlotForm({
       <Field label="요일">
         <select
           name="dayOfWeek"
-          defaultValue={slot?.dayOfWeek ?? defaultDay ?? 3}
+          value={dayOfWeek}
+          onChange={(e) => setDayOfWeek(Number(e.target.value))}
           className="rounded border border-border bg-bg px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
         >
           {WEEK_DAYS.map((d) => (
