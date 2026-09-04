@@ -1,0 +1,188 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+
+import {
+  type BulkResult,
+  CharacterError,
+  type SiblingPreview,
+  deleteCharacter,
+  previewSiblings,
+  registerCharacter,
+  registerCharacters,
+  setCharacterRole,
+  syncCharacter,
+} from "@/lib/characters";
+import { findInstance } from "@/lib/instance";
+
+/*
+ * 서버 액션은 UI를 거치지 않고 POST로 직접 호출될 수 있다.
+ * 1단계는 로그인이 없는 구조라 사용자 인증은 하지 않지만, **어떤 인스턴스의 데이터인지는
+ * 반드시 서버에서 다시 확인한다.** 클라이언트가 보낸 id를 그대로 믿지 않는다.
+ */
+async function resolveInstanceId(slug: unknown): Promise<string> {
+  if (typeof slug !== "string" || !slug) throw new CharacterError("잘못된 요청이다");
+  const instance = await findInstance(slug);
+  if (!instance) throw new CharacterError("인스턴스를 찾을 수 없다");
+  return instance.id;
+}
+
+function refresh(slug: string) {
+  revalidatePath(`/i/${slug}/characters`);
+  revalidatePath(`/i/${slug}`);
+}
+
+/** 예상 가능한 실패는 메시지로 돌려주고, 그 외는 그대로 던져 에러 화면에 맡긴다. */
+function toMessage(error: unknown): string {
+  if (error instanceof CharacterError) return error.message;
+  throw error;
+}
+
+// --- 단일 등록 ---------------------------------------------------------------
+
+export interface RegisterState {
+  status: "idle" | "ok" | "error";
+  message: string;
+}
+
+export async function registerAction(
+  _prev: RegisterState,
+  formData: FormData,
+): Promise<RegisterState> {
+  const slug = String(formData.get("slug") ?? "");
+  const name = String(formData.get("name") ?? "");
+  const memberLabel = String(formData.get("memberLabel") ?? "");
+
+  try {
+    const instanceId = await resolveInstanceId(slug);
+    const character = await registerCharacter(instanceId, name, memberLabel);
+    refresh(slug);
+    return {
+      status: "ok",
+      message: `${character.name} (${character.className ?? "?"}) 등록됨`,
+    };
+  } catch (error) {
+    return { status: "error", message: toMessage(error) };
+  }
+}
+
+// --- 원정대 불러오기 ---------------------------------------------------------
+
+export interface SiblingsState {
+  status: "idle" | "ok" | "error";
+  message: string;
+  /** 조회한 원정대 대표 닉네임. 사람 이름 기본값으로 쓴다 */
+  searched: string;
+  siblings: SiblingPreview[];
+}
+
+export async function previewSiblingsAction(
+  _prev: SiblingsState,
+  formData: FormData,
+): Promise<SiblingsState> {
+  const slug = String(formData.get("slug") ?? "");
+  const name = String(formData.get("name") ?? "");
+
+  try {
+    const instanceId = await resolveInstanceId(slug);
+    const siblings = await previewSiblings(instanceId, name);
+    return {
+      status: "ok",
+      message: `${siblings.length}개 캐릭터를 찾았다. 등록할 것을 고른다`,
+      searched: name.trim(),
+      siblings,
+    };
+  } catch (error) {
+    return { status: "error", message: toMessage(error), searched: "", siblings: [] };
+  }
+}
+
+// --- 선택한 캐릭터 일괄 등록 --------------------------------------------------
+
+export interface ImportState {
+  status: "idle" | "ok" | "error";
+  message: string;
+  result: BulkResult | null;
+}
+
+export async function importSiblingsAction(
+  _prev: ImportState,
+  formData: FormData,
+): Promise<ImportState> {
+  const slug = String(formData.get("slug") ?? "");
+  const memberLabel = String(formData.get("memberLabel") ?? "");
+  const names = formData.getAll("names").map(String).filter(Boolean);
+
+  if (names.length === 0) {
+    return { status: "error", message: "등록할 캐릭터를 하나 이상 고른다", result: null };
+  }
+
+  try {
+    const instanceId = await resolveInstanceId(slug);
+    const result = await registerCharacters(instanceId, names, memberLabel);
+    refresh(slug);
+
+    const parts = [`${result.added.length}개 등록됨`];
+    if (result.failed.length > 0) parts.push(`${result.failed.length}개 실패`);
+    return { status: "ok", message: parts.join(" / "), result };
+  } catch (error) {
+    return { status: "error", message: toMessage(error), result: null };
+  }
+}
+
+// --- 개별 조작 ---------------------------------------------------------------
+
+export interface RowState {
+  status: "idle" | "ok" | "error";
+  message: string;
+}
+
+export async function syncAction(_prev: RowState, formData: FormData): Promise<RowState> {
+  const slug = String(formData.get("slug") ?? "");
+  const id = String(formData.get("id") ?? "");
+
+  try {
+    const instanceId = await resolveInstanceId(slug);
+    // 버튼을 눌렀다는 건 지금 최신값을 원한다는 뜻이므로 캐시를 무시한다.
+    const character = await syncCharacter(instanceId, id, { force: true });
+    refresh(slug);
+    return character.syncError
+      ? { status: "error", message: character.syncError }
+      : { status: "ok", message: `${character.name} 갱신됨` };
+  } catch (error) {
+    return { status: "error", message: toMessage(error) };
+  }
+}
+
+export async function setRoleAction(_prev: RowState, formData: FormData): Promise<RowState> {
+  const slug = String(formData.get("slug") ?? "");
+  const id = String(formData.get("id") ?? "");
+  const role = String(formData.get("role") ?? "");
+
+  if (role !== "DPS" && role !== "SUPPORT") {
+    return { status: "error", message: "잘못된 역할이다" };
+  }
+
+  try {
+    const instanceId = await resolveInstanceId(slug);
+    await setCharacterRole(instanceId, id, role);
+    refresh(slug);
+    return { status: "ok", message: role === "DPS" ? "딜러로 지정됨" : "서폿으로 지정됨" };
+  } catch (error) {
+    return { status: "error", message: toMessage(error) };
+  }
+}
+
+export async function deleteAction(_prev: RowState, formData: FormData): Promise<RowState> {
+  const slug = String(formData.get("slug") ?? "");
+  const id = String(formData.get("id") ?? "");
+
+  try {
+    const instanceId = await resolveInstanceId(slug);
+    await deleteCharacter(instanceId, id);
+    refresh(slug);
+    return { status: "ok", message: "삭제됨" };
+  } catch (error) {
+    return { status: "error", message: toMessage(error) };
+  }
+}

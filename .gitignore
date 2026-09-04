@@ -1,0 +1,52 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files — 로아 API 키와 DB 접속 정보가 들어간다. 절대 커밋 금지.
+# 예시 파일만 예외로 둔다.
+.env*
+!.env.example
+
+# prisma가 생성하는 클라이언트 (npm run db:generate로 재생성)
+/src/generated
+
+# probe 스크립트가 남기는 API 응답 덤프
+/.probe
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# vscode 로컬 UI 상태
+/.vscode/changelists.json

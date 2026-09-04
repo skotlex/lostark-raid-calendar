@@ -1,0 +1,290 @@
+# CLAUDE.md
+
+Claude Code가 이 저장소에서 작업할 때 자동으로 읽는 컨텍스트다.
+작업 전 전체를 읽고, "규칙" 섹션을 위반하지 않는다.
+
+---
+
+## 1. 프로젝트
+
+로스트아크 길드 레이드 편성표. 요일별 레이드 슬롯에 길드원이 캐릭터를 배치하고,
+클래스·템레벨·전투력·각인·아크그리드를 로아 공식 OpenAPI로 자동 표시한다.
+
+기존에 쓰던 Google 시트를 대체한다. 시트는 캐릭터 스펙 참조가 `#REF!`로 깨져 있었고,
+매주 인원을 손으로 지워야 했으며, 셀 편집이라 남의 신청을 실수로 지우기 쉬웠다.
+**이 세 가지를 고치는 것이 이 앱의 존재 이유다.**
+
+**사용자: 길드원 다수.** 링크를 공유해 함께 편집한다.
+
+### 범위 밖
+
+- **Gmail 확장 프로그램**: 이 저장소의 이전 목적이었다. 2026-09-04에 전면 폐기했다.
+  관련 코드·문서·OAuth 설정을 되살리지 않는다
+- **개인 계정 로그인**: 의도적으로 만들지 않는다. 섹션 4 참조
+- **시트 임포트**: 기존 시트에서 데이터를 가져오지 않는다. 처음부터 새로 입력한다
+
+---
+
+## 2. 핵심 설계 — 슬롯과 배정의 분리
+
+이 앱에서 가장 먼저 이해해야 할 구조다.
+
+| 모델 | 성격 | 리셋 |
+|---|---|---|
+| `RaidSlot` | 고정 요일표의 한 칸. 요일·시간·레이드·공대장 | 안 됨. 영속적 |
+| `Assignment` | 그 칸에 누가 들어갔는지. `weekStart`를 가짐 | 매주 |
+
+**리셋은 크론이나 배치 삭제가 아니다.** 조회할 때 현재 주차의 배정만 읽으므로 새 주차가
+시작되면 자동으로 빈 편성이 된다. 지난 주 기록은 남는다. 이 구조를 깨는 방향
+(예: 매주 Assignment를 DELETE하는 크론)으로 바꾸지 않는다.
+
+**주차 경계는 KST 수요일 06:00**이다. `src/lib/week.ts`의 `getWeekStart()`가 유일한
+정답지이고 유닛 테스트가 붙어 있다. 이 정의를 다른 곳에서 다시 구현하지 않는다.
+
+### 리셋 예외는 두 단위
+
+| 단위 | 필드 | 용도 |
+|---|---|---|
+| 자리 | `Assignment.pinned` | 고정 6명 + 유동 2자리 |
+| 레이드 | `RaidSlot.keepRoster` | 슬롯 전체가 고정 공대 |
+
+승계 규칙: **새 주차 첫 조회 시, 직전 주차 배정 중 `slot.keepRoster`가 켜져 있거나
+`pinned`가 켜진 자리를 복사한다.** lazy carry-over이며 unique 제약 덕분에 중복 실행에
+안전하다.
+
+---
+
+## 3. 규칙
+
+### 3.1 절대 커밋 금지
+
+```
+.env, .env.local
+/src/generated
+/.probe
+node_modules/
+```
+
+- **로아 API 키(`LOSTARK_API_KEY`)를 코드·주석·문서·테스트 픽스처 어디에도 하드코딩하지
+  않는다.** 예시는 `YOUR_LOSTARK_JWT_HERE` 같은 플레이스홀더로
+- **`NEXT_PUBLIC_` 접두사를 API 키에 붙이지 않는다.** 붙는 순간 브라우저 번들로 새어
+  나간다. 로아 공식 문서도 서버 보관을 권장한다
+- 키는 `src/lib/lostark.ts`를 통해서만 읽는다. 이 파일은 브라우저 실행을 런타임 가드로 막는다
+- 실수로 커밋된 키는 코드 수정으로 해결되지 않는다. 히스토리에 남으므로 **개발자 포털에서
+  클라이언트를 삭제하고 재발급**해야 한다. 발견 시 즉시 사용자에게 알린다
+
+### 3.2 로아 API 사용
+
+- **분당 100회.** 클라이언트당 제한이다. `src/lib/lostark.ts`의 큐가 직렬화하고 429를
+  백오프로 재시도한다. 이 래퍼를 우회해 `fetch`를 직접 부르지 않는다
+- **캐릭터 하나당 요청 1회.** `?filters=profiles+engravings+arkgrid`로 묶어서 받는다.
+  세 엔드포인트를 따로 부르면 한도가 3배로 준다
+- 응답 수치는 `"1,770.83"`처럼 **천 단위 쉼표가 붙은 문자열**로 온다.
+  반드시 `parseNumeric()`을 거친다. `Number()`를 직접 쓰면 `NaN`이 된다
+- 조회 실패는 `Character.syncError`에 남기고 **기존 스펙 값은 지우지 않는다.**
+  시트의 `#REF!`처럼 조용히 비는 상황을 다시 만들지 않는다
+
+### 3.3 응답 구조 (2026-09-04 실측 확정)
+
+추측이 아니라 `npm run probe`로 확인한 값이다. 게임 개편으로 바뀌면 프로브부터 다시 돌린다.
+
+| 항목 | 실제 위치 | 비고 |
+|---|---|---|
+| 템레벨 | `ArmoryProfile.ItemAvgLevel` | **`ItemMaxLevel`은 더 이상 오지 않는다** |
+| 전투력 | `ArmoryProfile.CombatPower` | `"5,043.42"` 문자열. 존재 확인됨 |
+| 이미지 | `ArmoryProfile.CharacterImage` | `cdn-lostark.game.onstove.com` |
+| **직업 각인** | `ArkPassive.Effects`의 **깨달음 1티어** | 아래 설명 참조 |
+| 전투 각인 | `ArmoryEngraving.ArkPassiveEffects` | 원한·예리한 둔기 등. **직업 각인이 아니다** |
+| 아크그리드 | `ArkGrid.Slots` (코어 6), `ArkGrid.Effects` | 질서/혼돈 × 해/달/별 |
+| 원정대 | `/characters/{name}/siblings` | 여기도 `ItemAvgLevel`뿐 |
+
+**직업 각인은 아크패시브에 있다.** API 이름이 헷갈리게 지어져 있어 주의한다.
+`ArmoryEngraving.ArkPassiveEffects`는 이름과 달리 **전투 각인** 목록이고,
+직업 각인은 `ArkPassive.Effects` 중 깨달음 트리의 1티어 노드다.
+
+`Description`이 태그가 섞인 고정 형식이라 파싱해서 쓴다.
+
+```
+<FONT color='#83E9FF'>깨달음</FONT> 1티어 <FONT color='#83E9FF'>수라의 길 Lv.1</FONT>
+→ 태그 제거 → "깨달음 1티어 수라의 길 Lv.1" → { category, tier, name, level }
+```
+
+브레이커·도화가·소서리스·데빌헌터 4개 클래스로 확인했다.
+조회는 `?filters=profiles+engravings+arkgrid+arkpassive`로 **여전히 요청 1회**다.
+
+**툴팁은 저장하지 않는다.** 아크그리드 응답 87KB 중 대부분이 코어·젬의 Tooltip 문자열이고,
+걷어내면 1KB 미만이 된다. 게임 내 표시용 마크업이라 이 앱이 쓸 일이 없다.
+정규화는 `src/lib/armory.ts`가 전담하며 유닛 테스트가 붙어 있다.
+
+### 3.4 경고는 차단하지 않는다
+
+템레벨 미달, 중복 참여, 서폿 자리의 딜러 클래스는 **경고만 띄우고 배치는 허용한다.**
+시트도 강제하지 않았고 예외 상황이 늘 있다. 검증을 하드 블로킹으로 바꾸지 않는다.
+
+### 3.5 커밋과 푸시 — 물어보지 않고 진행한다
+
+**작업 하나가 끝나면 커밋과 푸시까지 마치는 것이 기본이다.** 별도 요청이나 확인을 기다리지
+않는다. 사용자가 "커밋하지 마"라고 말한 경우에만 멈춘다.
+
+**작업 하나**의 기준은 "지금 하던 것이 동작하는 상태"다. 로드맵 항목 하나, 버그 수정 하나,
+리팩터 하나. 여러 관심사를 한 커밋에 섞지 않는다.
+
+푸시 대상은 `origin main`이다. 1인 개발이라 브랜치를 따로 파지 않는다.
+
+#### 커밋 전 체크
+
+1. `git status`로 **3.1의 금지 목록이 스테이징되지 않았는지 확인한다.**
+   `.env*`, `/src/generated`, `/.probe`, `node_modules/`
+2. `git diff --staged`로 API 키·DB 접속 문자열이 섞여 들어가지 않았는지 본다
+3. 테스트가 있는 영역을 건드렸으면 `npm test`. 특히 `src/lib/week.ts`는 필수(섹션 8)
+4. **깨진 상태로 푸시하지 않는다.** 테스트나 타입 체크가 실패하면 고치고 커밋한다.
+   단, 새 라우트 직후의 `tsc --noEmit` 실패는 6-1의 알려진 현상이니 빌드를 먼저 돌린다
+5. `git commit --no-verify`로 훅을 건너뛰지 않는다. 훅이 막으면 원인을 고친다
+
+`AGENTS.md`의 `nextjs-agent-rules` 블록은 `next dev`가 다시 써넣는다.
+지워봐야 되살아나므로 변경분이 생겼으면 함께 커밋한다.
+
+#### 메시지 형식
+
+Conventional Commits 접두사 + **한국어 제목**. 제목은 50자 안쪽, 마침표 없이.
+
+```
+feat: 고정 요일표 CRUD 추가
+
+요일·시간·레이드·공대장을 편집할 수 있게 했다.
+Assignment는 건드리지 않으므로 주간 리셋 구조에 영향이 없다.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+```
+
+| 접두사 | 쓰는 경우 |
+|---|---|
+| `feat` | 기능 추가 |
+| `fix` | 버그 수정 |
+| `refactor` | 동작 그대로 구조만 변경 |
+| `chore` | 의존성·설정·스크립트 |
+| `docs` | 문서. CLAUDE.md 갱신 포함 |
+| `test` | 테스트만 |
+
+본문에는 **무엇을 했는지가 아니라 왜 그렇게 했는지**를 적는다. 무엇을 했는지는 diff에 있다.
+자명한 변경이면 본문 없이 제목만으로 끝낸다.
+
+---
+
+## 4. 인증 — 의도적으로 없다
+
+1단계는 **로그인이 없다.** 링크를 아는 사람은 누구나 편집한다. 기존 시트와 같은 방식이고
+사용자가 명시적으로 선택한 구조다.
+
+- 편집자 식별은 `localStorage`의 "내 이름"뿐이다. `Assignment.createdByLabel`과
+  `ChangeLog.actorLabel`에 기록된다
+- 남의 신청을 지울 수 있다는 점은 구조적으로 남는다. `ChangeLog`와 확인 모달로 완화할 뿐
+  막지 못한다. **이걸 개인 계정 로그인으로 "해결"하려 들지 않는다**
+- 2단계는 **인스턴스 입장 암호**다. `Instance.passwordHash`가 있으면 입장 시 암호를 묻고,
+  통과하면 서명 쿠키를 굽는다. **입장 후에는 여전히 누구나 편집한다.** 개인 계정이 아니다
+
+---
+
+## 5. 현재 상태 (2026-09-04 기준)
+
+### 확정된 것
+
+| 항목 | 값 |
+|---|---|
+| 스택 | Next.js 16 (App Router) + React 19 + Tailwind 4 |
+| DB | Postgres. Prisma 7 + `@prisma/adapter-pg` |
+| 배포 | Vercel + Neon (예정) |
+| 지역 | **둘 다 싱가포르.** Neon `aws-ap-southeast-1`, Vercel `sin1` |
+| 테스트 | vitest |
+
+**지역을 싱가포르로 고정한 이유**: 페이지 렌더링마다 DB 쿼리가 여러 번 순차로 나가므로
+함수와 DB가 같은 지역에 있어야 한다. Neon은 한국·일본에 지역이 없어 싱가포르가 최선이고,
+서울(`icn1`)에 함수를 두면 쿼리마다 태평양을 왕복해 오히려 느려진다.
+Vercel 지역은 `vercel.json`에 박아뒀다. **Neon은 생성 후 지역 변경이 불가능하다.**
+
+### 완료
+
+- 저장소 정리(Gmail 코드 전부 삭제) 및 Next.js 스캐폴드
+- `prisma/schema.prisma` — 전체 데이터 모델
+- `src/lib/week.ts` — 주차 계산 + 유닛 테스트 14개
+- `src/lib/synergy.ts` — 29개 클래스 시너지·역할 매핑
+- `src/lib/lostark.ts` — API 클라이언트 (레이트리밋, 429 백오프)
+- `src/lib/positions.ts`, `src/lib/raids.ts`, `prisma/seed.mts`
+- `src/lib/armory.ts` — API 응답 정규화 (직업 각인·전투 각인·아크그리드·템레벨·전투력)
+- **로아 API 연동 실동작 확인.** 실제 캐릭터로 조회·정규화까지 통과했다
+- **캐릭터 관리 화면.** 단일 등록, 원정대 조회 후 선택 등록, 갱신, 역할 전환, 삭제.
+  API→정규화→DB→화면 전 경로를 실제 캐릭터로 확인했다
+- **Neon DB 연결 완료** (싱가포르). 스키마 반영과 시드 실행까지 확인했다.
+  기본 인스턴스 slug는 `main`이다
+
+### 환경
+
+`.env.local`에 `DATABASE_URL`(풀링), `DATABASE_URL_UNPOOLED`(직결), `LOSTARK_API_KEY`,
+`INSTANCE_SESSION_SECRET`이 모두 채워져 있고 동작을 확인했다.
+
+---
+
+## 6. Prisma 7 주의사항
+
+버전이 올라가며 바뀐 것들이라 옛 문서를 따라가면 막힌다.
+
+- **접속 URL이 `schema.prisma`에 없다.** `prisma.config.ts`가 갖는다
+- **`.env`를 자동으로 읽지 않는다.** `prisma.config.ts`가 `process.loadEnvFile()`로 직접 읽는다
+- **런타임은 드라이버 어댑터로 접속한다.** `src/lib/prisma.ts`의 `PrismaPg`
+- **Neon 접속 문자열은 두 개다.** 앱 런타임은 풀링(`DATABASE_URL`, 호스트에 `-pooler`),
+  Prisma CLI의 스키마 작업은 직결(`DATABASE_URL_UNPOOLED`)을 쓴다. 풀러(PgBouncer)로는
+  마이그레이션이 통과하지 못한다. 둘을 섞지 않는다
+- 생성된 클라이언트는 `src/generated/prisma`에 나온다. 커밋하지 않으므로 클론 후
+  `npm run db:generate`가 필요하다
+- 생성 파일이 확장자 없이 import하면 node가 해석하지 못해 `prisma/seed.mts`가 깨진다.
+  그래서 `importFileExtension = "ts"`를 켜뒀다. 이 옵션을 지우지 않는다
+
+---
+
+## 6-1. Next 16 주의사항
+
+`AGENTS.md`가 가리키는 `node_modules/next/dist/docs/`가 이 버전의 정답지다.
+훈련 데이터와 다른 부분이 있어 코드 쓰기 전에 확인한다.
+
+- `params`와 `searchParams`는 **Promise**다. `const { slug } = await params`
+- 페이지·레이아웃 props는 생성 타입 `PageProps<"/i/[slug]">`, `LayoutProps<"/i/[slug]">`를 쓴다.
+  이 타입은 `next build`나 `next dev`가 만들므로, **새 라우트를 추가한 직후의
+  `tsc --noEmit`은 실패한다.** 빌드를 한 번 돌린 뒤 다시 확인한다
+- Turbopack이 기본이다. `--turbopack` 플래그가 필요 없다
+- `middleware`는 `proxy`로 대체됐다. 인스턴스 암호 게이트를 만들 때 확인한다
+- `export const dynamic = "force-dynamic"`은 아직 유효하다(Cache Components를 켜면 제거된다).
+  Prisma로 DB를 읽는 페이지에 붙여 빌드 시점 프리렌더를 막는다
+- **`_`로 시작하는 폴더는 라우팅에서 제외된다**(private folder). `app/api/_foo/route.ts`는 404다
+
+## 7. 로드맵
+
+```
+[x] 저장소 정리 + Next.js 스캐폴드
+[x] 스키마, 주차 계산, 시너지 표, API 클라이언트
+[x] DB 마이그레이션 + 시드 (Neon 싱가포르)
+[x] 로아 API 프로브 → 각인·아크그리드 구조 확정 + 정규화
+[x] 캐릭터 관리 (등록, 원정대 선택 등록, 동기화, Member 묶기)
+[ ] 고정 요일표 CRUD   ← 여기부터
+[ ] 주간 배정 + ChangeLog
+[ ] 리셋 예외 (자리 핀, 레이드 토글, 고정 현황 화면)
+[ ] 경고와 시너지 요약
+[ ] 인스턴스 암호 게이트
+[ ] Vercel 배포
+```
+
+---
+
+## 8. 작업 시 유의
+
+- 커밋과 푸시는 3.5를 따른다. 요청을 기다리지 않고, 커밋 전 `git status`로 `.env.local`을 확인한다
+- `scripts/*.mts`는 node가 **타입만 벗겨서** 실행한다. 변환이 필요한 문법을 쓸 수 없다.
+  파라미터 프로퍼티(`constructor(readonly x: T)`)와 enum이 대표적이다.
+  또 이 스크립트가 닿는 모듈은 확장자 없는 런타임 import를 하면 안 된다
+  (`import type`은 지워지므로 괜찮다)
+- `src/lib/week.ts`를 고치면 반드시 `npm test`를 돌린다. 주차 경계는 눈으로 검증이 어렵다
+- 사용자에게 터미널 출력 공유를 요청할 때 **API 키를 지우고 붙여넣도록 안내**한다
+- 칸에 보여줄 각인은 **직업 각인**이다(`Character.classEngraving`). 전투 각인은 상세
+  팝오버로 민다. 사용자가 명시적으로 요구한 구분이다
+- 편성 칸 배경에 캐릭터 이미지를 깐다. **가독성이 우선이다.** 스크림으로 대비를 보장하고
+  `text-shadow`로 때우지 않는다. 이미지가 없으면 클래스 색 단색으로 대체한다
+- 이 문서와 실제 상태가 어긋나면 문서를 갱신한다. 특히 섹션 5와 7

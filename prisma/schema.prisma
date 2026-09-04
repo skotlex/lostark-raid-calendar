@@ -1,0 +1,168 @@
+// 로스트아크 길드 레이드 편성표
+//
+// 핵심 구조: 슬롯 정의(RaidSlot)와 인원 배정(Assignment)을 분리한다.
+// 슬롯은 고정 요일표라 영속적이고, 배정은 weekStart를 가져 매주 리셋된다.
+// 리셋은 삭제가 아니라 "현재 주차 배정만 조회"하는 방식이라 과거 기록이 남는다.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  // 생성된 파일끼리 확장자 없이 import하면 node가 해석하지 못한다.
+  // prisma/seed.mts처럼 node로 직접 돌리는 스크립트를 위해 확장자를 붙인다.
+  importFileExtension = "ts"
+}
+
+// Prisma 7부터 접속 URL은 스키마가 아니라 prisma.config.ts에서 읽는다.
+// 런타임 접속은 PrismaClient에 넘기는 드라이버 어댑터가 담당한다(src/lib/prisma.ts).
+datasource db {
+  provider = "postgresql"
+}
+
+/// 길드 하나 = 인스턴스 하나. 1단계는 기본 인스턴스 1개만 쓴다.
+model Instance {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  name         String
+  /// null이면 누구나 입장. 값이 있으면 입장 시 암호를 요구한다(2단계).
+  passwordHash String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  members    Member[]
+  characters Character[]
+  slots      RaidSlot[]
+  changeLogs ChangeLog[]
+}
+
+/// 한 사람. 부캐 여럿이 동일인임을 표현해 중복 참여 경고에 쓴다.
+model Member {
+  id         String   @id @default(cuid())
+  instanceId String
+  /// 원정대명 또는 디코 닉 등 사람을 가리키는 이름
+  label      String
+  createdAt  DateTime @default(now())
+
+  instance   Instance    @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  characters Character[]
+
+  @@unique([instanceId, label])
+  @@index([instanceId])
+}
+
+model Character {
+  id          String  @id @default(cuid())
+  instanceId  String
+  memberId    String?
+  /// 로스트아크 캐릭터 닉네임. API 조회 키다.
+  name        String
+
+  // --- 로아 OpenAPI에서 받아오는 값 ---
+  className   String?
+  itemLevel   Decimal? @db.Decimal(7, 2)
+  combatPower Decimal? @db.Decimal(10, 2)
+  serverName  String?
+  /// CharacterImage. 편성 칸 배경으로 쓴다. null일 수 있다.
+  imageUrl    String?
+  /// 직업 각인. "수라의 길 Lv.1". 아크패시브 깨달음 1티어에서 뽑는다.
+  /// 칸에 클래스와 나란히 보여줄 값이라 따로 꺼내 둔다.
+  classEngraving String?
+  /// 아크패시브 전체(진화·깨달음·도약 노드와 포인트). 툴팁은 제외한다.
+  arkPassive  Json?
+  /// 전투 각인(원한, 예리한 둔기 …). 직업 각인이 아니다.
+  engravings  Json?
+  /// 아크그리드 코어와 효과. 툴팁은 제외한다.
+  arkGrid     Json?
+
+  /// 클래스로 자동 판정하되 수동 override를 허용한다(딜 발키리 등).
+  role        Role     @default(DPS)
+  roleLocked  Boolean  @default(false)
+
+  syncedAt    DateTime?
+  /// 조회 실패 사유. 값이 있어도 기존 스펙은 지우지 않는다.
+  syncError   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  instance    Instance     @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  member      Member?      @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  assignments Assignment[]
+
+  @@unique([instanceId, name])
+  @@index([instanceId])
+  @@index([memberId])
+}
+
+/// 고정 요일표의 한 칸. 주차 개념이 없다.
+model RaidSlot {
+  id           String   @id @default(cuid())
+  instanceId   String
+  /// 0=일 … 6=토
+  dayOfWeek    Int
+  /// "20:00" 형식의 KST 시각
+  startTime    String
+  raidName     String
+  difficulty   String?
+  /// "1공대" 같은 표시용 라벨
+  partyLabel   String?
+  leaderName   String?
+  /// 경고에만 쓴다. 미달이어도 배치는 막지 않는다.
+  minItemLevel Decimal? @db.Decimal(7, 2)
+  note         String?
+  /// 켜면 이 슬롯 전원이 매주 승계된다(레이드 단위 리셋 제외).
+  keepRoster   Boolean  @default(false)
+  waitSlots    Int      @default(2)
+  sortOrder    Int      @default(0)
+  /// 삭제 대신 보관. 과거 주차 기록이 사라지지 않게 한다.
+  archivedAt   DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  instance    Instance     @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  assignments Assignment[]
+
+  @@index([instanceId, dayOfWeek])
+}
+
+model Assignment {
+  id             String   @id @default(cuid())
+  slotId         String
+  /// 수요일 06:00 KST 기준 주차 시작 시각(UTC 저장)
+  weekStart      DateTime
+  /// DPS1..DPS6 | SUP1..SUP2 | WAIT1..WAIT2
+  position       String
+  characterId    String
+  /// 켜면 이 자리만 매주 승계된다(자리 단위 리셋 제외).
+  pinned         Boolean  @default(false)
+  note           String?
+  /// 로그인이 없으므로 localStorage에 저장된 "내 이름"을 남긴다.
+  createdByLabel String?
+  createdAt      DateTime @default(now())
+
+  slot      RaidSlot  @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@unique([slotId, weekStart, position])
+  @@index([weekStart])
+  @@index([characterId])
+}
+
+/// 로그인이 없어 누구나 남의 신청을 지울 수 있다. 추적 수단이 이것뿐이다.
+model ChangeLog {
+  id         String   @id @default(cuid())
+  instanceId String
+  weekStart  DateTime?
+  slotId     String?
+  actorLabel String?
+  action     String
+  detail     Json?
+  createdAt  DateTime @default(now())
+
+  instance Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([instanceId, createdAt])
+}
+
+enum Role {
+  DPS
+  SUPPORT
+}

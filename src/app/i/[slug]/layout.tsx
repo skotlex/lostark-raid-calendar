@@ -1,0 +1,49 @@
+import Link from "next/link";
+
+import { requireInstance } from "@/lib/instance";
+
+import { MyNameField } from "./MyNameField";
+
+// Prisma로 DB를 읽으므로 빌드 시점에 미리 굽지 않는다.
+export const dynamic = "force-dynamic";
+
+export default async function InstanceLayout({ children, params }: LayoutProps<"/i/[slug]">) {
+  const { slug } = await params;
+  const instance = await requireInstance(slug);
+
+  const tabs = [
+    { href: `/i/${slug}`, label: "편성표" },
+    { href: `/i/${slug}/characters`, label: "캐릭터" },
+    { href: `/i/${slug}/slots`, label: "요일표 편집" },
+  ];
+
+  return (
+    <div className="flex min-h-full flex-col">
+      <header className="border-b border-border bg-surface">
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3">
+          <Link href={`/i/${slug}`} className="text-lg font-bold text-accent">
+            {instance.name}
+          </Link>
+
+          <nav className="flex gap-1">
+            {tabs.map((tab) => (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                className="rounded px-3 py-1.5 text-sm text-text-dim transition-colors hover:bg-surface-2 hover:text-text"
+              >
+                {tab.label}
+              </Link>
+            ))}
+          </nav>
+
+          <div className="ml-auto">
+            <MyNameField />
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
+    </div>
+  );
+}
