@@ -7,10 +7,10 @@ import {
   parseArkPassiveNode,
   stripTags,
   summarizeArkGrid,
-  summarizeClassEngraving,
   summarizeEngravings,
   toCharacterSpec,
 } from "./armory";
+import { pickClassEngraving } from "./classEngravings";
 import type { ArmoryResponse } from "./lostark";
 
 /**
@@ -87,7 +87,19 @@ const SAMPLE: ArmoryResponse = {
         Name: "질서의 해 코어 : 그림자 주먹",
         Point: 17,
         Grade: "유물",
-        Tooltip: "{거대한 JSON 문자열}",
+        Tooltip: JSON.stringify({
+          Element_005: {
+            type: "ItemPartBox",
+            value: { Element_000: "코어 옵션", Element_001: "[10P] 가 [14P] 나 [17P] 다" },
+          },
+          Element_006: {
+            type: "ItemPartBox",
+            value: {
+              Element_000: "코어 옵션 발동 조건",
+              Element_001: "수라의 길 전용아크 패시브 4티어 무아지경 활성화 필요",
+            },
+          },
+        }),
         Gems: [
           { Index: 0, Icon: null, IsActive: true, Grade: "유물", Tooltip: "{큰 문자열}" },
           { Index: 1, Icon: null, IsActive: false, Grade: "영웅" },
@@ -156,18 +168,33 @@ describe("normalizeArkGrid", () => {
       name: "질서의 해 코어 : 그림자 주먹",
       grade: "유물",
       point: 17,
+      stage: 3,
       gemCount: 2,
       inactiveGemCount: 1,
     });
     // 툴팁이 어디에도 남지 않아야 한다. 87KB가 4KB로 줄어드는 근거다.
-    expect(JSON.stringify(result)).not.toContain("거대한 JSON");
+    // 툴팁 원문이 저장 결과에 남으면 안 된다. 87KB가 1KB 미만으로 줄어드는 근거다.
+    expect(JSON.stringify(result)).not.toContain("무아지경 활성화 필요");
     expect(JSON.stringify(result)).not.toContain("큰 문자열");
   });
 
-  it("총 포인트와 등급 구성을 계산한다", () => {
+  it("총 포인트와 코어 단계를 계산한다", () => {
     const result = normalizeArkGrid(SAMPLE.ArkGrid);
     expect(result?.totalPoint).toBe(37);
-    expect(result?.gradeCounts).toEqual({ 유물: 1, 고대: 1 });
+    // 임계값 10/14/17 기준: 17p → 3단계, 20p → 3단계
+    expect(result?.cores.map((c) => c.stage)).toEqual([3, 3]);
+  });
+
+  it("임계값에 못 미치면 단계가 낮아진다", () => {
+    const result = normalizeArkGrid({
+      Slots: [
+        { Index: 0, Icon: null, Name: "질서의 해 코어 : 시험", Point: 9, Grade: "영웅", Gems: [] },
+        { Index: 1, Icon: null, Name: "질서의 달 코어 : 시험", Point: 10, Grade: "영웅", Gems: [] },
+        { Index: 2, Icon: null, Name: "질서의 별 코어 : 시험", Point: 14, Grade: "영웅", Gems: [] },
+      ],
+      Effects: [],
+    });
+    expect(result?.cores.map((c) => c.stage)).toEqual([0, 1, 2]);
   });
 
   it("효과의 색상 태그를 벗긴다", () => {
@@ -175,9 +202,9 @@ describe("normalizeArkGrid", () => {
     expect(result?.effects[0]).toEqual({ name: "공격력", level: 28, text: "공격력 +1.02%" });
   });
 
-  it("요약은 고대를 앞에 놓는다", () => {
+  it("요약은 질서·혼돈별 코어 단계를 보여준다", () => {
     const data = normalizeArkGrid(SAMPLE.ArkGrid);
-    expect(summarizeArkGrid(data)).toBe("37p 고대1·유물1");
+    expect(summarizeArkGrid(data)).toBe("질서 3 · 혼돈 3");
   });
 
   it("아크그리드를 안 낀 캐릭터는 null이다", () => {
@@ -222,18 +249,7 @@ describe("toCharacterSpec", () => {
   });
 });
 
-describe("normalizeArkPassive — 직업 각인", () => {
-  it("깨달음 1티어를 직업 각인으로 뽑는다", () => {
-    const result = normalizeArkPassive(SAMPLE.ArkPassive);
-    expect(result?.classEngraving).toEqual({ name: "수라의 길", level: 1 });
-  });
-
-  it("칸에 붙일 요약을 만든다", () => {
-    const data = normalizeArkPassive(SAMPLE.ArkPassive);
-    expect(summarizeClassEngraving(data)).toBe("수라의 길 Lv.1");
-    expect(summarizeClassEngraving(null)).toBeNull();
-  });
-
+describe("normalizeArkPassive", () => {
   it("모든 노드를 카테고리·티어·레벨로 쪼갠다", () => {
     const result = normalizeArkPassive(SAMPLE.ArkPassive);
     expect(result?.nodes).toHaveLength(3);
@@ -260,24 +276,47 @@ describe("normalizeArkPassive — 직업 각인", () => {
     expect(parseArkPassiveNode(null)).toBeNull();
   });
 
-  it("깨달음 1티어가 없으면 직업 각인은 null이다", () => {
-    const result = normalizeArkPassive({
-      Title: null,
-      IsArkPassive: true,
-      Points: [],
-      Effects: [{ Name: "진화", Description: "진화 1티어 치명 Lv.30", Icon: null }],
-    });
-    expect(result?.classEngraving).toBeNull();
-    expect(result?.nodes).toHaveLength(1);
-  });
-
   it("아크패시브가 없으면 null이다", () => {
     expect(normalizeArkPassive(null)).toBeNull();
   });
 });
 
-describe("toCharacterSpec — 직업 각인 포함", () => {
-  it("직업 각인을 문자열로 담는다", () => {
-    expect(toCharacterSpec(SAMPLE)?.classEngraving).toBe("수라의 길 Lv.1");
+describe("아크그리드에서 직업 각인 읽기", () => {
+  it("코어 발동 조건 맨 앞이 직업 각인 이름이다", () => {
+    // API가 직업 각인을 알려주는 유일한 지점이다.
+    const result = normalizeArkGrid(SAMPLE.ArkGrid);
+    expect(result?.classEngraving).toBe("수라의 길");
+  });
+
+  it("조건 문구가 없으면 null이다", () => {
+    const result = normalizeArkGrid({
+      Slots: [{ Index: 0, Icon: null, Name: "질서의 해 코어", Point: 17, Grade: "유물", Gems: [] }],
+      Effects: [],
+    });
+    expect(result?.classEngraving).toBeNull();
+  });
+
+  it("아크그리드에서 읽은 값이 이름표보다 우선한다", () => {
+    // 브레이커는 이름표에도 있지만, 코어 조건이 있으면 그쪽을 쓴다.
+    expect(toCharacterSpec(SAMPLE)?.classEngraving).toBe("수라의 길");
+  });
+});
+
+describe("pickClassEngraving (아크그리드가 없을 때의 대비책)", () => {
+  it("티어와 무관하게 이름으로 찾는다", () => {
+    // 버서커는 깨달음 4티어에 있다.
+    expect(
+      pickClassEngraving("버서커", ["강인한 육체", "신체 활성", "폭주 강화", "광전사의 비기"]),
+    ).toBe("광전사의 비기");
+  });
+
+  it("세부 갈래가 붙어도 앞부분만 쓴다", () => {
+    expect(pickClassEngraving("건슬링어", ["피스메이커 - 핸드건", "평화주의자"])).toBe(
+      "피스메이커",
+    );
+  });
+
+  it("표에 없는 직업이면 null이다 (엉뚱한 이름을 붙이지 않는다)", () => {
+    expect(pickClassEngraving("워로드", ["알 수 없는 노드"])).toBeNull();
   });
 });

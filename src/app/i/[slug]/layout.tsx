@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { requireInstance } from "@/lib/instance";
 
+import { ThemeToggle } from "../../ThemeToggle";
 import { MyNameField } from "./MyNameField";
 
 // Prisma로 DB를 읽으므로 빌드 시점에 미리 굽지 않는다.
@@ -13,8 +14,9 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
 
   const tabs = [
     { href: `/i/${slug}`, label: "편성표" },
-    { href: `/i/${slug}/characters`, label: "캐릭터" },
     { href: `/i/${slug}/slots`, label: "요일표 편집" },
+    // 편성은 칸에서 바로 하므로 여기는 정리용 화면이다. 그래서 뒤로 뺐다.
+    { href: `/i/${slug}/characters`, label: "캐릭터 관리" },
   ];
 
   return (
@@ -37,8 +39,9 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
             ))}
           </nav>
 
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-3">
             <MyNameField />
+            <ThemeToggle />
           </div>
         </div>
       </header>

@@ -10,7 +10,7 @@ import {
   previewSiblings,
   registerCharacter,
   registerCharacters,
-  setCharacterRole,
+  syncAllCharacters,
   syncCharacter,
 } from "@/lib/characters";
 import { findInstance } from "@/lib/instance";
@@ -154,25 +154,6 @@ export async function syncAction(_prev: RowState, formData: FormData): Promise<R
   }
 }
 
-export async function setRoleAction(_prev: RowState, formData: FormData): Promise<RowState> {
-  const slug = String(formData.get("slug") ?? "");
-  const id = String(formData.get("id") ?? "");
-  const role = String(formData.get("role") ?? "");
-
-  if (role !== "DPS" && role !== "SUPPORT") {
-    return { status: "error", message: "잘못된 역할이다" };
-  }
-
-  try {
-    const instanceId = await resolveInstanceId(slug);
-    await setCharacterRole(instanceId, id, role);
-    refresh(slug);
-    return { status: "ok", message: role === "DPS" ? "딜러로 지정됨" : "서폿으로 지정됨" };
-  } catch (error) {
-    return { status: "error", message: toMessage(error) };
-  }
-}
-
 export async function deleteAction(_prev: RowState, formData: FormData): Promise<RowState> {
   const slug = String(formData.get("slug") ?? "");
   const id = String(formData.get("id") ?? "");
@@ -184,5 +165,27 @@ export async function deleteAction(_prev: RowState, formData: FormData): Promise
     return { status: "ok", message: "삭제됨" };
   } catch (error) {
     return { status: "error", message: toMessage(error) };
+  }
+}
+
+/**
+ * 등록된 캐릭터를 전부 다시 조회한다.
+ * 정규화 형식이 바뀌었을 때(예: 아크그리드 단계 추가) 옛 데이터를 되살리는 수단이다.
+ */
+export async function syncAllAction(
+  _prev: ImportState,
+  formData: FormData,
+): Promise<ImportState> {
+  const slug = String(formData.get("slug") ?? "");
+  try {
+    const instanceId = await resolveInstanceId(slug);
+    const result = await syncAllCharacters(instanceId);
+    refresh(slug);
+
+    const parts = [`${result.added.length}개 갱신됨`];
+    if (result.failed.length > 0) parts.push(`${result.failed.length}개 실패`);
+    return { status: "ok", message: parts.join(" / "), result };
+  } catch (error) {
+    return { status: "error", message: toMessage(error), result: null };
   }
 }

@@ -100,6 +100,72 @@ export const TRACKED_KINDS: SynergyKind[] = [
   "백헤드",
 ];
 
+/**
+ * 딜/서폿을 모두 할 수 있는 직업.
+ *
+ * 나머지 직업은 클래스만 보면 역할이 정해진다.
+ */
+export const ROLE_VARIABLE_CLASSES = ["바드", "도화가", "발키리", "홀리나이트"];
+
+/**
+ * 직업 각인 → 역할.
+ *
+ * **각인이 가장 안정적인 신호다.** 진화 세팅은 솔플하려고 잠시 딜로 바꿔두는 일이
+ * 흔한데(각인은 폿인 채로), 각인은 그 캐릭터가 무엇으로 레이드를 가는지를 나타낸다.
+ *
+ * 역할이 갈리는 네 직업을 모두 담았다. 표에 없는 각인이면 진화 노드로 떨어진다.
+ */
+const ENGRAVING_ROLE: Record<string, Role> = {
+  // 도화가
+  만개: "SUPPORT",
+  회귀: "DPS",
+  // 바드
+  "절실한 구원": "SUPPORT",
+  "진실된 용맹": "DPS",
+  // 발키리
+  해방자: "SUPPORT",
+  "빛의 기사": "DPS",
+  // 홀리나이트
+  "축복의 오라": "SUPPORT",
+  심판자: "DPS",
+};
+
+/**
+ * 서폿 세팅을 가리키는 아크패시브 진화 노드.
+ *
+ * 서폿은 진화 2티어 `축복의 여신`, 3티어 `정열의 춤사위`를 찍는다.
+ * 딜 세팅은 같은 자리에 `끝없는 마나`, `무한한 마력` 같은 딜 노드를 찍는다.
+ *
+ * **각인보다 약한 근거다.** 솔플용으로 바꿔둔 캐릭터를 딜로 잘못 읽는다.
+ * 각인을 모르는 직업에서만 쓴다.
+ */
+const SUPPORT_NODES = ["축복의 여신", "정열의 춤사위"];
+
+/**
+ * 딜/서폿을 판정한다.
+ *
+ * 판정 순서:
+ *   1. 역할이 갈리지 않는 직업이면 클래스로 끝
+ *   2. 직업 각인이 표에 있으면 그것으로 (가장 안정적)
+ *   3. 아크패시브 진화 노드로 (솔플 세팅에 속을 수 있다)
+ *   4. 아무 정보도 없으면 클래스 기본값
+ */
+export function resolveRole(
+  className: string | null | undefined,
+  arkPassiveNodeNames: string[],
+  classEngraving?: string | null,
+): Role {
+  if (!className || !ROLE_VARIABLE_CLASSES.includes(className)) return inferRole(className);
+
+  const byEngraving = classEngraving ? ENGRAVING_ROLE[classEngraving] : undefined;
+  if (byEngraving) return byEngraving;
+
+  if (arkPassiveNodeNames.length > 0) {
+    return arkPassiveNodeNames.some((n) => SUPPORT_NODES.includes(n)) ? "SUPPORT" : "DPS";
+  }
+  return inferRole(className);
+}
+
 export function getClassInfo(className: string | null | undefined): ClassInfo | null {
   if (!className) return null;
   return CLASS_TABLE[className] ?? null;
@@ -113,38 +179,60 @@ export function inferRole(className: string | null | undefined): Role {
   return getClassInfo(className)?.role ?? "DPS";
 }
 
-export function getSynergies(className: string | null | undefined): Synergy[] {
-  return getClassInfo(className)?.synergies ?? [];
+/**
+ * 시너지 목록.
+ *
+ * 딜 세팅을 한 서폿 직업(딜 발키리 등)은 서폿 버프를 주지 않으므로 제외한다.
+ * 역할을 넘기지 않으면 클래스 기본값으로 본다.
+ */
+export function getSynergies(
+  className: string | null | undefined,
+  role?: Role,
+): Synergy[] {
+  const list = getClassInfo(className)?.synergies ?? [];
+  if (role === "DPS" && className && ROLE_VARIABLE_CLASSES.includes(className)) {
+    return list.filter((s) => s.kind !== "서폿");
+  }
+  return list;
 }
 
 /** 편성 칸에 한 줄로 찍을 문구. 워로드처럼 둘이면 쉼표로 잇는다. */
-export function synergyLabel(className: string | null | undefined): string {
-  const list = getSynergies(className);
+export function synergyLabel(className: string | null | undefined, role?: Role): string {
+  const list = getSynergies(className, role);
   return list.length > 0 ? list.map((s) => s.label).join(", ") : "-";
 }
 
-export interface CoverageEntry {
+export interface PartySynergy {
   kind: SynergyKind;
-  covered: boolean;
+  label: string;
+  /** 이 시너지를 주는 인원 수. 2 이상이면 겹친다 */
+  count: number;
 }
 
 /**
- * 파티에 배치된 클래스들로 시너지 커버리지를 계산한다.
- * 카드 하단에 "공증 없음" 같은 뱃지를 띄우는 근거다.
+ * 파티에 실제로 들어온 시너지를 종합한다.
+ *
+ * **시너지는 4인 파티 단위로 적용된다.** 8인 전체로 묶어 계산하면 실제 게임과 어긋난다.
+ * 없는 것을 나열하기보다 있는 것을 보여주는 편이 편성을 확인할 때 읽기 쉽다.
+ *
+ * 서폿 버프는 종류가 하나뿐이라 따로 세지 않고 같은 목록에 담는다.
  */
-export function synergyCoverage(classNames: (string | null | undefined)[]): CoverageEntry[] {
-  const present = new Set<SynergyKind>();
-  for (const name of classNames) {
-    for (const synergy of getSynergies(name)) {
-      present.add(synergy.kind);
+export function partySynergies(
+  members: { className: string | null | undefined; role?: Role }[],
+): PartySynergy[] {
+  const found = new Map<SynergyKind, PartySynergy>();
+
+  for (const member of members) {
+    for (const synergy of getSynergies(member.className, member.role)) {
+      const existing = found.get(synergy.kind);
+      if (existing) existing.count += 1;
+      else found.set(synergy.kind, { ...synergy, count: 1 });
     }
   }
-  return TRACKED_KINDS.map((kind) => ({ kind, covered: present.has(kind) }));
-}
 
-/** 커버리지 중 비어 있는 것만. 요약 뱃지는 없는 것만 보여주는 편이 눈에 띈다. */
-export function missingSynergies(classNames: (string | null | undefined)[]): SynergyKind[] {
-  return synergyCoverage(classNames)
-    .filter((entry) => !entry.covered)
-    .map((entry) => entry.kind);
+  // 표시 순서를 고정한다. 파티마다 순서가 달라지면 비교가 어렵다.
+  const order: SynergyKind[] = [...TRACKED_KINDS, "서폿"];
+  return [...found.values()].sort(
+    (a, b) => order.indexOf(a.kind) - order.indexOf(b.kind),
+  );
 }

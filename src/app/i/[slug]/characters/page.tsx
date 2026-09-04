@@ -3,6 +3,7 @@ import { requireInstance } from "@/lib/instance";
 
 import { CharacterCard } from "./CharacterCard";
 import { RegisterPanel } from "./RegisterPanel";
+import { SyncAllButton } from "./SyncAllButton";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,8 @@ export default async function CharactersPage({ params }: PageProps<"/i/[slug]/ch
       <div>
         <h1 className="text-xl font-bold">캐릭터</h1>
         <p className="mt-1 text-sm text-text-dim">
-          닉네임만 넣으면 클래스·템레벨·전투력·직업 각인·아크그리드를 로아 API에서 가져온다.
+          정리용 화면이다. 편성은 <strong>편성표의 칸에 닉네임을 바로 입력</strong>하면 되고,
+          여기서는 잘못 들어간 캐릭터 삭제, 딜/서폿 교정, 스펙 갱신, 부캐 묶기를 한다.
         </p>
       </div>
 
@@ -50,17 +52,18 @@ export default async function CharactersPage({ params }: PageProps<"/i/[slug]/ch
         <span>
           서폿 <strong className="text-support tabular">{supports}</strong>
         </span>
-        {failed > 0 && (
-          <span className="text-danger">조회 실패 {failed}</span>
-        )}
+        {failed > 0 && <span className="text-danger">조회 실패 {failed}</span>}
+        <div className="ml-auto">
+          <SyncAllButton slug={slug} count={characters.length} />
+        </div>
       </div>
 
       {characters.length === 0 ? (
         <div className="rounded border border-dashed border-border px-4 py-10 text-center text-sm text-text-dim">
-          아직 등록된 캐릭터가 없다. 위에서 닉네임을 넣어 시작한다.
+          아직 등록된 캐릭터가 없다.
           <br />
           <span className="text-text-faint">
-            원정대 불러오기를 쓰면 부캐까지 한 번에 고를 수 있다.
+            편성표 칸에 닉네임을 넣으면 자동으로 등록된다. 여기서 미리 넣어둘 수도 있다.
           </span>
         </div>
       ) : (

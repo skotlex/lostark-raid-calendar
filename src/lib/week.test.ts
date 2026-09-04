@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   addWeeks,
+  currentKstDay,
   formatWeekLabel,
   getWeekStart,
   isCurrentWeek,
+  parseDayParam,
   parseWeekParam,
   previousWeek,
   toWeekParam,
@@ -91,5 +93,21 @@ describe("URL 파라미터", () => {
 describe("formatWeekLabel", () => {
   it("수요일부터 화요일까지를 KST 날짜로 보여준다", () => {
     expect(formatWeekLabel(WEEK_2026_09_02)).toBe("2026-09-02(수) ~ 09-08(화)");
+  });
+});
+
+describe("요일 파라미터", () => {
+  it("KST 기준 요일을 돌려준다", () => {
+    // 2026-09-04 금요일 21:00 KST
+    expect(currentKstDay(kst("2026-09-04T21:00:00"))).toBe(5);
+    // UTC로는 아직 목요일인 시각도 KST에서는 금요일이다.
+    expect(currentKstDay(new Date("2026-09-04T02:00:00.000Z"))).toBe(5);
+  });
+
+  it("잘못된 값은 오늘로 떨어진다", () => {
+    expect(parseDayParam("3")).toBe(3);
+    expect(parseDayParam("9")).toBe(currentKstDay());
+    expect(parseDayParam("아무말")).toBe(currentKstDay());
+    expect(parseDayParam(null)).toBe(currentKstDay());
   });
 });

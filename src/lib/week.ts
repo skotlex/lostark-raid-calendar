@@ -65,6 +65,18 @@ export function formatWeekLabel(weekStart: Date): string {
 
 const DAY_NAMES = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
+/** 지금 KST 기준 요일(0=일 … 6=토). 편성표를 열면 오늘 탭이 먼저 보이게 한다. */
+export function currentKstDay(now: Date = new Date()): number {
+  return new Date(now.getTime() + KST_OFFSET_MS).getUTCDay();
+}
+
+/** `?day=` 파라미터를 요일 번호로. 잘못된 값이면 오늘로 떨어뜨린다. */
+export function parseDayParam(value: string | undefined | null): number {
+  if (value === null || value === undefined || value === "") return currentKstDay();
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 0 && n <= 6 ? n : currentKstDay();
+}
+
 /** 요일 이름. RaidSlot.dayOfWeek 표시에 쓴다. */
 export function dayName(dayOfWeek: number): string {
   return DAY_NAMES[dayOfWeek] ?? "?";

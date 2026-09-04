@@ -1,10 +1,62 @@
 @import "tailwindcss";
 
 /*
- * 어두운 바탕을 기본으로 잡았다. 레이드 편성은 대체로 밤에 보는 화면이고,
- * 캐릭터 초상(투명 배경 PNG)이 어두운 바탕에서 훨씬 또렷하게 읽힌다.
+ * 테마.
+ *
+ * 세 가지 상태를 다룬다.
+ *   1. 시스템 설정 따름 (기본) — data-theme 속성 없음, prefers-color-scheme로 결정
+ *   2. 라이트 고정 — <html data-theme="light">
+ *   3. 다크 고정  — <html data-theme="dark">
+ *
+ * 라이트를 :root에 완전히 정의하고, 다크는 토큰만 다시 덮는다.
+ * 어떤 색도 미디어 쿼리 안에서만 정의되지 않게 한다. 그래야 셋 중 어느 상태에서도
+ * 빠지는 값이 없다.
  */
 :root {
+  color-scheme: light;
+
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --surface-2: #eaeef3;
+  --border: #d7dee6;
+  --border-strong: #b4bfcc;
+  --text: #161c23;
+  --text-dim: #55606e;
+  --text-faint: #8590a0;
+  --accent: #9a6b12;
+  --accent-contrast: #ffffff;
+  --danger: #b83a3a;
+  --ok: #2b7d4a;
+  --dps: #a8502c;
+  --support: #2a6690;
+}
+
+/* 시스템이 다크일 때. 사용자가 라이트를 명시적으로 고르면 적용하지 않는다. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface-2: #1c2330;
+    --border: #2a3441;
+    --border-strong: #3d4a5c;
+    --text: #e6edf3;
+    --text-dim: #9aa7b4;
+    --text-faint: #6b7684;
+    --accent: #d9a441;
+    --accent-contrast: #0d1117;
+    --danger: #e06c6c;
+    --ok: #5fbf7f;
+    --dps: #d98b6a;
+    --support: #6aa9d9;
+  }
+}
+
+/* 사용자가 다크를 명시적으로 고른 경우. 시스템 설정을 이긴다. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
   --bg: #0d1117;
   --surface: #161b22;
   --surface-2: #1c2330;
@@ -14,7 +66,7 @@
   --text-dim: #9aa7b4;
   --text-faint: #6b7684;
   --accent: #d9a441;
-  --accent-dim: #8a6a2a;
+  --accent-contrast: #0d1117;
   --danger: #e06c6c;
   --ok: #5fbf7f;
   --dps: #d98b6a;
@@ -31,7 +83,7 @@
   --color-text-dim: var(--text-dim);
   --color-text-faint: var(--text-faint);
   --color-accent: var(--accent);
-  --color-accent-dim: var(--accent-dim);
+  --color-accent-contrast: var(--accent-contrast);
   --color-danger: var(--danger);
   --color-ok: var(--ok);
   --color-dps: var(--dps);

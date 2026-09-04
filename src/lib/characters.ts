@@ -3,10 +3,11 @@ import "server-only";
 import { Prisma } from "@/generated/prisma/client";
 
 import type { ArkGridData, ArkPassiveData, EngravingData } from "./armory";
-import { summarizeArkGrid, toCharacterSpec } from "./armory";
+import { type CharacterSpec, enlightenmentNames, summarizeArkGrid, toCharacterSpec } from "./armory";
+import { pickClassEngraving } from "./classEngravings";
 import { LostArkError, fetchArmory, fetchSiblings } from "./lostark";
 import { prisma } from "./prisma";
-import { inferRole } from "./synergy";
+import { resolveRole } from "./synergy";
 
 /** 이 시간이 지난 캐릭터만 다시 조회한다. 분당 100회 한도를 아끼기 위한 캐시다. */
 export const SYNC_TTL_MS = 6 * 60 * 60 * 1000;
@@ -147,6 +148,27 @@ async function resolveMemberId(
   return member.id;
 }
 
+/**
+ * 직업 각인은 아크그리드 코어의 발동 조건에서 나온다.
+ * 아크그리드를 아직 끼지 않은 캐릭터만 이름표로 보완한다.
+ */
+function specRole(spec: CharacterSpec) {
+  // 딜 발키리·딜 바드는 클래스만으로 가릴 수 없다.
+  // 직업 각인이 가장 안정적이고, 모르면 진화 노드로 떨어진다.
+  return resolveRole(
+    spec.className,
+    (spec.arkPassive?.nodes ?? []).map((n) => n.name),
+    resolveClassEngraving(spec),
+  );
+}
+
+function resolveClassEngraving(spec: CharacterSpec): string | null {
+  return (
+    spec.classEngraving ??
+    pickClassEngraving(spec.className, enlightenmentNames(spec.arkPassive))
+  );
+}
+
 export class CharacterError extends Error {
   constructor(message: string) {
     super(message);
@@ -186,7 +208,7 @@ export async function registerCharacter(
   const memberId = await resolveMemberId(instanceId, memberLabel);
   // 로아가 돌려준 정식 표기를 쓴다. 사용자가 대소문자를 다르게 쳐도 한 행으로 모인다.
   const canonicalName = armory?.ArmoryProfile?.CharacterName ?? name;
-  const role = inferRole(spec.className);
+  const role = specRole(spec);
 
   const spec_data = {
     className: spec.className,
@@ -194,7 +216,7 @@ export async function registerCharacter(
     combatPower: spec.combatPower,
     serverName: spec.serverName,
     imageUrl: spec.imageUrl,
-    classEngraving: spec.classEngraving,
+    classEngraving: resolveClassEngraving(spec),
     arkPassive: toJson(spec.arkPassive),
     engravings: toJson(spec.engravings),
     arkGrid: toJson(spec.arkGrid),
@@ -261,7 +283,7 @@ export async function syncCharacter(
     const spec = toCharacterSpec(await fetchArmory(existing.name));
     if (!spec) throw new LostArkError("캐릭터를 찾을 수 없다", 404, existing.name);
 
-    const role = inferRole(spec.className);
+    const role = specRole(spec);
     const row = await prisma.character.update({
       where: { id: characterId },
       data: {
@@ -270,14 +292,14 @@ export async function syncCharacter(
         combatPower: spec.combatPower,
         serverName: spec.serverName,
         imageUrl: spec.imageUrl,
-        classEngraving: spec.classEngraving,
+        classEngraving: resolveClassEngraving(spec),
         arkPassive: toJson(spec.arkPassive),
         engravings: toJson(spec.engravings),
         arkGrid: toJson(spec.arkGrid),
         syncedAt: new Date(),
         syncError: null,
-        // 수동으로 고정한 역할은 동기화가 덮어쓰지 않는다.
-        ...(existing.roleLocked ? {} : { role }),
+        // 아크패시브로 판정하므로 동기화가 항상 최신 세팅을 따라간다.
+        role,
       } satisfies Prisma.CharacterUncheckedUpdateInput,
       select: characterSelect,
     });
@@ -376,19 +398,26 @@ export async function registerCharacters(
   return result;
 }
 
-export async function setCharacterRole(
-  instanceId: string,
-  characterId: string,
-  role: "DPS" | "SUPPORT",
-): Promise<CharacterView> {
-  const row = await prisma.character.update({
-    // 다른 인스턴스의 캐릭터를 건드리지 못하게 instanceId를 함께 건다.
-    where: { id: characterId, instanceId },
-    // 수동으로 정하면 이후 동기화가 덮어쓰지 않는다.
-    data: { role, roleLocked: true },
-    select: characterSelect,
+/**
+ * 등록된 캐릭터를 전부 다시 조회한다.
+ *
+ * 스펙이 바뀐 것도 반영하지만, **정규화 형식이 바뀌었을 때 옛 데이터를 되살리는**
+ * 용도가 더 크다. 캐릭터마다 요청 1회가 나가고 큐가 직렬화한다.
+ */
+export async function syncAllCharacters(instanceId: string): Promise<BulkResult> {
+  const rows = await prisma.character.findMany({
+    where: { instanceId },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
   });
-  return toCharacterView(row);
+
+  const result: BulkResult = { added: [], failed: [] };
+  for (const row of rows) {
+    const character = await syncCharacter(instanceId, row.id, { force: true });
+    if (character.syncError) result.failed.push({ name: row.name, reason: character.syncError });
+    else result.added.push(character.name);
+  }
+  return result;
 }
 
 export async function deleteCharacter(instanceId: string, characterId: string): Promise<void> {

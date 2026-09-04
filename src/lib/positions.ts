@@ -1,51 +1,44 @@
 /**
- * 편성 자리 정의.
+ * 편성 자리.
  *
- * 8인 레이드 기준으로 딜러 6 + 서폿 2이고, 그 아래에 대기 자리를 둔다.
- * Assignment.position에 문자열로 저장하므로 여기가 유일한 정답지다.
+ * 8인 레이드는 **4인 파티 둘**로 구성된다. 시너지가 파티 단위로 적용되므로
+ * 화면도 데이터도 이 구조를 그대로 따른다.
+ *
+ *   1파티: 딜1 딜2 딜3 폿1
+ *   2파티: 딜4 딜5 딜6 폿2
  */
 
-export type PositionKind = "DPS" | "SUP" | "WAIT";
+export type PositionKind = "DPS" | "SUP";
 
-export const DPS_POSITIONS = ["DPS1", "DPS2", "DPS3", "DPS4", "DPS5", "DPS6"] as const;
-export const SUP_POSITIONS = ["SUP1", "SUP2"] as const;
+export const PARTY_1 = ["DPS1", "DPS2", "DPS3", "SUP1"] as const;
+export const PARTY_2 = ["DPS4", "DPS5", "DPS6", "SUP2"] as const;
 
-/** 파티 본진 8자리. 대기는 슬롯마다 개수가 달라 따로 만든다. */
-export const PARTY_POSITIONS = [...DPS_POSITIONS, ...SUP_POSITIONS];
+/** 파티 순서대로. 화면 배치와 저장 순서가 같다. */
+export const PARTIES: readonly (readonly string[])[] = [PARTY_1, PARTY_2];
 
-export function waitPositions(count: number): string[] {
-  return Array.from({ length: Math.max(0, count) }, (_, i) => `WAIT${i + 1}`);
-}
-
-/** 슬롯이 가지는 전체 자리. 대기 개수는 슬롯 설정을 따른다. */
-export function allPositions(waitSlots: number): string[] {
-  return [...PARTY_POSITIONS, ...waitPositions(waitSlots)];
-}
+export const ALL_POSITIONS: string[] = [...PARTY_1, ...PARTY_2];
 
 export function positionKind(position: string): PositionKind | null {
   if (position.startsWith("DPS")) return "DPS";
   if (position.startsWith("SUP")) return "SUP";
-  if (position.startsWith("WAIT")) return "WAIT";
   return null;
 }
 
-/** "DPS1" → "딜러 1". 화면 라벨. */
+/** "DPS1" → "딜 1", "SUP2" → "폿 2" */
 export function positionLabel(position: string): string {
   const kind = positionKind(position);
   const index = position.replace(/\D/g, "");
-  switch (kind) {
-    case "DPS":
-      return `딜러 ${index}`;
-    case "SUP":
-      return `서폿 ${index}`;
-    case "WAIT":
-      return `대기 ${index}`;
-    default:
-      return position;
-  }
+  if (kind === "DPS") return `딜 ${index}`;
+  if (kind === "SUP") return `폿 ${index}`;
+  return position;
+}
+
+/** 이 자리가 몇 번째 파티인가. 0-based. */
+export function partyIndexOf(position: string): number {
+  return PARTY_2.includes(position as (typeof PARTY_2)[number]) ? 1 : 0;
 }
 
 /** 유효한 자리 이름인지. API 입력 검증에 쓴다. */
-export function isValidPosition(position: string, waitSlots: number): boolean {
-  return allPositions(waitSlots).includes(position);
+export function isValidPosition(position: string): boolean {
+  return ALL_POSITIONS.includes(position);
 }
