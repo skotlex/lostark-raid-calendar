@@ -123,7 +123,11 @@ function Party({
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      {/*
+        카드가 초상까지 안고 있어 좁으면 숫자가 인물 위로 넘친다.
+        4열은 화면이 충분히 넓을 때(lg)만 쓰고, 그 아래는 2열·1열로 카드를 넓힌다.
+      */}
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {party.cells.map((cell) => (
           <Cell
             key={cell.position}

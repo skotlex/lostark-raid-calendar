@@ -6,7 +6,7 @@ import type { CellView } from "@/lib/board";
 import { positionLabel } from "@/lib/positions";
 
 import { readMyName } from "./MyNameField";
-import { Portrait } from "./Portrait";
+import { PortraitBleed } from "./Portrait";
 import { type CellState, assignAction, pinAction, unassignAction } from "./actions";
 
 const IDLE: CellState = { status: "idle", message: "" };
@@ -59,18 +59,18 @@ export function Cell({
   // --- 빈 칸 ---------------------------------------------------------------
   if (!character) {
     return (
-      <div className="flex min-h-24 flex-col rounded border border-dashed border-border p-2">
-        <div className="text-[11px] text-text-faint">{positionLabel(cell.position)}</div>
+      <div className="char-card char-card--empty flex min-h-[6.5rem] flex-col p-2">
+        <div className="char-label">{positionLabel(cell.position)}</div>
 
         {!editable ? (
-          <div className="mt-1 text-xs text-text-faint">비어 있음</div>
+          <div className="char-faint mt-1 text-xs">비어 있음</div>
         ) : editing ? (
           <form
             action={(formData) => {
               formData.set("actorLabel", readMyName());
               assign(formData);
             }}
-            className="mt-1"
+            className="mt-2"
           >
             {hidden}
             <input
@@ -87,114 +87,144 @@ export function Cell({
               onKeyDown={(e) => {
                 if (e.key === "Escape") setEditing(false);
               }}
-              className="w-full rounded border border-border bg-bg px-1.5 py-1 text-xs focus:border-accent focus:outline-none"
+              className="char-input"
             />
-            {assigning && <div className="mt-1 text-[11px] text-text-faint">조회 중…</div>}
+            {assigning && <div className="char-faint mt-1 text-[11px]">조회 중…</div>}
           </form>
         ) : (
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="mt-1 flex-1 rounded text-xs text-text-faint transition-colors hover:bg-surface-2 hover:text-text"
+            className="char-faint mt-1 flex-1 rounded text-xs transition-colors hover:bg-white/5 hover:text-[color:var(--c-text)]"
           >
             + 닉네임 입력
           </button>
         )}
 
-        {error && <p className="mt-1 text-[11px] text-danger">{error.message}</p>}
+        {error && <p className="char-danger mt-1 text-[11px]">{error.message}</p>}
       </div>
     );
   }
 
   // --- 채워진 칸 -----------------------------------------------------------
+  //
+  // 전적 사이트의 캐릭터 카드 형태다. 초상이 오른쪽 끝에 걸쳐 배경으로 깔리고,
+  // 글자는 그 위 왼쪽에 쌓인다. 카드는 라이트/다크 어느 쪽에서도 어둡다(globals.css 참조).
   return (
-    <div className="min-h-24 rounded border border-border bg-surface p-2">
-      <div className="flex items-center gap-1">
-        <span className="text-[11px] text-text-faint">{positionLabel(cell.position)}</span>
-        {cell.pinned && (
-          <span className="text-[11px] text-accent" title="이 자리는 수요일 리셋에 남는다">
-            고정
-          </span>
-        )}
-        {editable && (
-          <div className="ml-auto flex items-center gap-0.5">
-            <form action={pin}>
-              {hidden}
-              <input type="hidden" name="pinned" value={cell.pinned ? "false" : "true"} />
-              <button
-                type="submit"
-                disabled={busy}
-                title={cell.pinned ? "고정 해제" : "이 자리 고정 (리셋에서 제외)"}
-                aria-label={cell.pinned ? "고정 해제" : "자리 고정"}
-                className={`rounded px-1 text-xs transition-colors disabled:opacity-50 ${
-                  cell.pinned ? "text-accent" : "text-text-faint hover:text-text"
-                }`}
-              >
-                📌
-              </button>
-            </form>
-            <form
-              action={(formData) => {
-                formData.set("actorLabel", readMyName());
-                remove(formData);
-              }}
-              onSubmit={(e) => {
-                const mine = readMyName();
-                // 남이 넣은 신청을 지울 때만 한 번 확인한다.
-                if (cell.createdByLabel && cell.createdByLabel !== mine) {
-                  if (!confirm(`${cell.createdByLabel}님이 넣은 ${character.name}을(를) 뺀다.`)) {
-                    e.preventDefault();
-                  }
-                }
-              }}
-            >
-              {hidden}
-              <button
-                type="submit"
-                disabled={busy}
-                title="자리 비우기"
-                aria-label="자리 비우기"
-                className="rounded px-1 text-xs text-text-faint transition-colors hover:text-danger disabled:opacity-50"
-              >
-                ✕
-              </button>
-            </form>
-          </div>
-        )}
-      </div>
+    <div className="char-card min-h-[6.5rem] p-2">
+      <PortraitBleed src={character.imageUrl} className={character.className} />
 
-      <div className="mt-1 flex gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold">{character.name}</div>
-          <div className="truncate text-xs text-text-dim">{character.className ?? "?"}</div>
-          {character.classEngraving && (
-            <div className="truncate text-xs text-accent">{character.classEngraving}</div>
-          )}
-          <div className="mt-1 flex flex-wrap gap-x-2 text-xs tabular">
-            <span>{format(character.itemLevel)}</span>
-            <span className="text-text-dim">{format(character.combatPower)}</span>
+      {/* 초상 위에 얹으려면 쌓임 맥락이 필요하다. */}
+      <div className="relative">
+        <div className="flex items-start gap-1">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1">
+              <span className="char-label">{positionLabel(cell.position)}</span>
+              {cell.pinned && (
+                <span
+                  className="char-accent text-[10px]"
+                  title="이 자리는 수요일 리셋에 남는다"
+                >
+                  고정
+                </span>
+              )}
+            </div>
+
+            {/* 클래스와 직업 각인을 이름 위에 칩으로 둔다. 칸에서 가장 자주 찾는 두 가지다. */}
+            <div className="mt-0.5 flex flex-wrap gap-1">
+              <span className="char-chip">{character.className ?? "?"}</span>
+              {character.classEngraving && (
+                <span className="char-chip char-chip--engraving">
+                  {character.classEngraving}
+                </span>
+              )}
+            </div>
+
+            <div className="char-name mt-1 truncate pr-1">{character.name}</div>
           </div>
-          {character.arkGridSummary && (
-            <div className="truncate text-[11px] text-text-faint">
-              {character.arkGridSummary}
+
+          {editable && (
+            <div className="flex shrink-0 items-center gap-0.5">
+              <form action={pin}>
+                {hidden}
+                <input type="hidden" name="pinned" value={cell.pinned ? "false" : "true"} />
+                <button
+                  type="submit"
+                  disabled={busy}
+                  title={cell.pinned ? "고정 해제" : "이 자리 고정 (리셋에서 제외)"}
+                  aria-label={cell.pinned ? "고정 해제" : "자리 고정"}
+                  className={`char-icon-btn ${cell.pinned ? "char-accent" : ""}`}
+                >
+                  📌
+                </button>
+              </form>
+              <form
+                action={(formData) => {
+                  formData.set("actorLabel", readMyName());
+                  remove(formData);
+                }}
+                onSubmit={(e) => {
+                  const mine = readMyName();
+                  // 남이 넣은 신청을 지울 때만 한 번 확인한다.
+                  if (cell.createdByLabel && cell.createdByLabel !== mine) {
+                    if (!confirm(`${cell.createdByLabel}님이 넣은 ${character.name}을(를) 뺀다.`)) {
+                      e.preventDefault();
+                    }
+                  }
+                }}
+              >
+                {hidden}
+                <button
+                  type="submit"
+                  disabled={busy}
+                  title="자리 비우기"
+                  aria-label="자리 비우기"
+                  className="char-icon-btn hover:text-[color:var(--c-danger)]"
+                >
+                  ✕
+                </button>
+              </form>
             </div>
           )}
         </div>
 
-        <Portrait src={character.imageUrl} className={character.className} size="sm" />
+        {/* 템레벨과 전투력. 숫자가 커서 초상과 겹치지 않게 왼쪽에만 둔다. */}
+        <div className="mt-1.5 flex gap-3 pr-[42%]">
+          <div>
+            <div className="char-label">템렙</div>
+            <div className="char-value">{format(character.itemLevel)}</div>
+          </div>
+          <div>
+            <div className="char-label">전투력</div>
+            <div className="char-value char-dim">{format(character.combatPower)}</div>
+          </div>
+        </div>
+
+        {character.arkGridSummary && (
+          <div className="char-faint mt-1 truncate pr-[42%] text-[10px] tabular">
+            {character.arkGridSummary}
+          </div>
+        )}
+
+        {/* 경고와 오류는 카드 폭을 다 쓴다. 초상 위로 지나가므로 바탕을 깐다. */}
+        {(cell.warnings.length > 0 || error) && (
+          <ul className="mt-1 space-y-0.5">
+            {cell.warnings.map((warning) => (
+              <li
+                key={warning}
+                className="char-danger rounded bg-black/55 px-1 text-[10px] leading-4"
+              >
+                {warning}
+              </li>
+            ))}
+            {error && (
+              <li className="char-danger rounded bg-black/55 px-1 text-[10px] leading-4">
+                {error.message}
+              </li>
+            )}
+          </ul>
+        )}
       </div>
-
-      {cell.warnings.length > 0 && (
-        <ul className="mt-1 space-y-0.5">
-          {cell.warnings.map((warning) => (
-            <li key={warning} className="text-[11px] text-danger">
-              {warning}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {error && <p className="mt-1 text-[11px] text-danger">{error.message}</p>}
     </div>
   );
 }

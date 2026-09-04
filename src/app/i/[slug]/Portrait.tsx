@@ -81,3 +81,63 @@ export function Portrait({
     </div>
   );
 }
+
+/**
+ * 편성 칸의 오른쪽에 걸치는 초상.
+ *
+ * 위의 증명사진형 썸네일과 달리 **카드 오른쪽 끝까지 붙어 배경처럼 깔린다.**
+ * 전적 사이트 카드가 이 형태다. 다만 그냥 깔면 이미지의 사각형 경계와 어두운 배경이
+ * 카드와 부딪히므로 두 가지를 건다.
+ *
+ *   1. 왼쪽으로 갈수록 투명해지는 마스크 — 글자와 만나는 쪽이 서서히 사라진다
+ *   2. 클래스 색 글로우 — 인물 뒤에서 은은하게 퍼져 잘린 티가 덜 난다
+ *
+ * 칸 높이가 내용에 따라 달라지므로 여기서는 위 썸네일의 비율 계산을 쓰지 않는다.
+ * 비율이 어긋나면 인물이 위아래로 밀리기 때문이다. 대신 `object-cover`로 칸을 채운 뒤
+ * 머리 근처를 원점으로 확대해, 칸이 어떤 높이여도 머리부터 상체까지가 들어오게 한다.
+ */
+/** 글자와 만나는 왼쪽을 지운다. 반복되면 칸 밖으로 새므로 no-repeat와 함께 쓴다. */
+const BLEED_MASK = "linear-gradient(to right, transparent 0%, #000 62%)";
+/** 확대 원점을 머리 근처에 두고 키운다. 머리 위 여백을 조금 남겨 답답하지 않게 한다. */
+const BLEED_ORIGIN = "50% 14%";
+const BLEED_SCALE = 2.1;
+
+export function PortraitBleed({
+  src,
+  className,
+}: {
+  src: string | null;
+  className: string | null;
+}) {
+  const [broken, setBroken] = useState(false);
+  const color = classColor(className);
+
+  return (
+    <div
+      className="pointer-events-none absolute inset-y-0 right-0 w-[46%] overflow-hidden select-none"
+      style={{
+        maskImage: BLEED_MASK,
+        WebkitMaskImage: BLEED_MASK,
+        maskRepeat: "no-repeat",
+        WebkitMaskRepeat: "no-repeat",
+      }}
+      aria-hidden
+    >
+      <div
+        className="absolute inset-0"
+        style={{ background: `radial-gradient(60% 55% at 70% 30%, ${color}, transparent 75%)` }}
+      />
+      {src && !broken && (
+        <Image
+          src={src}
+          alt=""
+          fill
+          sizes="120px"
+          className="object-cover"
+          style={{ objectPosition: BLEED_ORIGIN, transform: `scale(${BLEED_SCALE})`, transformOrigin: BLEED_ORIGIN }}
+          onError={() => setBroken(true)}
+        />
+      )}
+    </div>
+  );
+}
