@@ -123,7 +123,7 @@ export function Cell({
     return (
       <div
         {...dropProps}
-        className={`char-card char-card--empty flex min-h-[6.5rem] flex-col p-2 ${
+        className={`char-card char-card--empty flex flex-col p-2 ${
           dropping ? "char-card--dropping" : ""
         }`}
       >
@@ -167,7 +167,7 @@ export function Cell({
       draggable={editable}
       onDragStart={onDragStart}
       onDragEnd={() => setDragging(false)}
-      className={`char-card min-h-[6.5rem] p-2 ${dropping ? "char-card--dropping" : ""} ${
+      className={`char-card p-2 ${dropping ? "char-card--dropping" : ""} ${
         dragging ? "char-card--dragging" : ""
       }`}
     >
