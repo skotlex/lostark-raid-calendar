@@ -4,8 +4,9 @@ import { getBoard } from "@/lib/board";
 import { prisma } from "@/lib/prisma";
 import { requireInstance } from "@/lib/instance";
 import {
+  WEEK_DAYS,
   addWeeks,
-  dayName,
+  dayNameFull,
   formatWeekLabel,
   isCurrentWeek,
   parseDayParam,
@@ -17,8 +18,6 @@ import { RememberDay } from "./lastDay";
 import { SlotCard } from "./SlotCard";
 
 export const dynamic = "force-dynamic";
-
-const DAYS = [0, 1, 2, 3, 4, 5, 6];
 
 export default async function BoardPage({
   params,
@@ -66,7 +65,7 @@ export default async function BoardPage({
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <nav className="flex flex-wrap gap-1">
-          {DAYS.map((d) => {
+          {WEEK_DAYS.map((d) => {
             const count = countByDay.get(d) ?? 0;
             return (
               <Link
@@ -78,7 +77,7 @@ export default async function BoardPage({
                     : "text-text-dim hover:bg-surface-2 hover:text-text"
                 }`}
               >
-                {dayName(d)}
+                {dayNameFull(d)}
                 {count > 0 && <span className="ml-1 text-xs text-text-faint tabular">{count}</span>}
               </Link>
             );
@@ -120,7 +119,7 @@ export default async function BoardPage({
 
       {slots.length === 0 ? (
         <div className="rounded border border-dashed border-border px-4 py-10 text-center text-sm text-text-dim">
-          {dayName(day)}요일에 등록된 레이드가 없다.
+          {dayNameFull(day)}에 등록된 레이드가 없다.
           <br />
           <Link href={`/i/${slug}/slots`} className="text-accent hover:underline">
             요일표 편집에서 레이드를 추가한다

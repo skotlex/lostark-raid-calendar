@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  WEEK_DAYS,
   addWeeks,
+  compareWeekDay,
   currentKstDay,
+  dayNameFull,
   formatWeekLabel,
   getWeekStart,
   isCurrentWeek,
@@ -109,5 +112,22 @@ describe("요일 파라미터", () => {
     expect(parseDayParam("9")).toBe(currentKstDay());
     expect(parseDayParam("아무말")).toBe(currentKstDay());
     expect(parseDayParam(null)).toBe(currentKstDay());
+  });
+});
+
+describe("요일 순서", () => {
+  it("수요일에서 시작해 화요일로 끝난다", () => {
+    // 주차가 수요일 06시에 갈리므로 화면의 요일 순서도 같은 경계를 따라야 한다.
+    expect([...WEEK_DAYS]).toEqual([3, 4, 5, 6, 0, 1, 2]);
+  });
+
+  it("정렬하면 수요일이 앞, 화요일이 뒤로 간다", () => {
+    expect([0, 2, 3, 6].sort(compareWeekDay)).toEqual([3, 6, 0, 2]);
+  });
+
+  it("전체 이름을 돌려준다", () => {
+    expect(dayNameFull(3)).toBe("수요일");
+    expect(dayNameFull(0)).toBe("일요일");
+    expect(dayNameFull(9)).toBe("?");
   });
 });

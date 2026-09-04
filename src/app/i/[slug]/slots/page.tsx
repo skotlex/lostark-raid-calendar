@@ -1,6 +1,6 @@
 import { requireInstance } from "@/lib/instance";
 import { listSlots } from "@/lib/slots";
-import { dayName } from "@/lib/week";
+import { compareWeekDay, dayNameFull } from "@/lib/week";
 
 import { SlotForm } from "./SlotForm";
 import { SlotRow } from "./SlotRow";
@@ -18,7 +18,7 @@ export default async function SlotsPage({ params }: PageProps<"/i/[slug]/slots">
     if (list) list.push(slot);
     else byDay.set(slot.dayOfWeek, [slot]);
   }
-  const days = [...byDay.keys()].sort((a, b) => a - b);
+  const days = [...byDay.keys()].sort(compareWeekDay);
 
   return (
     <div className="space-y-6">
@@ -43,7 +43,7 @@ export default async function SlotsPage({ params }: PageProps<"/i/[slug]/slots">
           {days.map((day) => (
             <section key={day} className="space-y-2">
               <h2 className="flex items-baseline gap-2 text-sm font-semibold">
-                {dayName(day)}요일
+                {dayNameFull(day)}
                 <span className="text-xs text-text-faint tabular">
                   {byDay.get(day)!.length}
                 </span>

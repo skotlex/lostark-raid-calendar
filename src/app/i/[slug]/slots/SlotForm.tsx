@@ -4,12 +4,11 @@ import { useActionState } from "react";
 
 import { RAID_PRESETS } from "@/lib/raids";
 import type { SlotView } from "@/lib/slots";
-import { dayName } from "@/lib/week";
+import { WEEK_DAYS, dayNameFull } from "@/lib/week";
 
 import { type SlotState, createSlotAction, updateSlotAction } from "./actions";
 
 const IDLE: SlotState = { status: "idle", message: "" };
-const DAYS = [0, 1, 2, 3, 4, 5, 6];
 
 /**
  * 슬롯 추가·수정 폼.
@@ -51,9 +50,9 @@ export function SlotForm({
           defaultValue={slot?.dayOfWeek ?? defaultDay ?? 3}
           className="rounded border border-border bg-bg px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
         >
-          {DAYS.map((d) => (
+          {WEEK_DAYS.map((d) => (
             <option key={d} value={d}>
-              {dayName(d)}
+              {dayNameFull(d)}
             </option>
           ))}
         </select>

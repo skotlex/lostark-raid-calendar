@@ -65,6 +65,14 @@ export function formatWeekLabel(weekStart: Date): string {
 
 const DAY_NAMES = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
+/**
+ * 요일을 늘어놓는 순서. 수요일이 앞이다.
+ *
+ * 주차가 수요일 06시에 갈리므로 일요일부터 세면 한 주가 화면에서 두 동강 난다.
+ * 리셋 직후가 왼쪽 끝, 리셋 직전이 오른쪽 끝이어야 남은 요일이 눈에 보인다.
+ */
+export const WEEK_DAYS: readonly number[] = [3, 4, 5, 6, 0, 1, 2];
+
 /** 지금 KST 기준 요일(0=일 … 6=토). 편성표를 열면 오늘 탭이 먼저 보이게 한다. */
 export function currentKstDay(now: Date = new Date()): number {
   return new Date(now.getTime() + KST_OFFSET_MS).getUTCDay();
@@ -77,9 +85,20 @@ export function parseDayParam(value: string | undefined | null): number {
   return Number.isInteger(n) && n >= 0 && n <= 6 ? n : currentKstDay();
 }
 
-/** 요일 이름. RaidSlot.dayOfWeek 표시에 쓴다. */
+/** 요일 한 글자. 주차 라벨의 `(수)`처럼 좁은 자리에 쓴다. */
 export function dayName(dayOfWeek: number): string {
   return DAY_NAMES[dayOfWeek] ?? "?";
+}
+
+/** 요일 전체 이름. 요일 탭·제목처럼 읽는 자리에 쓴다. */
+export function dayNameFull(dayOfWeek: number): string {
+  const name = DAY_NAMES[dayOfWeek];
+  return name ? `${name}요일` : "?";
+}
+
+/** 요일을 수요일 시작 순서로 줄 세운다. Array.sort의 비교 함수로 넘긴다. */
+export function compareWeekDay(a: number, b: number): number {
+  return WEEK_DAYS.indexOf(a) - WEEK_DAYS.indexOf(b);
 }
 
 function formatKstDate(utc: Date, withYear: boolean): string {
