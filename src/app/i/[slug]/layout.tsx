@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { requireInstance } from "@/lib/instance";
+import { requireSession } from "@/lib/session";
 
 import { ThemeToggle } from "../../ThemeToggle";
 import { BoardTabLink } from "./lastDay";
@@ -11,6 +12,9 @@ export const dynamic = "force-dynamic";
 
 export default async function InstanceLayout({ children, params }: LayoutProps<"/i/[slug]">) {
   const { slug } = await params;
+  // 편성표 전체가 이 레이아웃 아래에 있으므로 여기 한 곳이 관문이 된다.
+  // 서버 액션은 레이아웃을 거치지 않으니 액션마다 따로 확인한다(actions.ts).
+  await requireSession(`/i/${slug}`);
   const instance = await requireInstance(slug);
 
   // `remember`가 켜진 탭은 마지막으로 보던 요일로 돌아간다(lastDay.tsx 참조).
