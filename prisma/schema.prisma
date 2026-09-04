@@ -39,7 +39,7 @@ model Instance {
 model Member {
   id         String   @id @default(cuid())
   instanceId String
-  /// 원정대명 또는 디코 닉 등 사람을 가리키는 이름
+  /// 사람을 가리키는 이름. 디스코드 길드 닉네임을 기본값으로 채운다.
   label      String
   createdAt  DateTime @default(now())
 
@@ -133,7 +133,7 @@ model Assignment {
   /// 켜면 이 자리만 매주 승계된다(자리 단위 리셋 제외).
   pinned         Boolean  @default(false)
   note           String?
-  /// 로그인이 없으므로 localStorage에 저장된 "내 이름"을 남긴다.
+  /// 넣은 사람의 디스코드 길드 닉네임. 폼이 아니라 세션에서 읽는다(CLAUDE.md 4장).
   createdByLabel String?
   createdAt      DateTime @default(now())
 
@@ -145,7 +145,8 @@ model Assignment {
   @@index([characterId])
 }
 
-/// 로그인이 없어 누구나 남의 신청을 지울 수 있다. 추적 수단이 이것뿐이다.
+/// 입장한 사람은 누구의 신청이든 지울 수 있다(하드 블로킹을 두지 않는다).
+/// 그래서 누가 했는지를 남긴다. 디스코드 로그인 뒤로는 actorLabel이 검증된 값이다.
 model ChangeLog {
   id         String   @id @default(cuid())
   instanceId String

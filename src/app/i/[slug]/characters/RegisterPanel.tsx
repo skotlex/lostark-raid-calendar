@@ -44,7 +44,7 @@ export function RegisterPanel({ slug, viewerLabel }: { slug: string; viewerLabel
       {mode === "siblings" ? (
         <SiblingsForm slug={slug} viewerLabel={viewerLabel} />
       ) : (
-        <SingleForm slug={slug} />
+        <SingleForm slug={slug} viewerLabel={viewerLabel} />
       )}
     </section>
   );
@@ -74,7 +74,7 @@ function ModeButton({
   );
 }
 
-function SingleForm({ slug }: { slug: string }) {
+function SingleForm({ slug, viewerLabel }: { slug: string; viewerLabel: string }) {
   const [state, submit, pending] = useActionState(registerAction, REGISTER_IDLE);
 
   return (
@@ -87,10 +87,14 @@ function SingleForm({ slug }: { slug: string }) {
           className="w-48 rounded border border-border bg-bg px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
         />
       </Field>
-      <Field label="사람 이름" hint="선택. 부캐를 묶는 이름">
+      {/*
+        들어와 있는 사람의 이름을 미리 채워 둔다. 자기 캐릭터를 등록하는 경우가
+        대부분이라 이게 거의 맞다. 남의 캐릭터라면 값이 보이니 고칠 수 있다.
+      */}
+      <Field label="사람 이름" hint="부캐를 묶는 이름. 남의 캐릭터면 바꿔 주세요">
         <input
           name="memberLabel"
-          placeholder="디코 닉"
+          defaultValue={viewerLabel}
           className="w-36 rounded border border-border bg-bg px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
         />
       </Field>
@@ -118,7 +122,8 @@ function SiblingsForm({ slug, viewerLabel }: { slug: string; viewerLabel: string
   );
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [memberLabel, setMemberLabel] = useState("");
+  // 처음부터 자기 이름으로 채워 둔다. 조회 결과를 기다릴 이유가 없다.
+  const [memberLabel, setMemberLabel] = useState(viewerLabel);
 
   // 조회 결과가 새로 오면 쓸 만한 것만 미리 골라 둔다.
   // 25개를 전부 등록하면 API 요청도 그만큼 나가고 목록도 저렙 부캐로 덮인다.
@@ -131,8 +136,8 @@ function SiblingsForm({ slug, viewerLabel }: { slug: string; viewerLabel: string
           .map((s) => s.name),
       ),
     );
-    setMemberLabel((current) => current || viewerLabel || search.searched);
-  }, [search, viewerLabel]);
+    setMemberLabel((current) => current || search.searched);
+  }, [search]);
 
   function toggle(name: string) {
     setSelected((prev) => {
@@ -172,12 +177,11 @@ function SiblingsForm({ slug, viewerLabel }: { slug: string; viewerLabel: string
           <input type="hidden" name="slug" value={slug} />
 
           <div className="flex flex-wrap items-end gap-2">
-            <Field label="사람 이름" hint="이 캐릭터들을 한 사람으로 묶습니다">
+            <Field label="사람 이름" hint="한 사람으로 묶습니다. 남의 원정대면 바꿔 주세요">
               <input
                 name="memberLabel"
                 value={memberLabel}
                 onChange={(e) => setMemberLabel(e.target.value)}
-                placeholder="디코 닉"
                 className="w-36 rounded border border-border bg-bg px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
               />
             </Field>
