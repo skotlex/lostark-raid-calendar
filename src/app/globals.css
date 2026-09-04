@@ -337,6 +337,12 @@ button:disabled,
   flex: 1;
 }
 
+/*
+ * 아래쪽은 하나의 띠로 덮는다.
+ *
+ * 글자마다 뱃지를 둘러봤는데 상자 여럿이 겹쳐 보여 오히려 어수선했다. 띠 하나면
+ * 경계가 한 줄뿐이라 조용하다. 인물이 그만큼 가려지는 것은 감수한다.
+ */
 .char-bottom {
   position: relative;
   display: flex;
@@ -344,19 +350,7 @@ button:disabled,
   align-items: flex-start;
   gap: 0.125rem;
   padding: 0.25rem 0.375rem;
-}
-
-/*
- * 글자마다 제 바탕을 갖는다.
- *
- * 아래쪽을 띠로 통째로 덮으면 그만큼 인물이 가려진다. 글자가 놓인 자리만 덮으면
- * 가리는 넓이가 줄고, 카드가 초상 위에 정보를 얹은 것처럼 보인다.
- */
-.char-bottom > *,
-.char-stat-line > * {
-  border-radius: 0.25rem;
-  background: rgb(6 9 14 / 70%);
-  padding: 0 0.25rem;
+  background: rgb(6 9 14 / 62%);
 }
 
 .char-name {
@@ -504,13 +498,6 @@ button:disabled,
     margin-top: 0.25rem;
   }
 
-  /* 넓은 칸에서는 글자가 인물을 피해 왼쪽에 있다. 뱃지 바탕이 필요 없다. */
-  .char-bottom > *,
-  .char-stat-line > * {
-    background: none;
-    padding: 0;
-  }
-
   .char-stat .char-label {
     display: block;
   }
@@ -567,8 +554,9 @@ button:disabled,
 .empty-mark[data-kind="DPS"] {
   color: var(--dps);
 }
+/* 힐은 초록이다. 파랑은 서폿 칩과 같은 색이라 "지키는 자리"로 읽혔다. */
 .empty-mark[data-kind="SUP"] {
-  color: var(--support);
+  color: var(--ok);
 }
 
 .empty-mark svg {
