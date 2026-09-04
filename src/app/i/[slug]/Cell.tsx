@@ -180,7 +180,7 @@ export function Cell({
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="char-faint mt-1 flex-1 rounded text-xs transition-colors hover:bg-white/5 hover:text-[color:var(--c-text)]"
+            className="char-add-btn char-faint mt-1 flex-1 rounded text-xs transition-colors"
           >
             + 닉네임 입력
           </button>
