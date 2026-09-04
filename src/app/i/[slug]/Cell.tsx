@@ -1,6 +1,13 @@
 "use client";
 
-import { type DragEvent, useActionState, useEffect, useRef, useState } from "react";
+import {
+  type DragEvent,
+  startTransition,
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import type { CellView } from "@/lib/board";
 import { positionLabel } from "@/lib/positions";
@@ -117,7 +124,9 @@ export function Cell({
     formData.set("toSlotId", slotId);
     formData.set("toPosition", cell.position);
     formData.set("actorLabel", readMyName());
-    move(formData);
+    // form의 action이 아니라 drop 핸들러에서 부르는 것이라 전환을 직접 열어야 한다.
+    // 그러지 않으면 moving(isPending)이 갱신되지 않아 이동 중에도 버튼이 열려 있다.
+    startTransition(() => move(formData));
   }
 
   const dropProps = {
@@ -185,7 +194,8 @@ export function Cell({
   // --- 채워진 칸 -----------------------------------------------------------
   //
   // 전적 사이트의 캐릭터 카드 형태다. 초상이 오른쪽 끝에 걸쳐 배경으로 깔리고,
-  // 글자는 그 위 왼쪽에 쌓인다. 카드는 라이트/다크 어느 쪽에서도 어둡다(globals.css 참조).
+  // 글자는 그 위 왼쪽에 쌓인다. 초상 때문에 이 칸만은 라이트 모드에서도 어둡다
+  // (globals.css 참조). 위의 빈 칸은 초상이 없어 테마를 따른다.
   return (
     <div
       {...dropProps}
