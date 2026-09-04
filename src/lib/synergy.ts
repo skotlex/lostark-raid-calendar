@@ -40,7 +40,11 @@ const 백헤드: Synergy = { kind: "백헤드", label: "백/헤드 9%" };
 const 서폿버프: Synergy = { kind: "서폿", label: "딜러공 + 서폿공15% × 6%" };
 
 /**
- * 로스트아크 전 클래스. 시트에 있던 29개를 모두 담았다.
+ * 로스트아크 전 클래스 30개.
+ *
+ * 시트의 `시너지 표`에 있던 29개에 차원술사를 더했다. 목록은 인벤 직업별 아크그리드
+ * 글 30개(`arkGridCores.ts` 참조)와 일치한다.
+ *
  * 클래스명은 로아 OpenAPI의 `CharacterClassName`과 정확히 일치해야 한다.
  */
 export const CLASS_TABLE: Record<string, ClassInfo> = {
@@ -65,6 +69,7 @@ export const CLASS_TABLE: Record<string, ClassInfo> = {
   서머너: { role: "DPS", synergies: [방깍] },
   리퍼: { role: "DPS", synergies: [방깍] },
   환수사: { role: "DPS", synergies: [방깍] },
+  차원술사: { role: "DPS", synergies: [방깍] },
 
   // 백어택 / 헤드어택 피해 증가
   블레이드: { role: "DPS", synergies: [백헤드] },
