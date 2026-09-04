@@ -188,7 +188,14 @@ describe("normalizeArkGrid", () => {
   });
 
   it("표에 없는 코어뿐이면 등급 구성으로 떨어진다", () => {
-    const data = normalizeArkGrid(SAMPLE.ArkGrid);
+    // 패치로 새 코어가 추가되면 이렇게 된다.
+    const data = normalizeArkGrid({
+      Slots: [
+        { Index: 0, Icon: null, Name: "질서의 해 코어 : 새로 나온 코어", Point: 20, Grade: "고대", Gems: [] },
+        { Index: 1, Icon: null, Name: "질서의 달 코어 : 또 다른 신규", Point: 18, Grade: "유물", Gems: [] },
+      ],
+      Effects: [],
+    });
     expect(summarizeArkGrid(data)).toBe("고대1·유물1");
   });
 
@@ -208,7 +215,7 @@ describe("normalizeArkGrid", () => {
     expect(summarizeArkGrid(data)).toBe("질서 222 · 혼돈 111");
   });
 
-  it("모르는 코어는 물음표로 둔다", () => {
+  it("아는 코어와 모르는 코어가 섞이면 모르는 쪽만 물음표다", () => {
     const data = normalizeArkGrid({
       Slots: [
         { Index: 0, Icon: null, Name: "질서의 해 코어 : 연회의 잔향", Point: 20, Grade: "고대", Gems: [] },
