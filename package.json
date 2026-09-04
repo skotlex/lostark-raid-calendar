@@ -14,7 +14,8 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:seed": "node --env-file=.env.local prisma/seed.mts",
-    "probe": "node --env-file=.env.local scripts/probe-lostark.mts"
+    "probe": "node --env-file=.env.local scripts/probe-lostark.mts",
+    "logo": "node scripts/make-logo.mts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",

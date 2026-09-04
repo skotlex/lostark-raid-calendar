@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 import { requireInstance } from "@/lib/instance";
@@ -31,9 +32,21 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
   return (
     <div className="flex min-h-full flex-col">
       <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3">
-          <Link href={`/i/${slug}`} className="text-lg font-bold text-accent">
-            {instance.name}
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-3 px-5 py-2">
+          {/*
+            로고는 애니메이션 WebP다. unoptimized가 없으면 Next의 이미지 최적화가
+            첫 프레임만 남긴 정지 이미지로 바꿔버린다.
+          */}
+          <Link href={`/i/${slug}`} className="flex shrink-0 items-center" title={instance.name}>
+            <Image
+              src="/logo.webp"
+              alt={instance.name}
+              width={102}
+              height={128}
+              priority
+              unoptimized
+              className="h-11 w-auto"
+            />
           </Link>
 
           <nav className="flex gap-1">
