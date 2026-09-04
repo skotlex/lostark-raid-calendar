@@ -144,11 +144,12 @@ function Party({
         )}
       </div>
 
-      {/*
-        카드가 초상까지 안고 있어 좁으면 숫자가 인물 위로 넘친다.
-        4열은 화면이 충분히 넓을 때(lg)만 쓰고, 그 아래는 2열·1열로 카드를 넓힌다.
+{/*
+        4인 파티가 늘 한 줄에 보여야 한다. 두 줄로 갈리면 어느 넷이 한 파티인지
+        눈으로 다시 묶어야 하고, 시너지가 4인 단위라 그게 곧 오독으로 이어진다.
+        좁아지면 카드가 함께 좁아진다(Cell.tsx의 세로 배치).
       */}
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
         {party.cells.map((cell) => (
           <Cell
             key={cell.position}

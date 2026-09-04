@@ -6,7 +6,7 @@ import type { CellView } from "@/lib/board";
 import { positionKind, positionLabel } from "@/lib/positions";
 
 import { NameInput } from "./NameInput";
-import { PortraitBleed } from "./Portrait";
+import { PortraitFill } from "./Portrait";
 import {
   type CellState,
   assignAction,
@@ -153,125 +153,123 @@ export function Cell({
 
   // --- 채워진 칸 -----------------------------------------------------------
   //
-  // 전적 사이트의 캐릭터 카드 형태다. 초상이 오른쪽 끝에 걸쳐 배경으로 깔리고,
-  // 글자는 그 위 왼쪽에 쌓인다. 초상 때문에 이 칸만은 라이트 모드에서도 어둡다
-  // (globals.css 참조). 위의 빈 칸은 초상이 없어 테마를 따른다.
+  // 초상이 칸을 가득 채우고 글자가 그 위에 얹힌다. 4열로 좁아지면 인물과 글자를
+  // 좌우로 나눌 자리가 없어서, 위아래로 검은 바탕을 깔고 그 위에 쌓는다.
+  // 초상 때문에 이 칸만은 라이트 모드에서도 어둡다(globals.css 참조).
   return (
     <div
       {...dropProps}
       draggable={editable}
       onDragStart={onDragStart}
       onDragEnd={() => setDragging(false)}
-      className={`char-card p-2 ${dropping ? "char-card--dropping" : ""} ${
+      className={`char-card flex flex-col ${dropping ? "char-card--dropping" : ""} ${
         dragging ? "char-card--dragging" : ""
       }`}
     >
-      <PortraitBleed src={character.imageUrl} className={character.className} />
+      <PortraitFill src={character.imageUrl} className={character.className} />
 
       {/* 초상 위에 얹으려면 쌓임 맥락이 필요하다. */}
-      <div className="relative">
-        <div className="flex items-start gap-1">
-          <div className="min-w-0 flex-1">
-            {/* 클래스·직업 각인·고정 여부. 칸에서 가장 자주 찾는 것들이다. */}
-            <div className="flex flex-wrap gap-1">
-              <span className="char-chip">{character.className ?? "?"}</span>
-              {character.classEngraving && (
-                <span className="char-chip char-chip--engraving">
-                  {character.classEngraving}
-                </span>
-              )}
-              {cell.pinned && (
-                <span
-                  className="char-chip char-chip--pinned"
-                  title="이 자리는 수요일 리셋에 남습니다"
-                >
-                  고정
-                </span>
-              )}
-            </div>
-
-            <div className="char-name mt-1 truncate pr-1">{character.name}</div>
-          </div>
-
-          {editable && (
-            <div className="flex shrink-0 items-center gap-0.5">
-              <form action={pin}>
-                {hidden}
-                <input type="hidden" name="pinned" value={cell.pinned ? "false" : "true"} />
-                <button
-                  type="submit"
-                  disabled={busy}
-                  title={cell.pinned ? "고정 해제" : "이 자리 고정 (리셋에서 제외)"}
-                  aria-label={cell.pinned ? "고정 해제" : "자리 고정"}
-                  className={`char-icon-btn ${cell.pinned ? "char-accent" : ""}`}
-                >
-                  📌
-                </button>
-              </form>
-              <form
-                action={remove}
-                onSubmit={(e) => {
-                  // 남이 넣은 신청을 지울 때만 한 번 확인한다.
-                  // 누구 것인지는 서버가 정한다(board.ts의 CellView.mine).
-                  if (cell.createdByLabel && !cell.mine) {
-                    if (!confirm(`${cell.createdByLabel}님이 넣은 ${character.name}을(를) 빼시겠습니까?`)) {
-                      e.preventDefault();
-                    }
-                  }
-                }}
+      {/*
+        위쪽에는 띠를 깔지 않는다. 깔면 인물의 머리가 그 아래로 숨는다.
+        칩과 버튼이 각자 어두운 바탕을 갖고 있어 초상 위에서도 읽힌다.
+      */}
+      <div className="relative flex items-start gap-1 px-1.5 py-1">
+        <div className="min-w-0 flex-1">
+          {/* 직업 각인이 칸에서 가장 먼저 읽히는 정보다. 클래스는 그다음. */}
+          <div className="char-chip-line">
+            {character.classEngraving && (
+              <span className="char-chip char-chip--engraving">
+                {character.classEngraving}
+              </span>
+            )}
+            <span className="char-chip char-chip--class">{character.className ?? "?"}</span>
+            {cell.pinned && (
+              <span
+                className="char-chip char-chip--pinned"
+                title="이 자리는 수요일 리셋에 남습니다"
               >
-                {hidden}
-                <button
-                  type="submit"
-                  disabled={busy}
-                  title="자리 비우기"
-                  aria-label="자리 비우기"
-                  className="char-icon-btn hover:text-[color:var(--c-danger)]"
-                >
-                  ✕
-                </button>
-              </form>
-            </div>
-          )}
+                고정
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* 템레벨과 전투력. 숫자가 커서 초상과 겹치지 않게 왼쪽에만 둔다. */}
-        <div className="mt-1.5 flex gap-3 pr-[42%]">
-          <div>
-            <div className="char-label">템렙</div>
-            <div className="char-value">{format(character.itemLevel)}</div>
+        {editable && (
+          <div className="flex shrink-0 items-center gap-0.5">
+            <form action={pin}>
+              {hidden}
+              <input type="hidden" name="pinned" value={cell.pinned ? "false" : "true"} />
+              <button
+                type="submit"
+                disabled={busy}
+                title={cell.pinned ? "고정 해제" : "이 자리 고정 (리셋에서 제외)"}
+                aria-label={cell.pinned ? "고정 해제" : "자리 고정"}
+                className={`char-icon-btn ${cell.pinned ? "char-accent" : ""}`}
+              >
+                📌
+              </button>
+            </form>
+            <form
+              action={remove}
+              onSubmit={(e) => {
+                // 남이 넣은 신청을 지울 때만 한 번 확인한다.
+                // 누구 것인지는 서버가 정한다(board.ts의 CellView.mine).
+                if (cell.createdByLabel && !cell.mine) {
+                  if (!confirm(`${cell.createdByLabel}님이 넣은 ${character.name}을(를) 빼시겠습니까?`)) {
+                    e.preventDefault();
+                  }
+                }
+              }}
+            >
+              {hidden}
+              <button
+                type="submit"
+                disabled={busy}
+                title="자리 비우기"
+                aria-label="자리 비우기"
+                className="char-icon-btn hover:text-[color:var(--c-danger)]"
+              >
+                ✕
+              </button>
+            </form>
           </div>
-          <div>
-            <div className="char-label">전투력</div>
-            <div className="char-value char-dim">{format(character.combatPower)}</div>
-          </div>
+        )}
+      </div>
+
+      {/* 인물이 보이도록 가운데는 비운다. */}
+      <div className="relative flex-1" />
+
+      <div className="char-veil relative px-1.5 py-1">
+        <div className="char-name truncate">{character.name}</div>
+
+        {/*
+          좁은 칸에서는 "템렙"·"전투력" 라벨을 넣을 자리가 없다. 자리만 고정해 두면
+          왼쪽이 템렙, 오른쪽이 전투력이라는 것을 금방 익힌다.
+        */}
+        <div className="char-stat-line" title="템렙 · 전투력">
+          <span className="char-value">{format(character.itemLevel)}</span>
+          <span className="char-value char-dim">{format(character.combatPower)}</span>
         </div>
 
         {character.arkGridSummary && (
-          <div className="char-faint mt-1 truncate pr-[42%] text-[11px] tabular">
+          <div className="char-arkgrid char-faint truncate text-[10px] tabular">
             {character.arkGridSummary}
           </div>
         )}
-
-        {/* 경고와 오류는 카드 폭을 다 쓴다. 초상 위로 지나가므로 바탕을 깐다. */}
-        {(cell.warnings.length > 0 || error) && (
-          <ul className="mt-1 space-y-0.5">
-            {cell.warnings.map((warning) => (
-              <li
-                key={warning}
-                className="char-danger rounded bg-black/55 px-1 text-[10px] leading-4"
-              >
-                {warning}
-              </li>
-            ))}
-            {error && (
-              <li className="char-danger rounded bg-black/55 px-1 text-[10px] leading-4">
-                {error.message}
-              </li>
-            )}
-          </ul>
-        )}
       </div>
+
+      {(cell.warnings.length > 0 || error) && (
+        <ul className="char-veil relative space-y-0.5 px-1.5 pb-1">
+          {cell.warnings.map((warning) => (
+            <li key={warning} className="char-danger text-[10px] leading-4">
+              {warning}
+            </li>
+          ))}
+          {error && (
+            <li className="char-danger text-[10px] leading-4">{error.message}</li>
+          )}
+        </ul>
+      )}
     </div>
   );
 }

@@ -159,12 +159,21 @@ button:disabled,
   /*
    * 빈 칸과 채워진 칸이 함께 쓰는 최소 높이.
    *
-   * 칩·이름·템렙·전투력·아크그리드가 다 든 카드가 123px이라 그보다 조금 위로 잡았다.
+   * 4열로 좁아지면서 초상이 칸을 가득 채우게 됐다. 인물이 알아볼 만한 최소 높이다.
    * 파티마다 격자가 따로라 한 파티에만 사람이 있으면 파티끼리 높이가 어긋난다.
    * 값을 줄이면 그 어긋남이 돌아오므로 카드에 줄을 더할 때는 여기도 같이 올린다.
    * 경고가 붙은 카드는 이 값을 넘는다. 경고를 감추느니 카드가 자라는 편이 낫다.
    */
-  min-height: 8rem;
+  min-height: 9.5rem;
+
+  /*
+   * 카드가 자기 폭을 기준으로 내용을 접는다.
+   *
+   * 4인 파티는 화면이 좁아도 한 줄이라, 폰에서는 카드가 80px 남짓까지 줄어든다.
+   * 화면 폭(미디어 쿼리)이 아니라 카드 폭을 봐야 하는 이유는 같은 화면에서도
+   * 나중에 열 수가 달라질 수 있기 때문이다.
+   */
+  container-type: inline-size;
 
   position: relative;
   overflow: hidden;
@@ -359,10 +368,74 @@ button:disabled,
   color: var(--accent-contrast);
 }
 
+/*
+ * 초상 위에 놓이는 글자 바탕.
+ *
+ * 인물과 겹치면 흰 옷·밝은 이펙트 위에서 글자가 사라진다. 카드 전체를 어둡게 덮으면
+ * 초상을 크게 넣은 뜻이 없어지므로, 글자가 있는 띠만 덮는다.
+ */
+.char-veil {
+  background: rgb(6 9 14 / 62%);
+}
+
+/*
+ * 칩 줄. 좁은 칸에서 두 줄로 늘어나면 카드가 들쭉날쭉해진다.
+ * 넘치는 칩은 잘라내고, 가장 먼저 읽어야 하는 직업 각인을 앞에 둔다.
+ */
+.char-chip-line {
+  display: flex;
+  gap: 0.25rem;
+  overflow: hidden;
+}
+
+.char-chip-line > * {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 템렙과 전투력. 라벨 없이 자리로 구분한다. */
+.char-stat-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.25rem;
+  line-height: 1.2;
+}
+
+/*
+ * 좁아질 때 버리는 순서.
+ *
+ * 남길 것부터 정한다. 이름 > 템렙 > 직업 각인 > 클래스 > 아크그리드.
+ * 클래스는 초상과 글로우 색으로도 짐작이 되지만 이름과 템렙은 대체할 것이 없다.
+ */
+@container (max-width: 170px) {
+  /* .char-chip이 아래에서 display를 다시 잡으므로 선택자를 겹쳐 이긴다. */
+  .char-chip.char-chip--class {
+    display: none;
+  }
+}
+
+@container (max-width: 125px) {
+  .char-stat-line,
+  .char-stat-line > * {
+    display: block;
+  }
+
+  .char-arkgrid {
+    display: none;
+  }
+
+  .char-name {
+    font-size: 0.8125rem;
+  }
+}
+
 .char-chip {
   display: inline-block;
   border-radius: 0.25rem;
-  background: rgb(255 255 255 / 8%);
+  /* 초상 위에 바로 얹히므로 밝은 옷·이펙트 위에서도 읽히게 어둡게 깐다. */
+  background: rgb(6 9 14 / 66%);
   padding: 0 0.3rem;
   font-size: 10px;
   line-height: 1.5rem;
@@ -372,13 +445,13 @@ button:disabled,
 
 /* 직업 각인. 칸에서 가장 먼저 읽히는 정보라 금색으로 띄운다. */
 .char-chip--engraving {
-  background: rgb(226 179 84 / 14%);
+  background: rgb(58 42 12 / 82%);
   color: var(--c-accent);
 }
 
 /* 자리 고정. 각인 칩 옆에 붙어 이 자리가 리셋에 남는다는 것을 알린다. */
 .char-chip--pinned {
-  background: transparent;
+  background: rgb(6 9 14 / 66%);
   box-shadow: inset 0 0 0 1px rgb(226 179 84 / 45%);
   color: var(--c-accent);
 }
