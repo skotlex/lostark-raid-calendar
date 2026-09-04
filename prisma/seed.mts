@@ -28,7 +28,7 @@ const instance = await prisma.instance.upsert({
   update: {},
   create: {
     slug: DEFAULT_SLUG,
-    name: "우리 길드",
+    name: "모여라!",
     // 1단계: 암호 없음. 링크를 아는 사람은 누구나 편집한다.
     passwordHash: null,
   },
