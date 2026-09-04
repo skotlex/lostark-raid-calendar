@@ -224,7 +224,7 @@ function SiblingsForm({ slug }: { slug: string }) {
               {importing ? "등록 중…" : `${selected.size}개 등록`}
             </button>
             <span className="text-xs text-text-faint">
-              캐릭터마다 API를 한 번씩 부른다. 많이 고르면 시간이 걸린다.
+              캐릭터마다 API를 한 번씩 부릅니다. 많이 고르면 시간이 걸립니다.
             </span>
             <Feedback status={imported.status} message={imported.message} />
           </div>

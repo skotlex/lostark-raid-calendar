@@ -60,10 +60,10 @@ export default async function CharactersPage({ params }: PageProps<"/i/[slug]/ch
 
       {characters.length === 0 ? (
         <div className="rounded border border-dashed border-border px-4 py-10 text-center text-sm text-text-dim">
-          아직 등록된 캐릭터가 없다.
+          아직 등록된 캐릭터가 없습니다.
           <br />
           <span className="text-text-faint">
-            편성표 칸에 닉네임을 넣으면 자동으로 등록된다. 여기서 미리 넣어둘 수도 있다.
+            편성표 칸에 닉네임을 넣으면 자동으로 등록됩니다. 여기서 미리 넣어둘 수도 있습니다.
           </span>
         </div>
       ) : (
