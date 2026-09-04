@@ -1,5 +1,6 @@
 import { listCharacters } from "@/lib/characters";
 import { requireInstance } from "@/lib/instance";
+import { requireSession } from "@/lib/session";
 
 import { CharacterCard } from "./CharacterCard";
 import { RegisterPanel } from "./RegisterPanel";
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function CharactersPage({ params }: PageProps<"/i/[slug]/characters">) {
   const { slug } = await params;
   const instance = await requireInstance(slug);
+  const session = await requireSession(`/i/${slug}/characters`);
   const characters = await listCharacters(instance.id);
 
   // 사람 단위로 묶어 보여준다. 부캐가 흩어져 있으면 누가 누군지 알 수 없다.
@@ -40,7 +42,7 @@ export default async function CharactersPage({ params }: PageProps<"/i/[slug]/ch
         </p>
       </div>
 
-      <RegisterPanel slug={slug} />
+      <RegisterPanel slug={slug} viewerLabel={session.label} />
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-dim">
         <span>

@@ -4,18 +4,25 @@ import { revalidatePath } from "next/cache";
 
 import { BoardError, assignByName, moveAssignment, setPinned, unassign } from "@/lib/board";
 import { findInstance } from "@/lib/instance";
+import { type Session, requireSession } from "@/lib/session";
 import { SlotError, setKeepRoster } from "@/lib/slots";
 import { parseWeekParam } from "@/lib/week";
 
 /**
  * 서버 액션은 UI를 거치지 않고 POST로 직접 호출될 수 있다.
- * 어떤 인스턴스의 데이터인지는 항상 서버에서 다시 확인한다.
+ *
+ * **레이아웃의 입장 검사를 거치지 않으므로 여기서 다시 확인한다.** 액션마다 흩어두면
+ * 하나 빠뜨렸을 때 조용히 열리므로 모든 액션이 지나는 이 한 곳에 둔다.
+ *
+ * 편집자 이름도 폼이 아니라 세션에서 읽는다. 폼으로 받으면 아무 이름이나 적어 보낼 수
+ * 있어 기록이 의미를 잃는다.
  */
-async function resolveInstanceId(slug: unknown): Promise<string> {
+async function authorize(slug: unknown): Promise<{ instanceId: string; session: Session }> {
   if (typeof slug !== "string" || !slug) throw new BoardError("잘못된 요청입니다");
+  const session = await requireSession();
   const instance = await findInstance(slug);
   if (!instance) throw new BoardError("인스턴스를 찾을 수 없습니다");
-  return instance.id;
+  return { instanceId: instance.id, session };
 }
 
 /** 예상 가능한 실패만 메시지로 돌려주고, 나머지는 에러 화면에 맡긴다. */
@@ -44,14 +51,14 @@ export async function assignAction(
   const slug = String(formData.get("slug") ?? "");
 
   try {
-    const instanceId = await resolveInstanceId(slug);
+    const { instanceId, session } = await authorize(slug);
     const { created } = await assignByName({
       instanceId,
       slotId: String(formData.get("slotId") ?? ""),
       weekStart: parseWeekParam(String(formData.get("week") ?? "")),
       position: String(formData.get("position") ?? ""),
       characterName: String(formData.get("characterName") ?? ""),
-      actorLabel: String(formData.get("actorLabel") ?? "") || null,
+      actorLabel: session.label,
     });
     revalidatePath(`/i/${slug}`);
     return created ? { status: "ok", message: "새 캐릭터를 조회해 등록했습니다" } : OK;
@@ -67,13 +74,13 @@ export async function unassignAction(
   const slug = String(formData.get("slug") ?? "");
 
   try {
-    const instanceId = await resolveInstanceId(slug);
+    const { instanceId, session } = await authorize(slug);
     await unassign({
       instanceId,
       slotId: String(formData.get("slotId") ?? ""),
       weekStart: parseWeekParam(String(formData.get("week") ?? "")),
       position: String(formData.get("position") ?? ""),
-      actorLabel: String(formData.get("actorLabel") ?? "") || null,
+      actorLabel: session.label,
     });
     revalidatePath(`/i/${slug}`);
     return OK;
@@ -92,7 +99,7 @@ export async function moveAction(_prev: CellState, formData: FormData): Promise<
   const slug = String(formData.get("slug") ?? "");
 
   try {
-    const instanceId = await resolveInstanceId(slug);
+    const { instanceId, session } = await authorize(slug);
     await moveAssignment({
       instanceId,
       weekStart: parseWeekParam(String(formData.get("week") ?? "")),
@@ -104,7 +111,7 @@ export async function moveAction(_prev: CellState, formData: FormData): Promise<
         slotId: String(formData.get("toSlotId") ?? ""),
         position: String(formData.get("toPosition") ?? ""),
       },
-      actorLabel: String(formData.get("actorLabel") ?? "") || null,
+      actorLabel: session.label,
     });
     revalidatePath(`/i/${slug}`);
     return OK;
@@ -118,7 +125,7 @@ export async function pinAction(_prev: CellState, formData: FormData): Promise<C
   const slug = String(formData.get("slug") ?? "");
 
   try {
-    const instanceId = await resolveInstanceId(slug);
+    const { instanceId } = await authorize(slug);
     await setPinned({
       instanceId,
       slotId: String(formData.get("slotId") ?? ""),
@@ -141,7 +148,7 @@ export async function keepRosterAction(
   const slug = String(formData.get("slug") ?? "");
 
   try {
-    const instanceId = await resolveInstanceId(slug);
+    const { instanceId } = await authorize(slug);
     await setKeepRoster(
       instanceId,
       String(formData.get("slotId") ?? ""),

@@ -2,7 +2,6 @@
 
 import { useActionState, useEffect, useState } from "react";
 
-import { readMyName } from "../MyNameField";
 import {
   type ImportState,
   type RegisterState,
@@ -24,7 +23,11 @@ const IMPORT_IDLE: ImportState = { status: "idle", message: "", result: null };
 /** 원정대에는 저렙 부캐가 잔뜩 섞여 있다. 기본 선택 기준선을 이 값으로 잡는다. */
 const DEFAULT_MIN_LEVEL = 1600;
 
-export function RegisterPanel({ slug }: { slug: string }) {
+/**
+ * viewerLabel은 지금 들어와 있는 사람의 디스코드 닉네임이다. 부캐를 묶는 "사람 이름"의
+ * 기본값으로 쓴다. 자기 원정대를 등록하는 경우가 대부분이라 이게 거의 맞다.
+ */
+export function RegisterPanel({ slug, viewerLabel }: { slug: string; viewerLabel: string }) {
   const [mode, setMode] = useState<"single" | "siblings">("siblings");
 
   return (
@@ -38,7 +41,11 @@ export function RegisterPanel({ slug }: { slug: string }) {
         </ModeButton>
       </div>
 
-      {mode === "siblings" ? <SiblingsForm slug={slug} /> : <SingleForm slug={slug} />}
+      {mode === "siblings" ? (
+        <SiblingsForm slug={slug} viewerLabel={viewerLabel} />
+      ) : (
+        <SingleForm slug={slug} />
+      )}
     </section>
   );
 }
@@ -100,7 +107,7 @@ function SingleForm({ slug }: { slug: string }) {
   );
 }
 
-function SiblingsForm({ slug }: { slug: string }) {
+function SiblingsForm({ slug, viewerLabel }: { slug: string; viewerLabel: string }) {
   const [search, searchSubmit, searching] = useActionState(
     previewSiblingsAction,
     SIBLINGS_IDLE,
@@ -124,8 +131,8 @@ function SiblingsForm({ slug }: { slug: string }) {
           .map((s) => s.name),
       ),
     );
-    setMemberLabel((current) => current || readMyName() || search.searched);
-  }, [search]);
+    setMemberLabel((current) => current || viewerLabel || search.searched);
+  }, [search, viewerLabel]);
 
   function toggle(name: string) {
     setSelected((prev) => {

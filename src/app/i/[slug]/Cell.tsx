@@ -6,7 +6,6 @@ import type { CellView } from "@/lib/board";
 import { positionKind, positionLabel } from "@/lib/positions";
 
 import { NameInput } from "./NameInput";
-import { readMyName } from "./MyNameField";
 import { PortraitBleed } from "./Portrait";
 import {
   type CellState,
@@ -106,7 +105,6 @@ export function Cell({
     formData.set("fromPosition", from.position);
     formData.set("toSlotId", slotId);
     formData.set("toPosition", cell.position);
-    formData.set("actorLabel", readMyName());
     // form의 action이 아니라 drop 핸들러에서 부르는 것이라 전환을 직접 열어야 한다.
     // 그러지 않으면 moving(isPending)이 갱신되지 않아 이동 중에도 버튼이 열려 있다.
     startTransition(() => move(formData));
@@ -141,12 +139,7 @@ export function Cell({
         {!editable ? (
           <div className="char-faint text-center text-xs">비어 있음</div>
         ) : (
-          <form
-            action={(formData) => {
-              formData.set("actorLabel", readMyName());
-              assign(formData);
-            }}
-          >
+          <form action={assign}>
             {hidden}
             <NameInput name="characterName" disabled={assigning} />
             {assigning && <div className="char-faint mt-1 text-[11px]">조회 중…</div>}
@@ -216,14 +209,11 @@ export function Cell({
                 </button>
               </form>
               <form
-                action={(formData) => {
-                  formData.set("actorLabel", readMyName());
-                  remove(formData);
-                }}
+                action={remove}
                 onSubmit={(e) => {
-                  const mine = readMyName();
                   // 남이 넣은 신청을 지울 때만 한 번 확인한다.
-                  if (cell.createdByLabel && cell.createdByLabel !== mine) {
+                  // 누구 것인지는 서버가 정한다(board.ts의 CellView.mine).
+                  if (cell.createdByLabel && !cell.mine) {
                     if (!confirm(`${cell.createdByLabel}님이 넣은 ${character.name}을(를) 빼시겠습니까?`)) {
                       e.preventDefault();
                     }

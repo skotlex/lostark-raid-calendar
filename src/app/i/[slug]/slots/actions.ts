@@ -3,9 +3,12 @@
 import { revalidatePath } from "next/cache";
 
 import { findInstance } from "@/lib/instance";
+import { requireSession } from "@/lib/session";
 import { type SlotInput, SlotError, archiveSlot, createSlot, updateSlot } from "@/lib/slots";
 
 async function resolveInstanceId(slug: unknown): Promise<string> {
+  // 레이아웃의 입장 검사를 거치지 않는 경로다. 여기서 다시 확인한다.
+  await requireSession();
   if (typeof slug !== "string" || !slug) throw new SlotError("잘못된 요청입니다");
   const instance = await findInstance(slug);
   if (!instance) throw new SlotError("인스턴스를 찾을 수 없습니다");

@@ -5,7 +5,7 @@ import { requireSession } from "@/lib/session";
 
 import { ThemeToggle } from "../../ThemeToggle";
 import { BoardTabLink } from "./lastDay";
-import { MyNameField } from "./MyNameField";
+import { Viewer } from "./Viewer";
 
 // Prisma로 DB를 읽으므로 빌드 시점에 미리 굽지 않는다.
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
   const { slug } = await params;
   // 편성표 전체가 이 레이아웃 아래에 있으므로 여기 한 곳이 관문이 된다.
   // 서버 액션은 레이아웃을 거치지 않으니 액션마다 따로 확인한다(actions.ts).
-  await requireSession(`/i/${slug}`);
+  const session = await requireSession(`/i/${slug}`);
   const instance = await requireInstance(slug);
 
   // `remember`가 켜진 탭은 마지막으로 보던 요일로 돌아간다(lastDay.tsx 참조).
@@ -51,7 +51,7 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
           </nav>
 
           <div className="ml-auto flex items-center gap-3">
-            <MyNameField />
+            <Viewer session={session} />
             <ThemeToggle />
           </div>
         </div>

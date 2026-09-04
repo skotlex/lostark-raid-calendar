@@ -32,6 +32,13 @@ export interface CellView {
   pinned: boolean;
   character: CharacterView | null;
   createdByLabel: string | null;
+  /**
+   * 보고 있는 사람이 직접 넣은 자리인가.
+   *
+   * 남의 신청을 뺄 때만 한 번 확인하려고 쓴다. 판정을 클라이언트에 맡기면 "내 이름"을
+   * 바꿔치기해 확인을 건너뛸 수 있으니 서버에서 정한다.
+   */
+  mine: boolean;
   /** 막지 않고 알리기만 하는 경고들 */
   warnings: string[];
 }
@@ -142,6 +149,8 @@ async function carryOver(instanceId: string, weekStart: Date): Promise<void> {
 export async function getBoard(
   instanceId: string,
   weekStart: Date,
+  /** 지금 보고 있는 사람. 자기가 넣은 자리를 가려내는 데만 쓴다. */
+  viewerLabel: string | null = null,
 ): Promise<BoardSlotView[]> {
   await carryOver(instanceId, weekStart);
 
@@ -194,6 +203,7 @@ export async function getBoard(
           pinned: false,
           character: null,
           createdByLabel: null,
+          mine: false,
           warnings: [],
         };
       }
@@ -224,6 +234,7 @@ export async function getBoard(
         pinned: assignment.pinned,
         character,
         createdByLabel: assignment.createdByLabel,
+        mine: viewerLabel !== null && assignment.createdByLabel === viewerLabel,
         warnings,
       };
     }

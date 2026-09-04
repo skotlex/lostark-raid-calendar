@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getBoard } from "@/lib/board";
 import { prisma } from "@/lib/prisma";
 import { requireInstance } from "@/lib/instance";
+import { requireSession } from "@/lib/session";
 import {
   WEEK_DAYS,
   addWeeks,
@@ -28,6 +29,7 @@ export default async function BoardPage({
   const { slug } = await params;
   const query = await searchParams;
   const instance = await requireInstance(slug);
+  const session = await requireSession(`/i/${slug}`);
 
   const weekStart = parseWeekParam(
     typeof query.week === "string" ? query.week : undefined,
@@ -38,7 +40,7 @@ export default async function BoardPage({
   // 지난 주는 읽기 전용이다. 기록을 나중에 고쳐 쓰지 못하게 한다.
   const editable = isCurrentWeek(weekStart);
 
-  const board = await getBoard(instance.id, weekStart);
+  const board = await getBoard(instance.id, weekStart, session.label);
   const slots = board.filter((slot) => slot.dayOfWeek === day);
 
   // 칸 입력의 자동완성 목록. 이미 등록된 캐릭터는 API를 다시 부르지 않는다.

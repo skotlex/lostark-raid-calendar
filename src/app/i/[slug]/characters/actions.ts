@@ -14,6 +14,7 @@ import {
   syncCharacter,
 } from "@/lib/characters";
 import { findInstance } from "@/lib/instance";
+import { requireSession } from "@/lib/session";
 
 /*
  * 서버 액션은 UI를 거치지 않고 POST로 직접 호출될 수 있다.
@@ -21,6 +22,8 @@ import { findInstance } from "@/lib/instance";
  * 반드시 서버에서 다시 확인한다.** 클라이언트가 보낸 id를 그대로 믿지 않는다.
  */
 async function resolveInstanceId(slug: unknown): Promise<string> {
+  // 레이아웃의 입장 검사를 거치지 않는 경로다. 여기서 다시 확인한다.
+  await requireSession();
   if (typeof slug !== "string" || !slug) throw new CharacterError("잘못된 요청입니다");
   const instance = await findInstance(slug);
   if (!instance) throw new CharacterError("인스턴스를 찾을 수 없습니다");
