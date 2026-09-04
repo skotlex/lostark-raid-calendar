@@ -8,6 +8,7 @@ import {
   addWeeks,
   dayNameFull,
   formatWeekLabel,
+  getWeekStart,
   isCurrentWeek,
   parseDayParam,
   parseWeekParam,
@@ -102,7 +103,7 @@ export default async function BoardPage({
           </Link>
           {!editable && (
             <Link
-              href={href({ week: undefined })}
+              href={href({ week: toWeekParam(getWeekStart()) })}
               className="ml-1 rounded bg-accent/15 px-2 py-1 text-xs text-accent"
             >
               이번 주로
