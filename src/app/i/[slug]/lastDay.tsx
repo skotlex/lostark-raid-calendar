@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 /**
  * 마지막으로 보던 요일.
@@ -43,7 +44,12 @@ export function RememberDay({ day }: { day: number }) {
 /**
  * 상단 "편성표" 탭.
  *
- * 서버 렌더 결과와 어긋나지 않도록 첫 렌더는 요일 없는 주소로 두고, 붙은 뒤에 바꾼다.
+ * **누르는 순간에 읽는다.** 예전에는 마운트할 때 한 번만 읽었는데, 이 탭은 레이아웃에
+ * 있어서 화면을 옮겨도 다시 마운트되지 않는다. 그래서 편성표에서 요일을 바꾼 뒤
+ * 캐릭터 관리에 갔다가 돌아오면 처음 들어왔을 때의 요일로 끌려갔다.
+ *
+ * href는 요일 없는 주소로 둔다. 서버 렌더 결과와 어긋나지 않고, 새 탭으로 열거나
+ * 주소를 복사하면 오늘 요일이 열린다.
  */
 export function BoardTabLink({
   href,
@@ -54,14 +60,21 @@ export function BoardTabLink({
   className?: string;
   children: React.ReactNode;
 }) {
-  const [day, setDay] = useState<number | null>(null);
-
-  useEffect(() => {
-    setDay(readLastDay());
-  }, []);
+  const router = useRouter();
 
   return (
-    <Link href={day === null ? href : `${href}?day=${day}`} className={className}>
+    <Link
+      href={href}
+      className={className}
+      onClick={(e) => {
+        // 새 탭·새 창으로 여는 조작은 브라우저에 맡긴다.
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+        const day = readLastDay();
+        if (day === null) return;
+        e.preventDefault();
+        router.push(`${href}?day=${day}`);
+      }}
+    >
       {children}
     </Link>
   );
