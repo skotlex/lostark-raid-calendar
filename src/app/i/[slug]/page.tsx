@@ -116,16 +116,16 @@ export default async function BoardPage({
 
       {!editable && (
         <p className="rounded border border-border bg-surface-2 px-3 py-2 text-xs text-text-dim">
-          지난 주 편성이다. 기록으로만 보여주며 고칠 수 없다.
+          지난 주 편성입니다. 기록으로만 보여주며 고칠 수 없습니다.
         </p>
       )}
 
       {slots.length === 0 ? (
         <div className="rounded border border-dashed border-border px-4 py-10 text-center text-sm text-text-dim">
-          {dayNameFull(day)}에 등록된 레이드가 없다.
+          {dayNameFull(day)}에 등록된 레이드가 없습니다.
           <br />
           <Link href={`/i/${slug}/slots`} className="text-accent hover:underline">
-            요일표 편집에서 레이드를 추가한다
+            요일표 편집에서 레이드를 추가해 주세요
           </Link>
         </div>
       ) : (

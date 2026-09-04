@@ -53,8 +53,8 @@ export function SlotRow({ slug, slot }: { slug: string; slot: SlotView }) {
           onSubmit={(e) => {
             if (
               !confirm(
-                `${raidLabel(slot.raidName, slot.difficulty)}을(를) 요일표에서 내린다.\n` +
-                  "과거 편성 기록은 남는다.",
+                `${raidLabel(slot.raidName, slot.difficulty)}을(를) 요일표에서 내리시겠습니까?\n` +
+                  "과거 편성 기록은 남습니다.",
               )
             ) {
               e.preventDefault();

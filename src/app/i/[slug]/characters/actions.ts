@@ -21,9 +21,9 @@ import { findInstance } from "@/lib/instance";
  * 반드시 서버에서 다시 확인한다.** 클라이언트가 보낸 id를 그대로 믿지 않는다.
  */
 async function resolveInstanceId(slug: unknown): Promise<string> {
-  if (typeof slug !== "string" || !slug) throw new CharacterError("잘못된 요청이다");
+  if (typeof slug !== "string" || !slug) throw new CharacterError("잘못된 요청입니다");
   const instance = await findInstance(slug);
-  if (!instance) throw new CharacterError("인스턴스를 찾을 수 없다");
+  if (!instance) throw new CharacterError("인스턴스를 찾을 수 없습니다");
   return instance.id;
 }
 
@@ -88,7 +88,7 @@ export async function previewSiblingsAction(
     const siblings = await previewSiblings(instanceId, name);
     return {
       status: "ok",
-      message: `${siblings.length}개 캐릭터를 찾았다. 등록할 것을 고른다`,
+      message: `${siblings.length}개 캐릭터를 찾았습니다. 등록할 캐릭터를 골라 주세요`,
       searched: name.trim(),
       siblings,
     };
@@ -114,7 +114,7 @@ export async function importSiblingsAction(
   const names = formData.getAll("names").map(String).filter(Boolean);
 
   if (names.length === 0) {
-    return { status: "error", message: "등록할 캐릭터를 하나 이상 고른다", result: null };
+    return { status: "error", message: "등록할 캐릭터를 하나 이상 골라 주세요", result: null };
   }
 
   try {

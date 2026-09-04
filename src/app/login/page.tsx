@@ -13,10 +13,10 @@ export const dynamic = "force-dynamic";
  */
 
 const MESSAGES: Record<string, string> = {
-  not_member: "길드 디스코드 서버의 멤버가 아니다. 서버에 들어온 뒤 다시 시도한다.",
-  cancelled: "디스코드에서 취소했다.",
-  state: "로그인 요청이 만료됐다. 다시 시도한다.",
-  discord: "디스코드와 통신하지 못했다. 잠시 뒤 다시 시도한다.",
+  not_member: "길드 디스코드 서버의 멤버가 아닙니다. 서버에 들어온 뒤 다시 시도해 주세요.",
+  cancelled: "디스코드에서 취소했습니다.",
+  state: "로그인 요청이 만료됐습니다. 다시 시도해 주세요.",
+  discord: "디스코드와 통신하지 못했습니다. 잠시 뒤 다시 시도해 주세요.",
 };
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
@@ -33,7 +33,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
       <div className="w-full max-w-sm rounded-lg border border-border bg-surface p-6 text-center">
         <h1 className="text-lg font-bold">길드 레이드 편성표</h1>
         <p className="mt-2 text-sm text-text-dim">
-          길드 디스코드 서버의 멤버만 들어올 수 있다.
+          길드 디스코드 서버의 멤버만 들어올 수 있습니다.
         </p>
 
         {error && (

@@ -128,7 +128,7 @@ async function request<T>(path: string, characterName?: string): Promise<T | nul
     }
 
     if (response.status === 404) {
-      throw new LostArkError("캐릭터를 찾을 수 없다", 404, characterName);
+      throw new LostArkError("캐릭터를 찾을 수 없습니다", 404, characterName);
     }
 
     if (!response.ok) {
@@ -145,7 +145,7 @@ async function request<T>(path: string, characterName?: string): Promise<T | nul
     return JSON.parse(text) as T;
   }
 
-  throw new LostArkError("요청 한도 초과로 조회하지 못했다", 429, characterName);
+  throw new LostArkError("요청 한도 초과로 조회하지 못했습니다", 429, characterName);
 }
 
 // --- 응답 타입 ---------------------------------------------------------------

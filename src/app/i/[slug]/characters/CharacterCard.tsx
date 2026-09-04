@@ -85,7 +85,7 @@ export function CharacterCard({
         )}
 
         {!character.syncError && character.stale && (
-          <p className="char-notice mt-2">정보가 오래됐다. 갱신을 눌러 최신 스펙을 가져온다.</p>
+          <p className="char-notice mt-2">정보가 오래됐습니다. 갱신을 눌러 최신 스펙을 가져옵니다.</p>
         )}
 
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -100,7 +100,7 @@ export function CharacterCard({
           <form
             action={remove}
             onSubmit={(e) => {
-              if (!confirm(`${character.name} 캐릭터를 삭제한다. 편성 기록도 함께 사라진다.`)) {
+              if (!confirm(`${character.name} 캐릭터를 삭제하시겠습니까? 편성 기록도 함께 사라집니다.`)) {
                 e.preventDefault();
               }
             }}

@@ -259,13 +259,13 @@ async function requireSlot(instanceId: string, slotId: string) {
     where: { id: slotId, instanceId, archivedAt: null },
     select: { id: true, raidName: true },
   });
-  if (!slot) throw new BoardError("슬롯을 찾을 수 없다");
+  if (!slot) throw new BoardError("슬롯을 찾을 수 없습니다");
   return slot;
 }
 
 function requireCurrentWeek(weekStart: Date) {
   if (weekStart.getTime() !== getWeekStart().getTime()) {
-    throw new BoardError("지난 주 편성은 고칠 수 없다");
+    throw new BoardError("지난 주 편성은 고칠 수 없습니다");
   }
 }
 
@@ -286,11 +286,11 @@ export async function assignByName(params: {
 }): Promise<{ character: CharacterView; created: boolean }> {
   const { instanceId, slotId, weekStart, position, actorLabel } = params;
   const name = params.characterName.trim();
-  if (!name) throw new BoardError("캐릭터 닉네임을 입력한다");
+  if (!name) throw new BoardError("캐릭터 닉네임을 입력해 주세요");
 
   requireCurrentWeek(weekStart);
   const slot = await requireSlot(instanceId, slotId);
-  if (!isValidPosition(position)) throw new BoardError("잘못된 자리다");
+  if (!isValidPosition(position)) throw new BoardError("잘못된 자리입니다");
 
   // 이미 등록된 캐릭터면 API를 부르지 않는다. 분당 100회 한도를 아낀다.
   const existing = await prisma.character.findFirst({
@@ -406,7 +406,7 @@ export async function moveAssignment(params: {
   const { instanceId, weekStart, from, to, actorLabel } = params;
   requireCurrentWeek(weekStart);
   if (!isValidPosition(from.position) || !isValidPosition(to.position)) {
-    throw new BoardError("잘못된 자리다");
+    throw new BoardError("잘못된 자리입니다");
   }
   if (from.slotId === to.slotId && from.position === to.position) return;
 
@@ -424,7 +424,7 @@ export async function moveAssignment(params: {
       },
       select: { id: true, character: { select: { name: true } } },
     });
-    if (!source) throw new BoardError("옮길 캐릭터가 없다");
+    if (!source) throw new BoardError("옮길 캐릭터가 없습니다");
 
     const target = await tx.assignment.findUnique({
       where: {

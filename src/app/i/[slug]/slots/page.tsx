@@ -25,7 +25,7 @@ export default async function SlotsPage({ params }: PageProps<"/i/[slug]/slots">
       <div>
         <h1 className="text-xl font-bold">요일표 편집</h1>
         <p className="mt-1 text-sm text-text-dim">
-          여기서 만든 슬롯은 매주 그대로 유지된다. 인원만 수요일 오전 6시에 초기화된다.
+          여기서 만든 슬롯은 매주 그대로 유지됩니다. 인원만 수요일 오전 6시에 초기화됩니다.
         </p>
       </div>
 
@@ -36,7 +36,7 @@ export default async function SlotsPage({ params }: PageProps<"/i/[slug]/slots">
 
       {slots.length === 0 ? (
         <div className="rounded border border-dashed border-border px-4 py-10 text-center text-sm text-text-dim">
-          아직 등록된 레이드가 없다. 위에서 추가한다.
+          아직 등록된 레이드가 없습니다. 위에서 추가해 주세요.
         </div>
       ) : (
         <div className="space-y-4">

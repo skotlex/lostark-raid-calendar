@@ -35,8 +35,8 @@ export default async function CharactersPage({ params }: PageProps<"/i/[slug]/ch
       <div>
         <h1 className="text-xl font-bold">캐릭터</h1>
         <p className="mt-1 text-sm text-text-dim">
-          정리용 화면이다. 편성은 <strong>편성표의 칸에 닉네임을 바로 입력</strong>하면 되고,
-          여기서는 잘못 들어간 캐릭터 삭제, 딜/서폿 교정, 스펙 갱신, 부캐 묶기를 한다.
+          정리용 화면입니다. 편성은 <strong>편성표의 칸에 닉네임을 바로 입력</strong>하면 되고,
+          여기서는 잘못 들어간 캐릭터 삭제, 딜/서폿 교정, 스펙 갱신, 부캐 묶기를 합니다.
         </p>
       </div>
 

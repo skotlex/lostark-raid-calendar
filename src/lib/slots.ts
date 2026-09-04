@@ -86,13 +86,13 @@ const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 function validate(input: SlotInput) {
   if (!Number.isInteger(input.dayOfWeek) || input.dayOfWeek < 0 || input.dayOfWeek > 6) {
-    throw new SlotError("요일을 고른다");
+    throw new SlotError("요일을 골라 주세요");
   }
   if (!TIME_PATTERN.test(input.startTime)) {
-    throw new SlotError("시간은 20:00 형식으로 입력한다");
+    throw new SlotError("시간은 20:00 형식으로 입력해 주세요");
   }
   if (!input.raidName.trim()) {
-    throw new SlotError("레이드 이름을 입력한다");
+    throw new SlotError("레이드 이름을 입력해 주세요");
   }
 }
 
@@ -140,7 +140,7 @@ export async function updateSlot(
     where: { id: slotId, instanceId },
     data: normalize(input),
   });
-  if (result.count === 0) throw new SlotError("슬롯을 찾을 수 없다");
+  if (result.count === 0) throw new SlotError("슬롯을 찾을 수 없습니다");
 
   const row = await prisma.raidSlot.findUniqueOrThrow({
     where: { id: slotId },
@@ -163,7 +163,7 @@ export async function setKeepRoster(
     where: { id: slotId, instanceId },
     data: { keepRoster },
   });
-  if (result.count === 0) throw new SlotError("슬롯을 찾을 수 없다");
+  if (result.count === 0) throw new SlotError("슬롯을 찾을 수 없습니다");
 }
 
 /**
@@ -177,5 +177,5 @@ export async function archiveSlot(instanceId: string, slotId: string): Promise<v
     where: { id: slotId, instanceId, archivedAt: null },
     data: { archivedAt: new Date() },
   });
-  if (result.count === 0) throw new SlotError("슬롯을 찾을 수 없다");
+  if (result.count === 0) throw new SlotError("슬롯을 찾을 수 없습니다");
 }

@@ -22,7 +22,7 @@ export function SyncAllButton({ slug, count }: { slug: string; count: number }) 
       <button
         type="submit"
         disabled={pending}
-        title="캐릭터마다 API를 한 번씩 부른다. 많으면 시간이 걸린다"
+        title="캐릭터마다 API를 한 번씩 부릅니다. 많으면 시간이 걸립니다"
         className="rounded border border-border px-2 py-1 text-xs text-text-dim transition-colors hover:border-border-strong hover:text-text disabled:opacity-50"
       >
         {pending ? `갱신 중… (${count}개)` : "전체 갱신"}

@@ -68,8 +68,8 @@ export function SlotCard({
               disabled={togglingKeep}
               title={
                 slot.keepRoster
-                  ? "매주 초기화되도록 되돌린다"
-                  : "이 공대 전원을 매주 그대로 유지한다"
+                  ? "매주 초기화되도록 되돌립니다"
+                  : "이 공대 전원을 매주 그대로 유지합니다"
               }
               className={`rounded border px-2 py-0.5 text-xs transition-colors disabled:opacity-50 ${
                 slot.keepRoster

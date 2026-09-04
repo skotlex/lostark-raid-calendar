@@ -165,7 +165,7 @@ function SiblingsForm({ slug }: { slug: string }) {
           <input type="hidden" name="slug" value={slug} />
 
           <div className="flex flex-wrap items-end gap-2">
-            <Field label="사람 이름" hint="이 캐릭터들을 한 사람으로 묶는다">
+            <Field label="사람 이름" hint="이 캐릭터들을 한 사람으로 묶습니다">
               <input
                 name="memberLabel"
                 value={memberLabel}

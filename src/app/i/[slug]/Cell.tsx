@@ -190,7 +190,7 @@ export function Cell({
               {cell.pinned && (
                 <span
                   className="char-chip char-chip--pinned"
-                  title="이 자리는 수요일 리셋에 남는다"
+                  title="이 자리는 수요일 리셋에 남습니다"
                 >
                   고정
                 </span>
@@ -224,7 +224,7 @@ export function Cell({
                   const mine = readMyName();
                   // 남이 넣은 신청을 지울 때만 한 번 확인한다.
                   if (cell.createdByLabel && cell.createdByLabel !== mine) {
-                    if (!confirm(`${cell.createdByLabel}님이 넣은 ${character.name}을(를) 뺀다.`)) {
+                    if (!confirm(`${cell.createdByLabel}님이 넣은 ${character.name}을(를) 빼시겠습니까?`)) {
                       e.preventDefault();
                     }
                   }

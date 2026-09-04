@@ -189,21 +189,21 @@ export async function registerCharacter(
   memberLabel?: string | null,
 ): Promise<CharacterView> {
   const name = rawName.trim();
-  if (!name) throw new CharacterError("캐릭터 닉네임을 입력한다");
+  if (!name) throw new CharacterError("캐릭터 닉네임을 입력해 주세요");
 
   let armory;
   try {
     armory = await fetchArmory(name);
   } catch (error) {
     if (error instanceof LostArkError && error.isNotFound) {
-      throw new CharacterError(`'${name}' 캐릭터를 찾을 수 없다. 닉네임을 확인한다`);
+      throw new CharacterError(`'${name}' 캐릭터를 찾을 수 없습니다. 닉네임을 확인해 주세요`);
     }
     throw error;
   }
 
   const spec = toCharacterSpec(armory);
   if (!spec) {
-    throw new CharacterError(`'${name}' 캐릭터를 찾을 수 없다. 닉네임을 확인한다`);
+    throw new CharacterError(`'${name}' 캐릭터를 찾을 수 없습니다. 닉네임을 확인해 주세요`);
   }
 
   const memberId = await resolveMemberId(instanceId, memberLabel);
@@ -274,7 +274,7 @@ export async function syncCharacter(
     where: { id: characterId, instanceId },
     select: characterSelect,
   });
-  if (!existing) throw new CharacterError("캐릭터를 찾을 수 없다");
+  if (!existing) throw new CharacterError("캐릭터를 찾을 수 없습니다");
 
   const fresh =
     existing.syncedAt && Date.now() - existing.syncedAt.getTime() < SYNC_TTL_MS;
@@ -282,7 +282,7 @@ export async function syncCharacter(
 
   try {
     const spec = toCharacterSpec(await fetchArmory(existing.name));
-    if (!spec) throw new LostArkError("캐릭터를 찾을 수 없다", 404, existing.name);
+    if (!spec) throw new LostArkError("캐릭터를 찾을 수 없습니다", 404, existing.name);
 
     const role = specRole(spec);
     const row = await prisma.character.update({
@@ -309,7 +309,7 @@ export async function syncCharacter(
     const message =
       error instanceof LostArkError
         ? error.isNotFound
-          ? "조회 실패: 캐릭터를 찾을 수 없다 (삭제되었거나 닉네임이 바뀌었다)"
+          ? "조회 실패: 캐릭터를 찾을 수 없습니다 (삭제되었거나 닉네임이 바뀌었습니다)"
           : `조회 실패: ${error.message}`
         : "조회 실패: 알 수 없는 오류";
 
@@ -336,20 +336,20 @@ export async function previewSiblings(
   rawName: string,
 ): Promise<SiblingPreview[]> {
   const name = rawName.trim();
-  if (!name) throw new CharacterError("캐릭터 닉네임을 입력한다");
+  if (!name) throw new CharacterError("캐릭터 닉네임을 입력해 주세요");
 
   let siblings;
   try {
     siblings = await fetchSiblings(name);
   } catch (error) {
     if (error instanceof LostArkError && error.isNotFound) {
-      throw new CharacterError(`'${name}' 캐릭터를 찾을 수 없다. 닉네임을 확인한다`);
+      throw new CharacterError(`'${name}' 캐릭터를 찾을 수 없습니다. 닉네임을 확인해 주세요`);
     }
     throw error;
   }
 
   if (siblings.length === 0) {
-    throw new CharacterError(`'${name}'의 원정대를 불러오지 못했다. 닉네임을 확인한다`);
+    throw new CharacterError(`'${name}'의 원정대를 불러오지 못했습니다. 닉네임을 확인해 주세요`);
   }
 
   const existing = await prisma.character.findMany({

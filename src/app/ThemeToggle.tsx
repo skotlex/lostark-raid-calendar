@@ -5,9 +5,9 @@ import { useEffect, useState } from "react";
 import { type ThemeChoice, applyTheme, readTheme } from "./theme";
 
 const OPTIONS: { value: ThemeChoice; label: string; title: string }[] = [
-  { value: "system", label: "자동", title: "시스템 설정을 따른다" },
-  { value: "light", label: "라이트", title: "밝은 테마로 고정한다" },
-  { value: "dark", label: "다크", title: "어두운 테마로 고정한다" },
+  { value: "system", label: "자동", title: "시스템 설정을 따릅니다" },
+  { value: "light", label: "라이트", title: "밝은 테마로 고정합니다" },
+  { value: "dark", label: "다크", title: "어두운 테마로 고정합니다" },
 ];
 
 export function ThemeToggle() {

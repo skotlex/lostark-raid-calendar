@@ -6,9 +6,9 @@ import { findInstance } from "@/lib/instance";
 import { type SlotInput, SlotError, archiveSlot, createSlot, updateSlot } from "@/lib/slots";
 
 async function resolveInstanceId(slug: unknown): Promise<string> {
-  if (typeof slug !== "string" || !slug) throw new SlotError("잘못된 요청이다");
+  if (typeof slug !== "string" || !slug) throw new SlotError("잘못된 요청입니다");
   const instance = await findInstance(slug);
-  if (!instance) throw new SlotError("인스턴스를 찾을 수 없다");
+  if (!instance) throw new SlotError("인스턴스를 찾을 수 없습니다");
   return instance.id;
 }
 
@@ -78,7 +78,7 @@ export async function archiveSlotAction(
     await archiveSlot(instanceId, String(formData.get("slotId") ?? ""));
     revalidatePath(`/i/${slug}/slots`);
     revalidatePath(`/i/${slug}`);
-    return { status: "ok", message: "목록에서 내렸다" };
+    return { status: "ok", message: "목록에서 내렸습니다" };
   } catch (error) {
     return { status: "error", message: toMessage(error) };
   }

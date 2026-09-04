@@ -12,9 +12,9 @@ import { parseWeekParam } from "@/lib/week";
  * 어떤 인스턴스의 데이터인지는 항상 서버에서 다시 확인한다.
  */
 async function resolveInstanceId(slug: unknown): Promise<string> {
-  if (typeof slug !== "string" || !slug) throw new BoardError("잘못된 요청이다");
+  if (typeof slug !== "string" || !slug) throw new BoardError("잘못된 요청입니다");
   const instance = await findInstance(slug);
-  if (!instance) throw new BoardError("인스턴스를 찾을 수 없다");
+  if (!instance) throw new BoardError("인스턴스를 찾을 수 없습니다");
   return instance.id;
 }
 
@@ -54,7 +54,7 @@ export async function assignAction(
       actorLabel: String(formData.get("actorLabel") ?? "") || null,
     });
     revalidatePath(`/i/${slug}`);
-    return created ? { status: "ok", message: "새 캐릭터를 조회해 등록했다" } : OK;
+    return created ? { status: "ok", message: "새 캐릭터를 조회해 등록했습니다" } : OK;
   } catch (error) {
     return { status: "error", message: toMessage(error) };
   }
