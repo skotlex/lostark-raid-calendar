@@ -23,7 +23,8 @@ model Instance {
   id           String   @id @default(cuid())
   slug         String   @unique
   name         String
-  /// null이면 누구나 입장. 값이 있으면 입장 시 암호를 요구한다(2단계).
+  /// 쓰지 않는다. 입장은 디스코드 길드 멤버십으로 가린다(CLAUDE.md 4장).
+  /// 대체가 실제로 끝나기 전까지 컬럼만 남겨둔다.
   passwordHash String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
