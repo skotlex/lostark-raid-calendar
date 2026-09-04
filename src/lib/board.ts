@@ -15,7 +15,7 @@ import {
   positionKind,
 } from "./positions";
 import { type SlotView, toSlotView } from "./slots";
-import { type PartySynergy, partySynergies } from "./synergy";
+import { type PartySynergy, missingSynergy, partySynergies } from "./synergy";
 import { getWeekStart, previousWeek } from "./week";
 
 export class BoardError extends Error {
@@ -69,6 +69,7 @@ const characterSelect = {
   arkPassive: true,
   engravings: true,
   arkGrid: true,
+  skillSynergies: true,
   role: true,
   roleLocked: true,
   memberId: true,
@@ -226,6 +227,11 @@ export async function getBoard(
         }
       }
 
+      // 시너지 트라이포드를 안 찍었다. 막지 않고 알리기만 한다(CLAUDE.md 3.4).
+      if (missingSynergy(character.className, character.role, character.skillSynergies)) {
+        warnings.push("시너지 트라이포드를 찍지 않았습니다");
+      }
+
       if (character.syncError) warnings.push(character.syncError);
 
       return {
@@ -249,6 +255,7 @@ export async function getBoard(
           cells.map((c) => ({
             className: c.character?.className ?? null,
             role: c.character?.role,
+            detected: c.character?.skillSynergies,
           })),
         ),
       };

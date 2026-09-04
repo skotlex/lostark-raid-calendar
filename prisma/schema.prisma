@@ -5,8 +5,8 @@
 // 리셋은 삭제가 아니라 "현재 주차 배정만 조회"하는 방식이라 과거 기록이 남는다.
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
   // 생성된 파일끼리 확장자 없이 import하면 node가 해석하지 못한다.
   // prisma/seed.mts처럼 node로 직접 돌리는 스크립트를 위해 확장자를 붙인다.
   importFileExtension = "ts"
@@ -51,38 +51,43 @@ model Member {
 }
 
 model Character {
-  id          String  @id @default(cuid())
-  instanceId  String
-  memberId    String?
+  id         String  @id @default(cuid())
+  instanceId String
+  memberId   String?
   /// 로스트아크 캐릭터 닉네임. API 조회 키다.
-  name        String
+  name       String
 
   // --- 로아 OpenAPI에서 받아오는 값 ---
-  className   String?
-  itemLevel   Decimal? @db.Decimal(7, 2)
-  combatPower Decimal? @db.Decimal(10, 2)
-  serverName  String?
+  className      String?
+  itemLevel      Decimal? @db.Decimal(7, 2)
+  combatPower    Decimal? @db.Decimal(10, 2)
+  serverName     String?
   /// CharacterImage. 편성 칸 배경으로 쓴다. null일 수 있다.
-  imageUrl    String?
+  imageUrl       String?
   /// 직업 각인. "수라의 길 Lv.1". 아크패시브 깨달음 1티어에서 뽑는다.
   /// 칸에 클래스와 나란히 보여줄 값이라 따로 꺼내 둔다.
   classEngraving String?
   /// 아크패시브 전체(진화·깨달음·도약 노드와 포인트). 툴팁은 제외한다.
-  arkPassive  Json?
+  arkPassive     Json?
   /// 전투 각인(원한, 예리한 둔기 …). 직업 각인이 아니다.
-  engravings  Json?
+  engravings     Json?
   /// 아크그리드 코어와 효과. 툴팁은 제외한다.
-  arkGrid     Json?
+  arkGrid        Json?
+  /// 스킬 트라이포드에서 읽은 파티 시너지. 툴팁은 제외한다.
+  ///
+  /// null과 빈 배열이 다른 뜻이다. null은 스킬을 받아본 적이 없다는 뜻이라 클래스 표로
+  /// 떨어지고, 빈 배열은 받아봤는데 시너지 트라이포드를 안 찍었다는 뜻이라 경고를 띄운다.
+  skillSynergies Json?
 
   /// 클래스로 자동 판정하되 수동 override를 허용한다(딜 발키리 등).
-  role        Role     @default(DPS)
-  roleLocked  Boolean  @default(false)
+  role       Role    @default(DPS)
+  roleLocked Boolean @default(false)
 
-  syncedAt    DateTime?
+  syncedAt  DateTime?
   /// 조회 실패 사유. 값이 있어도 기존 스펙은 지우지 않는다.
-  syncError   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  syncError String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   instance    Instance     @relation(fields: [instanceId], references: [id], onDelete: Cascade)
   member      Member?      @relation(fields: [memberId], references: [id], onDelete: SetNull)
@@ -95,26 +100,26 @@ model Character {
 
 /// 고정 요일표의 한 칸. 주차 개념이 없다.
 model RaidSlot {
-  id           String   @id @default(cuid())
-  instanceId   String
+  id          String    @id @default(cuid())
+  instanceId  String
   /// 0=일 … 6=토
-  dayOfWeek    Int
+  dayOfWeek   Int
   /// "20:00" 형식의 KST 시각
-  startTime    String
-  raidName     String
-  difficulty   String?
+  startTime   String
+  raidName    String
+  difficulty  String?
   /// "1공대" 같은 표시용 라벨
-  partyLabel   String?
+  partyLabel  String?
   /// 켜면 이 슬롯 전원이 매주 승계된다(레이드 단위 리셋 제외).
-  keepRoster   Boolean  @default(false)
-  sortOrder    Int      @default(0)
+  keepRoster  Boolean   @default(false)
+  sortOrder   Int       @default(0)
   /// 삭제 대신 보관. 과거 주차 기록이 사라지지 않게 한다.
-  archivedAt   DateTime?
+  archivedAt  DateTime?
   /// 승계를 이미 수행한 주차. 이 값이 조회 중인 주차와 다를 때만 직전 주차에서 복사한다.
   /// 없으면 "고정 인원을 지웠는데 새로고침하면 되살아나는" 상황이 생긴다.
-  carriedWeek  DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  carriedWeek DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   instance    Instance     @relation(fields: [instanceId], references: [id], onDelete: Cascade)
   assignments Assignment[]
@@ -148,14 +153,14 @@ model Assignment {
 /// 입장한 사람은 누구의 신청이든 지울 수 있다(하드 블로킹을 두지 않는다).
 /// 그래서 누가 했는지를 남긴다. 디스코드 로그인 뒤로는 actorLabel이 검증된 값이다.
 model ChangeLog {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   instanceId String
   weekStart  DateTime?
   slotId     String?
   actorLabel String?
   action     String
   detail     Json?
-  createdAt  DateTime @default(now())
+  createdAt  DateTime  @default(now())
 
   instance Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
 

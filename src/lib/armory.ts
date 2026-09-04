@@ -16,6 +16,7 @@ import type {
   ArmoryEngraving,
   ArmoryProfile,
   ArmoryResponse,
+  ArmorySkill,
 } from "./lostark";
 
 /**
@@ -287,6 +288,8 @@ export interface CharacterSpec {
   /** 전투 각인. 상세에서 보여준다 */
   engravings: EngravingData | null;
   arkGrid: ArkGridData | null;
+  /** 스킬 트라이포드에서 읽은 파티 시너지. 클래스 표보다 정확하다 */
+  skillSynergies: SkillSynergy[];
 }
 
 /**
@@ -314,5 +317,98 @@ export function toCharacterSpec(armory: ArmoryResponse | null | undefined): Char
     arkPassive,
     engravings: normalizeEngravings(armory?.ArmoryEngraving),
     arkGrid,
+    skillSynergies: normalizeSkillSynergies(armory?.ArmorySkills),
   };
+}
+
+// --- 스킬 트라이포드에서 읽는 파티 시너지 -------------------------------------
+
+/**
+ * 트라이포드가 주는 파티 시너지.
+ *
+ * `synergy.ts`의 클래스 표는 "이 직업은 보통 이 시너지를 준다"까지만 안다. 실제로는
+ * **그 트라이포드를 찍었을 때만** 나오고, 딜 발키리처럼 직업 표로는 답이 안 나오는
+ * 경우도 있다. 트라이포드는 캐릭터가 실제로 무엇을 들고 가는지를 말해준다.
+ */
+export interface SkillSynergy {
+  kind: string;
+  /** 툴팁이 말하는 수치. "8%" */
+  value: string;
+  /** 어느 스킬의 어느 트라이포드인지. 화면에서 근거를 보여줄 때 쓴다 */
+  source: string;
+}
+
+/**
+ * 툴팁 문구 → 시너지 종류.
+ *
+ * **문구가 종류마다 다르다.** 실측으로 확인한 것들이다.
+ *
+ *   치적    "받는 치명타 저항률이 6.0초간 10.0% 감소"   (건슬링어 / 급소 노출)
+ *   치피증  "치명타 공격에 받는 피해가 8.0% 증가"       (발키리 / 약점 공략)
+ *
+ * 두 가지를 조심한다.
+ *
+ * **지속시간이 중간에 끼어든다.** "저항률이 6.0초간 10.0% 감소"처럼 효과와 수치 사이에
+ * 다른 숫자가 들어온다. 사이를 건너뛰되 옆 문장까지 삼키지 않도록 길이를 묶는다.
+ * `[^.]`로는 못 건너뛴다. 지속시간 "6.0"에도 소수점이 있기 때문이다.
+ *
+ * **순서가 중요하다.** 치피증 문구에도 "받는 피해가 … 증가"가 들어 있어, 받피증을 먼저
+ * 보면 같은 트라이포드가 둘로 잡힌다. 좁은 규칙을 앞에 둔다.
+ *
+ * 확인하지 못한 종류는 추정 문구로 두었다. 안 잡히면 클래스 표로 떨어지므로
+ * 지금보다 나빠지지 않는다. 새 직업으로 확인되면 여기에 문구를 고쳐 넣는다.
+ */
+const SYNERGY_RULES: { kind: string; re: RegExp }[] = [
+  { kind: "치적", re: /치명타 저항률이.{0,40}?([\d.]+)%\s*감소/ },
+  { kind: "치피증", re: /치명타 공격에 받는 피해가.{0,40}?([\d.]+)%\s*증가/ },
+  { kind: "백헤드", re: /(?:백어택|헤드어택).{0,60}?피해가.{0,40}?([\d.]+)%\s*증가/ },
+  { kind: "방깍", re: /방어력이.{0,40}?([\d.]+)%\s*감소/ },
+  { kind: "받피증", re: /받는 피해가.{0,40}?([\d.]+)%\s*증가/ },
+  { kind: "공증", re: /공격력이.{0,40}?([\d.]+)%\s*증가/ },
+];
+
+/** "8.0" → "8%". 소수점 0은 떼어 표에 적힌 값과 같은 모양으로 만든다. */
+function formatPercent(raw: string): string {
+  const n = Number(raw);
+  return Number.isFinite(n) ? `${Number(n.toFixed(2))}%` : `${raw}%`;
+}
+
+/**
+ * 찍은 트라이포드에서 파티 시너지를 뽑는다.
+ *
+ * **"파티원"이 들어간 툴팁만 본다.** 자기만 받는 버프가 훨씬 많아서, 이걸 거르지 않으면
+ * 온갖 자버프가 시너지로 잡힌다.
+ *
+ * 툴팁 자체는 저장하지 않는다. 스킬까지 받으면 응답이 두 배가 되는데 대부분이 툴팁이고,
+ * 이 앱이 쓰는 것은 여기서 뽑은 결과뿐이다.
+ */
+export function normalizeSkillSynergies(
+  skills: ArmorySkill[] | null | undefined,
+): SkillSynergy[] {
+  if (!Array.isArray(skills)) return [];
+
+  const found = new Map<string, SkillSynergy>();
+  for (const skill of skills) {
+    for (const tripod of skill.Tripods ?? []) {
+      if (!tripod.IsSelected) continue;
+      const text = stripTags(tripod.Tooltip) ?? "";
+      if (!text.includes("파티원")) continue;
+
+      for (const rule of SYNERGY_RULES) {
+        const match = text.match(rule.re);
+        if (!match) continue;
+        // 같은 종류가 여러 스킬에 걸리면 하나만 센다. 시너지는 중첩되지 않는다.
+        if (!found.has(rule.kind)) {
+          found.set(rule.kind, {
+            kind: rule.kind,
+            value: formatPercent(match[1]!),
+            source: `${skill.Name ?? "?"} · ${tripod.Name ?? "?"}`,
+          });
+        }
+        // 한 트라이포드는 한 종류만 준다. 좁은 규칙이 먼저 걸렸으면 거기서 끝낸다.
+        break;
+      }
+    }
+  }
+  return [...found.values()];
 }

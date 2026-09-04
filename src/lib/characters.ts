@@ -2,7 +2,7 @@ import "server-only";
 
 import { Prisma } from "@/generated/prisma/client";
 
-import type { ArkGridData, ArkPassiveData, EngravingData } from "./armory";
+import type { ArkGridData, ArkPassiveData, EngravingData, SkillSynergy } from "./armory";
 import { type CharacterSpec, enlightenmentNames, toCharacterSpec } from "./armory";
 import { summarizeArkGrid } from "./arkGridCores";
 import { pickClassEngraving } from "./classEngravings";
@@ -32,6 +32,13 @@ export interface CharacterView {
   arkPassive: ArkPassiveData | null;
   engravings: EngravingData | null;
   arkGrid: ArkGridData | null;
+  /**
+   * 스킬 트라이포드에서 읽은 시너지.
+   *
+   * null이면 스킬을 아직 받아본 적이 없다는 뜻이고 클래스 표로 떨어진다.
+   * 빈 배열이면 받아봤는데 시너지 트라이포드를 안 찍은 것이다.
+   */
+  skillSynergies: SkillSynergy[] | null;
   role: "DPS" | "SUPPORT";
   roleLocked: boolean;
   memberId: string | null;
@@ -54,6 +61,7 @@ type CharacterRow = {
   arkPassive: unknown;
   engravings: unknown;
   arkGrid: unknown;
+  skillSynergies: unknown;
   role: string;
   roleLocked: boolean;
   memberId: string | null;
@@ -94,6 +102,7 @@ export function toCharacterView(row: CharacterRow, now = Date.now()): CharacterV
     arkPassive: (row.arkPassive as ArkPassiveData | null) ?? null,
     engravings: (row.engravings as EngravingData | null) ?? null,
     arkGrid,
+    skillSynergies: (row.skillSynergies as SkillSynergy[] | null) ?? null,
     role: row.role === "SUPPORT" ? "SUPPORT" : "DPS",
     roleLocked: row.roleLocked,
     memberId: row.memberId,
@@ -116,6 +125,7 @@ const characterSelect = {
   arkPassive: true,
   engravings: true,
   arkGrid: true,
+  skillSynergies: true,
   role: true,
   roleLocked: true,
   memberId: true,
@@ -221,6 +231,8 @@ export async function registerCharacter(
     arkPassive: toJson(spec.arkPassive),
     engravings: toJson(spec.engravings),
     arkGrid: toJson(spec.arkGrid),
+    // 빈 배열도 그대로 넣는다. null과 뜻이 다르다(schema.prisma 참조).
+    skillSynergies: spec.skillSynergies as unknown as Prisma.InputJsonValue,
     syncedAt: new Date(),
     syncError: null,
   };
@@ -297,6 +309,7 @@ export async function syncCharacter(
         arkPassive: toJson(spec.arkPassive),
         engravings: toJson(spec.engravings),
         arkGrid: toJson(spec.arkGrid),
+        skillSynergies: spec.skillSynergies as unknown as Prisma.InputJsonValue,
         syncedAt: new Date(),
         syncError: null,
         // 아크패시브로 판정하므로 동기화가 항상 최신 세팅을 따라간다.

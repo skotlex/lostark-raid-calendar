@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  normalizeSkillSynergies,
   normalizeArkGrid,
   normalizeArkPassive,
   normalizeEngravings,
@@ -338,5 +339,95 @@ describe("pickClassEngraving (아크그리드가 없을 때의 대비책)", () =
 
   it("표에 없는 직업이면 null이다 (엉뚱한 이름을 붙이지 않는다)", () => {
     expect(pickClassEngraving("워로드", ["알 수 없는 노드"])).toBeNull();
+  });
+});
+
+describe("트라이포드 시너지", () => {
+  /** 실제 응답에서 그대로 가져온 문구다. 게임 개편으로 바뀌면 여기부터 깨진다. */
+  const tripod = (name: string, tooltip: string, selected = true) => ({
+    Name: name,
+    Tier: 0,
+    Slot: 3,
+    IsSelected: selected,
+    Tooltip: tooltip,
+  });
+
+  it("치적 — 지속시간이 수치 앞에 끼어들어도 읽는다", () => {
+    const skills = [
+      {
+        Name: "AT02 유탄",
+        Level: 4,
+        Tripods: [
+          tripod(
+            "급소 노출",
+            "공격 적중 시 대상이 자신 및 파티원에게 받는 치명타 저항률이 8.0초간 10.0% 감소한다.",
+          ),
+        ],
+      },
+    ];
+    expect(normalizeSkillSynergies(skills)).toEqual([
+      { kind: "치적", value: "10%", source: "AT02 유탄 · 급소 노출" },
+    ]);
+  });
+
+  it("치피증 — 받피증 문구를 품고 있어도 하나로만 잡는다", () => {
+    const skills = [
+      {
+        Name: "전진 찌르기",
+        Level: 14,
+        Tripods: [
+          tripod(
+            "약점 공략",
+            "공격에 적중된 적은 12.0 초 동안 자신 및 파티원의 치명타 공격에 받는 피해가 8.0% 증가한다.",
+          ),
+        ],
+      },
+    ];
+    expect(normalizeSkillSynergies(skills)).toEqual([
+      { kind: "치피증", value: "8%", source: "전진 찌르기 · 약점 공략" },
+    ]);
+  });
+
+  it("안 찍은 트라이포드는 세지 않는다", () => {
+    const skills = [
+      {
+        Name: "민첩한 사격",
+        Level: 1,
+        Tripods: [
+          tripod(
+            "급소 노출",
+            "공격 적중 시 대상이 자신 및 파티원에게 받는 치명타 저항률이 8.0초간 10.0% 감소한다.",
+            false,
+          ),
+        ],
+      },
+    ];
+    expect(normalizeSkillSynergies(skills)).toEqual([]);
+  });
+
+  it("파티원이 없는 자버프는 시너지가 아니다", () => {
+    const skills = [
+      {
+        Name: "아무 스킬",
+        Level: 10,
+        Tripods: [tripod("자버프", "자신의 공격력이 20.0% 증가한다.")],
+      },
+    ];
+    expect(normalizeSkillSynergies(skills)).toEqual([]);
+  });
+
+  it("같은 시너지가 여러 스킬에 걸려도 한 번만 센다", () => {
+    const tip =
+      "공격 적중 시 대상이 자신 및 파티원에게 받는 치명타 저항률이 8.0초간 10.0% 감소한다.";
+    const skills = [
+      { Name: "스킬A", Level: 4, Tripods: [tripod("급소 노출", tip)] },
+      { Name: "스킬B", Level: 4, Tripods: [tripod("급소 노출", tip)] },
+    ];
+    expect(normalizeSkillSynergies(skills)).toHaveLength(1);
+  });
+
+  it("스킬이 없으면 빈 배열", () => {
+    expect(normalizeSkillSynergies(null)).toEqual([]);
+    expect(normalizeSkillSynergies(undefined)).toEqual([]);
   });
 });

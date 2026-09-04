@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getSynergies, partySynergies, resolveRole } from "./synergy";
+import { getSynergies, missingSynergy, partySynergies, resolveRole } from "./synergy";
 
 /**
  * 역할 판정 근거는 실제 캐릭터에서 확인했다.
@@ -101,5 +101,53 @@ describe("partySynergies", () => {
   it("워로드는 두 시너지를 함께 준다", () => {
     const result = partySynergies([{ className: "워로드", role: "DPS" }]);
     expect(result.map((s) => s.kind)).toEqual(["방깍", "백헤드"]);
+  });
+});
+
+describe("트라이포드 시너지", () => {
+  it("찍은 트라이포드가 클래스 표를 이긴다", () => {
+    // 딜 발키리는 클래스 표에 딜 시너지가 없다. 트라이포드에서만 나온다.
+    expect(getSynergies("발키리", "DPS", [{ kind: "치피증", value: "8%" }])).toEqual([
+      { kind: "치피증", label: "치피증 8%", value: "8%" },
+    ]);
+  });
+
+  it("스킬을 받아본 적 없으면(null) 클래스 표로 떨어진다", () => {
+    // 옛 데이터가 갑자기 시너지 없음으로 보이면 안 된다.
+    expect(getSynergies("건슬링어", "DPS", null).map((s) => s.kind)).toEqual(["치적"]);
+    expect(getSynergies("건슬링어", "DPS").map((s) => s.kind)).toEqual(["치적"]);
+  });
+
+  it("받아봤는데 비었으면(빈 배열) 시너지가 없는 게 맞다", () => {
+    expect(getSynergies("건슬링어", "DPS", [])).toEqual([]);
+  });
+
+  it("서폿 버프는 트라이포드가 아니라 직업에서 나온다", () => {
+    expect(getSynergies("바드", "SUPPORT", []).map((s) => s.kind)).toEqual(["서폿"]);
+    // 딜 세팅을 한 서폿 직업은 버프를 주지 않는다.
+    expect(getSynergies("발키리", "DPS", []).map((s) => s.kind)).toEqual([]);
+  });
+
+  it("표에 없는 종류는 무시한다", () => {
+    expect(getSynergies("건슬링어", "DPS", [{ kind: "이상한것", value: "1%" }])).toEqual([]);
+  });
+});
+
+describe("시너지 트라이포드 누락 경고", () => {
+  it("받아봤는데 비어 있는 딜러만 경고한다", () => {
+    expect(missingSynergy("건슬링어", "DPS", [])).toBe(true);
+  });
+
+  it("받아본 적이 없으면 경고하지 않는다", () => {
+    expect(missingSynergy("건슬링어", "DPS", null)).toBe(false);
+    expect(missingSynergy("건슬링어", "DPS", undefined)).toBe(false);
+  });
+
+  it("찍었으면 경고하지 않는다", () => {
+    expect(missingSynergy("건슬링어", "DPS", [{ kind: "치적", value: "10%" }])).toBe(false);
+  });
+
+  it("서폿은 딜 시너지가 없어도 경고하지 않는다", () => {
+    expect(missingSynergy("바드", "SUPPORT", [])).toBe(false);
   });
 });

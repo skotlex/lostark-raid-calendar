@@ -75,7 +75,8 @@ export function CharacterCard({
               <div className="truncate tabular">아크그리드 {character.arkGridSummary}</div>
             )}
             <div className="truncate">
-              시너지 {synergyLabel(character.className, character.role)}
+              시너지{" "}
+              {synergyLabel(character.className, character.role, character.skillSynergies)}
             </div>
           </div>
         </div>

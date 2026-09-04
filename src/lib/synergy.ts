@@ -192,26 +192,77 @@ export function inferRole(className: string | null | undefined): Role {
   return getClassInfo(className)?.role ?? "DPS";
 }
 
+/** 트라이포드에서 읽어온 시너지. armory.ts의 SkillSynergy와 같은 모양이다. */
+export interface DetectedSynergy {
+  kind: string;
+  value: string;
+}
+
+const KINDS = new Set<string>(TRACKED_KINDS);
+
 /**
  * 시너지 목록.
  *
- * 딜 세팅을 한 서폿 직업(딜 발키리 등)은 서폿 버프를 주지 않으므로 제외한다.
- * 역할을 넘기지 않으면 클래스 기본값으로 본다.
+ * **트라이포드가 클래스 표를 이긴다.** 클래스 표는 "이 직업은 보통 이걸 준다"까지만
+ * 알고, 실제로는 그 트라이포드를 찍었을 때만 나온다. 딜 발키리처럼 직업만으로는
+ * 답이 안 나오는 경우도 있다.
+ *
+ * `detected`가 null이면 스킬을 아직 받아본 적이 없다는 뜻이라 클래스 표로 떨어진다.
+ * 빈 배열이면 받아봤는데 안 찍은 것이므로 딜 시너지가 없는 게 맞다.
+ *
+ * 서폿 버프는 트라이포드가 아니라 직업에서 나오므로 언제나 클래스 표를 따른다.
+ * 딜 세팅을 한 서폿 직업(딜 발키리 등)은 버프를 주지 않으므로 제외한다.
  */
 export function getSynergies(
   className: string | null | undefined,
   role?: Role,
+  detected?: DetectedSynergy[] | null,
 ): Synergy[] {
-  const list = getClassInfo(className)?.synergies ?? [];
-  if (role === "DPS" && className && ROLE_VARIABLE_CLASSES.includes(className)) {
-    return list.filter((s) => s.kind !== "서폿");
-  }
-  return list;
+  const info = getClassInfo(className);
+  const table = info?.synergies ?? [];
+
+  const dealer =
+    detected === null || detected === undefined
+      ? table.filter((s) => s.kind !== "서폿")
+      : detected
+          .filter((d) => KINDS.has(d.kind))
+          .map((d) => ({
+            kind: d.kind as SynergyKind,
+            label: `${d.kind} ${d.value}`,
+            value: d.value,
+          }));
+
+  const givesSupportBuff =
+    table.some((s) => s.kind === "서폿") &&
+    !(role === "DPS" && className && ROLE_VARIABLE_CLASSES.includes(className));
+
+  return givesSupportBuff ? [...dealer, 서폿버프] : dealer;
 }
 
-/** 편성 칸에 한 줄로 찍을 문구. 워로드처럼 둘이면 쉼표로 잇는다. */
-export function synergyLabel(className: string | null | undefined, role?: Role): string {
-  const list = getSynergies(className, role);
+/**
+ * 클래스 표가 기대하는데 실제로는 안 찍은 시너지.
+ *
+ * 막지 않고 경고만 띄운다(CLAUDE.md 3.4). 편성 직전에 "트포 빠졌다"를 알아채는 것이
+ * 이 앱이 시트보다 나은 점이다.
+ */
+export function missingSynergy(
+  className: string | null | undefined,
+  role: Role | undefined,
+  detected: DetectedSynergy[] | null | undefined,
+): boolean {
+  if (!detected || detected.length > 0) return false;
+  if (role === "SUPPORT") return false;
+  const table = getClassInfo(className)?.synergies ?? [];
+  return table.some((s) => s.kind !== "서폿");
+}
+
+/** 한 줄로 찍을 문구. 워로드처럼 둘이면 쉼표로 잇는다. */
+export function synergyLabel(
+  className: string | null | undefined,
+  role?: Role,
+  detected?: DetectedSynergy[] | null,
+): string {
+  const list = getSynergies(className, role, detected);
   return list.length > 0 ? list.map((s) => s.label).join(", ") : "-";
 }
 
@@ -232,12 +283,16 @@ export interface PartySynergy {
  * 서폿 버프는 종류가 하나뿐이라 따로 세지 않고 같은 목록에 담는다.
  */
 export function partySynergies(
-  members: { className: string | null | undefined; role?: Role }[],
+  members: {
+    className: string | null | undefined;
+    role?: Role;
+    detected?: DetectedSynergy[] | null;
+  }[],
 ): PartySynergy[] {
   const found = new Map<SynergyKind, PartySynergy>();
 
   for (const member of members) {
-    for (const synergy of getSynergies(member.className, member.role)) {
+    for (const synergy of getSynergies(member.className, member.role, member.detected)) {
       const existing = found.get(synergy.kind);
       if (existing) existing.count += 1;
       else found.set(synergy.kind, { ...synergy, count: 1 });

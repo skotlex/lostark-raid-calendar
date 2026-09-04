@@ -262,9 +262,31 @@ export interface ArkPassive {
   Effects: ArkPassiveNode[] | null;
 }
 
+/**
+ * 스킬 하나. 트라이포드에서 파티 시너지를 읽는다(armory.ts).
+ *
+ * Tooltip은 게임 내 표시용 마크업이라 저장하지 않는다. 시너지를 뽑고 버린다.
+ */
+export interface ArmorySkill {
+  Name: string | null;
+  Level: number | null;
+  Tripods: ArmoryTripod[] | null;
+  [key: string]: unknown;
+}
+
+export interface ArmoryTripod {
+  Name: string | null;
+  Tier: number | null;
+  Slot: number | null;
+  IsSelected: boolean | null;
+  Tooltip: string | null;
+}
+
 export interface ArmoryResponse {
   ArmoryProfile: ArmoryProfile | null;
   ArmoryEngraving: ArmoryEngraving | null;
+  /** 필터에 combat-skills를 넣었을 때만 온다. 없을 수 있다 */
+  ArmorySkills?: ArmorySkill[] | null;
   ArkPassive: ArkPassive | null;
   ArkGrid: ArkGrid | null;
   [key: string]: unknown;
@@ -285,7 +307,8 @@ export interface Sibling {
 export async function fetchArmory(characterName: string): Promise<ArmoryResponse | null> {
   const encoded = encodeURIComponent(characterName);
   return request<ArmoryResponse>(
-    `/armories/characters/${encoded}?filters=profiles+engravings+arkgrid+arkpassive`,
+    // combat-skills를 합쳐도 요청은 1회다. 따로 부르면 분당 한도가 절반으로 준다.
+    `/armories/characters/${encoded}?filters=profiles+engravings+arkgrid+arkpassive+combat-skills`,
     characterName,
   );
 }
