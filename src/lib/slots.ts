@@ -9,7 +9,6 @@ export interface SlotView {
   startTime: string;
   raidName: string;
   difficulty: string | null;
-  partyLabel: string | null;
   keepRoster: boolean;
   sortOrder: number;
 }
@@ -27,7 +26,6 @@ const slotSelect = {
   startTime: true,
   raidName: true,
   difficulty: true,
-  partyLabel: true,
   keepRoster: true,
   sortOrder: true,
 } as const;
@@ -38,7 +36,6 @@ type SlotRow = {
   startTime: string;
   raidName: string;
   difficulty: string | null;
-  partyLabel: string | null;
   keepRoster: boolean;
   sortOrder: number;
 };
@@ -56,7 +53,6 @@ export function toSlotView(row: SlotRow): SlotView {
     startTime: row.startTime,
     raidName: row.raidName,
     difficulty: row.difficulty,
-    partyLabel: row.partyLabel,
     keepRoster: row.keepRoster,
     sortOrder: row.sortOrder,
   };
@@ -77,7 +73,6 @@ export interface SlotInput {
   startTime: string;
   raidName: string;
   difficulty?: string | null;
-  partyLabel?: string | null;
   keepRoster?: boolean;
 }
 
@@ -106,7 +101,6 @@ function normalize(input: SlotInput) {
     startTime: input.startTime,
     raidName: input.raidName.trim(),
     difficulty: trim(input.difficulty),
-    partyLabel: trim(input.partyLabel),
     keepRoster: input.keepRoster ?? false,
   };
 }

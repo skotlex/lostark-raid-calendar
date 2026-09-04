@@ -50,12 +50,6 @@ export function SlotCard({
           <span className="ml-2 text-text-dim tabular">{slot.startTime}</span>
         </h3>
 
-        {slot.partyLabel && (
-          <span className="rounded bg-surface-2 px-1.5 py-0.5 text-xs text-text-dim">
-            {slot.partyLabel}
-          </span>
-        )}
-
         <span className="text-xs text-text-faint tabular">{slot.filled}/8</span>
 
         {editable && (

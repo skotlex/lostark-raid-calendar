@@ -84,7 +84,6 @@ const slotSelect = {
   startTime: true,
   raidName: true,
   difficulty: true,
-  partyLabel: true,
   keepRoster: true,
   sortOrder: true,
 } as const;

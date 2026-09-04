@@ -89,15 +89,6 @@ export function SlotForm({
         />
       </Field>
 
-      <Field label="공대">
-        <input
-          name="partyLabel"
-          defaultValue={slot?.partyLabel ?? ""}
-          placeholder="1공대"
-          className="w-20 rounded border border-border bg-bg px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
-        />
-      </Field>
-
       <button
         type="submit"
         disabled={pending}

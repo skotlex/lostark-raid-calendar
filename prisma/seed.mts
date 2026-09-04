@@ -43,9 +43,9 @@ if (process.argv.includes("--with-samples")) {
   } else {
     // 0=일 … 6=토
     const samples = [
-      { dayOfWeek: 4, startTime: "20:00", raidName: "노르둠", difficulty: "하드", partyLabel: "1공대", minItemLevel: 1740 },
-      { dayOfWeek: 4, startTime: "22:00", raidName: "하기르", difficulty: "하드", partyLabel: "2공대", minItemLevel: 1760 },
-      { dayOfWeek: 6, startTime: "21:00", raidName: "벨가르딘", difficulty: "나이트메어", partyLabel: "고정공대", minItemLevel: 1780, keepRoster: true },
+      { dayOfWeek: 4, startTime: "20:00", raidName: "노르둠", difficulty: "하드", minItemLevel: 1740 },
+      { dayOfWeek: 4, startTime: "22:00", raidName: "하기르", difficulty: "하드", minItemLevel: 1760 },
+      { dayOfWeek: 6, startTime: "21:00", raidName: "벨가르딘", difficulty: "나이트메어", minItemLevel: 1780, keepRoster: true },
     ];
 
     await prisma.raidSlot.createMany({

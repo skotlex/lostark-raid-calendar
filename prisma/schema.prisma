@@ -108,8 +108,6 @@ model RaidSlot {
   startTime   String
   raidName    String
   difficulty  String?
-  /// "1공대" 같은 표시용 라벨
-  partyLabel  String?
   /// 켜면 이 슬롯 전원이 매주 승계된다(레이드 단위 리셋 제외).
   keepRoster  Boolean   @default(false)
   sortOrder   Int       @default(0)
