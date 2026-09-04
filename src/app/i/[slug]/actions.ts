@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { BoardError, assignByName, setPinned, unassign } from "@/lib/board";
+import { BoardError, assignByName, moveAssignment, setPinned, unassign } from "@/lib/board";
 import { findInstance } from "@/lib/instance";
 import { SlotError, setKeepRoster } from "@/lib/slots";
 import { parseWeekParam } from "@/lib/week";
@@ -73,6 +73,37 @@ export async function unassignAction(
       slotId: String(formData.get("slotId") ?? ""),
       weekStart: parseWeekParam(String(formData.get("week") ?? "")),
       position: String(formData.get("position") ?? ""),
+      actorLabel: String(formData.get("actorLabel") ?? "") || null,
+    });
+    revalidatePath(`/i/${slug}`);
+    return OK;
+  } catch (error) {
+    return { status: "error", message: toMessage(error) };
+  }
+}
+
+/**
+ * 카드를 드래그해 옮긴다. 받는 자리가 차 있으면 맞바꾼다.
+ *
+ * 어느 자리에서 어디로 가는지를 모두 폼으로 받는다. 드롭을 받은 칸이 자기 자리를
+ * `to`로, 끌려온 쪽을 `from`으로 넣는다.
+ */
+export async function moveAction(_prev: CellState, formData: FormData): Promise<CellState> {
+  const slug = String(formData.get("slug") ?? "");
+
+  try {
+    const instanceId = await resolveInstanceId(slug);
+    await moveAssignment({
+      instanceId,
+      weekStart: parseWeekParam(String(formData.get("week") ?? "")),
+      from: {
+        slotId: String(formData.get("fromSlotId") ?? ""),
+        position: String(formData.get("fromPosition") ?? ""),
+      },
+      to: {
+        slotId: String(formData.get("toSlotId") ?? ""),
+        position: String(formData.get("toPosition") ?? ""),
+      },
       actorLabel: String(formData.get("actorLabel") ?? "") || null,
     });
     revalidatePath(`/i/${slug}`);

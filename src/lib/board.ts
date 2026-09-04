@@ -7,7 +7,13 @@ import {
   toCharacterView,
 } from "./characters";
 import { prisma } from "./prisma";
-import { ALL_POSITIONS, PARTIES, isValidPosition, partyIndexOf } from "./positions";
+import {
+  ALL_POSITIONS,
+  PARTIES,
+  isValidPosition,
+  partyIndexOf,
+  positionKind,
+} from "./positions";
 import { type SlotView, toSlotView } from "./slots";
 import { type PartySynergy, partySynergies } from "./synergy";
 import { getWeekStart, previousWeek } from "./week";
@@ -306,13 +312,29 @@ export async function assignByName(params: {
     }
   }
 
+  // 서폿은 파티의 폿 자리로 보낸다. 딜 칸에 이름을 쳐 넣어도 자리를 다시 옮길 일이
+  // 없게 하기 위한 것이고, 폿 자리가 이미 차 있으면 친 자리에 그대로 둔다(경고만 뜬다).
+  let seat = position;
+  if (character.role === "SUPPORT" && positionKind(position) === "DPS") {
+    const supSeat = PARTIES[partyIndexOf(position)].find(
+      (p) => positionKind(p) === "SUP",
+    );
+    if (supSeat) {
+      const taken = await prisma.assignment.findUnique({
+        where: { slotId_weekStart_position: { slotId, weekStart, position: supSeat } },
+        select: { characterId: true },
+      });
+      if (!taken || taken.characterId === character.id) seat = supSeat;
+    }
+  }
+
   await prisma.assignment.upsert({
-    where: { slotId_weekStart_position: { slotId, weekStart, position } },
+    where: { slotId_weekStart_position: { slotId, weekStart, position: seat } },
     update: { characterId: character.id, createdByLabel: actorLabel ?? null },
     create: {
       slotId,
       weekStart,
-      position,
+      position: seat,
       characterId: character.id,
       createdByLabel: actorLabel ?? null,
     },
@@ -325,7 +347,7 @@ export async function assignByName(params: {
       slotId,
       actorLabel: actorLabel ?? null,
       action: "assign",
-      detail: { position, character: character.name, raid: slot.raidName },
+      detail: { position: seat, character: character.name, raid: slot.raidName },
     },
   });
 
@@ -361,6 +383,92 @@ export async function unassign(params: {
       actorLabel: actorLabel ?? null,
       action: "unassign",
       detail: { position, character: removed.character.name, raid: slot.raidName },
+    },
+  });
+}
+
+/**
+ * 카드를 다른 자리로 옮긴다. 드래그로 자리를 바꾸는 경로다.
+ *
+ * 받는 자리가 비어 있으면 그냥 옮기고, 차 있으면 **맞바꾼다.** 편성을 짤 때는
+ * "이 둘의 자리를 바꾸고 싶다"가 대부분이라 밀어내고 지우는 것보다 낫다.
+ *
+ * (slotId, weekStart, position) 유니크 제약 때문에 맞바꾸는 중간에 두 행이 같은 자리를
+ * 가리키는 순간이 생기면 안 된다. 한쪽을 임시 자리로 잠깐 비켜두고 트랜잭션으로 묶는다.
+ */
+export async function moveAssignment(params: {
+  instanceId: string;
+  weekStart: Date;
+  from: { slotId: string; position: string };
+  to: { slotId: string; position: string };
+  actorLabel?: string | null;
+}): Promise<void> {
+  const { instanceId, weekStart, from, to, actorLabel } = params;
+  requireCurrentWeek(weekStart);
+  if (!isValidPosition(from.position) || !isValidPosition(to.position)) {
+    throw new BoardError("잘못된 자리다");
+  }
+  if (from.slotId === to.slotId && from.position === to.position) return;
+
+  const fromSlot = await requireSlot(instanceId, from.slotId);
+  const toSlot = await requireSlot(instanceId, to.slotId);
+
+  const moved = await prisma.$transaction(async (tx) => {
+    const source = await tx.assignment.findUnique({
+      where: {
+        slotId_weekStart_position: {
+          slotId: from.slotId,
+          weekStart,
+          position: from.position,
+        },
+      },
+      select: { id: true, character: { select: { name: true } } },
+    });
+    if (!source) throw new BoardError("옮길 캐릭터가 없다");
+
+    const target = await tx.assignment.findUnique({
+      where: {
+        slotId_weekStart_position: {
+          slotId: to.slotId,
+          weekStart,
+          position: to.position,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (target) {
+      // 자리 이름은 자유 문자열이라 겹치지 않을 임시값을 쓸 수 있다.
+      await tx.assignment.update({
+        where: { id: source.id },
+        data: { position: `MOVING:${source.id}` },
+      });
+      await tx.assignment.update({
+        where: { id: target.id },
+        data: { slotId: from.slotId, position: from.position },
+      });
+    }
+
+    await tx.assignment.update({
+      where: { id: source.id },
+      data: { slotId: to.slotId, position: to.position },
+    });
+
+    return { name: source.character.name, swapped: Boolean(target) };
+  });
+
+  await prisma.changeLog.create({
+    data: {
+      instanceId,
+      weekStart,
+      slotId: to.slotId,
+      actorLabel: actorLabel ?? null,
+      action: moved.swapped ? "swap" : "move",
+      detail: {
+        character: moved.name,
+        from: { raid: fromSlot.raidName, position: from.position },
+        to: { raid: toSlot.raidName, position: to.position },
+      },
     },
   });
 }
