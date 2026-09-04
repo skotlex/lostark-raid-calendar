@@ -148,22 +148,16 @@ export function PortraitBleed({
 }
 
 /**
- * 칸을 가득 채우는 초상.
+ * 편성 칸의 초상.
  *
- * 위의 `PortraitBleed`는 카드가 가로로 넓을 때를 전제한다. 오른쪽 절반에 인물을 두고
- * 왼쪽에 글자를 쌓는 구도라, 4열로 좁아지면 인물과 글자가 같은 자리를 다툰다.
+ * **칸 폭에 따라 구도가 둘로 갈린다.** 넓으면 오른쪽에 걸쳐 배경으로 깔리고(전적 사이트
+ * 카드 형태), 좁으면 가운데에 크게 선다. 좁은 칸에서 오른쪽 절반만 쓰면 인물이
+ * 알아볼 수 없이 작아지고, 넓은 칸에서 가운데에 세우면 글자가 인물 위로 올라탄다.
  *
- * 그래서 좁은 칸에서는 인물을 **가운데에 크게** 두고 글자를 그 위에 얹는다.
- * 글자가 묻히지 않도록 읽는 쪽에서 검은 바탕을 깐다(globals.css의 `.char-veil`).
+ * 구도를 전환하는 것은 CSS다(globals.css의 char-portrait). 여기서 인라인 스타일로
+ * 잡으면 컨테이너 쿼리가 손댈 수 없다. 클래스 색만 변수로 넘긴다.
  */
-/**
- * 얼굴이 칸 위쪽에, 상체가 가운데에 오도록 잡은 값이다.
- * 더 키우면 얼굴이 잘리고, 줄이면 인물이 작아져 누구인지 알아보기 어렵다.
- */
-const FILL_ORIGIN = "50% 20%";
-const FILL_SCALE = 1.15;
-
-export function PortraitFill({
+export function PortraitCard({
   src,
   className,
 }: {
@@ -171,18 +165,15 @@ export function PortraitFill({
   className: string | null;
 }) {
   const [broken, setBroken] = useState(false);
-  const color = classColor(className);
 
   return (
     <div
-      className="pointer-events-none absolute inset-0 overflow-hidden select-none"
+      className="char-portrait"
+      style={{ "--class-color": classColor(className) } as React.CSSProperties}
       aria-hidden
     >
       {/* 클래스 색 글로우. 이미지가 없거나 깨져도 칸이 비어 보이지 않는다. */}
-      <div
-        className="absolute inset-0"
-        style={{ background: `radial-gradient(75% 60% at 50% 26%, ${color}, transparent 78%)` }}
-      />
+      <div className="char-portrait-glow" />
       {src && !broken && (
         <Image
           src={src}
@@ -190,12 +181,7 @@ export function PortraitFill({
           fill
           // 확대해서 일부만 쓰므로 칸 폭에 맞춘 크기를 받으면 뭉개진다.
           sizes="400px"
-          className="object-cover"
-          style={{
-            objectPosition: FILL_ORIGIN,
-            transform: `scale(${FILL_SCALE})`,
-            transformOrigin: FILL_ORIGIN,
-          }}
+          className="char-portrait-img"
           onError={() => setBroken(true)}
         />
       )}

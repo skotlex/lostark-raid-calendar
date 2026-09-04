@@ -6,7 +6,7 @@ import type { CellView } from "@/lib/board";
 import { positionKind, positionLabel } from "@/lib/positions";
 
 import { NameInput } from "./NameInput";
-import { PortraitFill } from "./Portrait";
+import { PortraitCard } from "./Portrait";
 import {
   type CellState,
   assignAction,
@@ -153,8 +153,10 @@ export function Cell({
 
   // --- 채워진 칸 -----------------------------------------------------------
   //
-  // 초상이 칸을 가득 채우고 글자가 그 위에 얹힌다. 4열로 좁아지면 인물과 글자를
-  // 좌우로 나눌 자리가 없어서, 위아래로 검은 바탕을 깔고 그 위에 쌓는다.
+  // **마크업 하나로 두 구도를 낸다.** 칸이 넓으면 인물이 오른쪽에 걸치고 글자가 왼쪽에
+  // 쌓이고, 좁으면 인물이 가운데 서고 글자가 위아래에 얹힌다. 전환은 CSS가 한다
+  // (globals.css의 컨테이너 쿼리). 두 벌을 만들면 한쪽만 고치는 실수가 난다.
+  //
   // 초상 때문에 이 칸만은 라이트 모드에서도 어둡다(globals.css 참조).
   return (
     <div
@@ -162,18 +164,13 @@ export function Cell({
       draggable={editable}
       onDragStart={onDragStart}
       onDragEnd={() => setDragging(false)}
-      className={`char-card flex flex-col ${dropping ? "char-card--dropping" : ""} ${
+      className={`char-card char-card--filled ${dropping ? "char-card--dropping" : ""} ${
         dragging ? "char-card--dragging" : ""
       }`}
     >
-      <PortraitFill src={character.imageUrl} className={character.className} />
+      <PortraitCard src={character.imageUrl} className={character.className} />
 
-      {/* 초상 위에 얹으려면 쌓임 맥락이 필요하다. */}
-      {/*
-        위쪽에는 띠를 깔지 않는다. 깔면 인물의 머리가 그 아래로 숨는다.
-        칩과 버튼이 각자 어두운 바탕을 갖고 있어 초상 위에서도 읽힌다.
-      */}
-      <div className="relative flex items-start gap-1 px-1.5 py-1">
+      <div className="char-top">
         <div className="min-w-0 flex-1">
           {/* 직업 각인이 칸에서 가장 먼저 읽히는 정보다. 클래스는 그다음. */}
           <div className="char-chip-line">
@@ -236,19 +233,21 @@ export function Cell({
         )}
       </div>
 
-      {/* 인물이 보이도록 가운데는 비운다. */}
-      <div className="relative flex-1" />
+      {/* 좁을 때만 벌어진다. 인물이 보이도록 가운데를 비운다. */}
+      <div className="char-gap" />
 
-      <div className="char-veil relative px-1.5 py-1">
+      <div className="char-bottom">
         <div className="char-name truncate">{character.name}</div>
 
-        {/*
-          좁은 칸에서는 "템렙"·"전투력" 라벨을 넣을 자리가 없다. 자리만 고정해 두면
-          왼쪽이 템렙, 오른쪽이 전투력이라는 것을 금방 익힌다.
-        */}
-        <div className="char-stat-line" title="템렙 · 전투력">
-          <span className="char-value">{format(character.itemLevel)}</span>
-          <span className="char-value char-dim">{format(character.combatPower)}</span>
+        <div className="char-stat-line">
+          <div className="char-stat">
+            <span className="char-label">템렙</span>
+            <span className="char-value">{format(character.itemLevel)}</span>
+          </div>
+          <div className="char-stat">
+            <span className="char-label">전투력</span>
+            <span className="char-value char-dim">{format(character.combatPower)}</span>
+          </div>
         </div>
 
         {character.arkGridSummary && (
@@ -259,15 +258,13 @@ export function Cell({
       </div>
 
       {(cell.warnings.length > 0 || error) && (
-        <ul className="char-veil relative space-y-0.5 px-1.5 pb-1">
+        <ul className="char-notices">
           {cell.warnings.map((warning) => (
             <li key={warning} className="char-danger text-[10px] leading-4">
               {warning}
             </li>
           ))}
-          {error && (
-            <li className="char-danger text-[10px] leading-4">{error.message}</li>
-          )}
+          {error && <li className="char-danger text-[10px] leading-4">{error.message}</li>}
         </ul>
       )}
     </div>
