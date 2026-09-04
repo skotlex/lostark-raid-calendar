@@ -98,6 +98,34 @@ body {
     system-ui, sans-serif;
 }
 
+/*
+ * 누를 수 있는 것에는 손가락 커서를 준다.
+ *
+ * Tailwind 3까지는 preflight가 버튼에 pointer를 줬는데 4에서 default로 바뀌었다.
+ * 그래서 링크는 손가락, 버튼은 화살표가 되어 같은 줄에 놓인 것끼리 어긋났다.
+ * 비활성 버튼은 눌러도 소용없다는 것을 커서로 알린다.
+ */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+summary {
+  cursor: pointer;
+}
+
+button:disabled,
+[role="button"][aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+/*
+ * 입력창과 같은 줄에 서는 버튼.
+ *
+ * 버튼에는 테두리가 없어 padding을 같게 줘도 입력창보다 2px 낮다. 나란히 놓으면 그
+ * 차이가 그대로 보여 버튼이 살짝 떠 있는 것처럼 읽힌다. 투명 테두리로 상자를 맞춘다.
+ */
+.btn-inline {
+  border: 1px solid transparent;
+}
+
 /* 숫자를 세로로 정렬해 템레벨·전투력 비교가 쉽도록 한다. */
 .tabular {
   font-variant-numeric: tabular-nums;
@@ -168,6 +196,84 @@ body {
   color: var(--c-faint);
   /* 자동완성 목록이 칸 밖으로 내려온다. 채워진 칸의 초상 잘라내기와 달리 가리면 안 된다. */
   overflow: visible;
+}
+
+/*
+ * 요일 탭.
+ *
+ * 밑줄로 지금 보는 요일을 알린다. 배경색만으로는 일곱 칸이 나란히 있을 때 어느 것이
+ * 켜져 있는지 한눈에 안 들어왔다.
+ *
+ * 레이드 수는 뱃지로 뽑는다. 그냥 숫자로 붙여두니 요일 글자에 묻혀 "레이드가 몇 개
+ * 걸려 있는 요일인지"를 세어봐야 했다.
+ */
+.day-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-bottom: 2px solid transparent;
+  padding: 0.375rem 0.625rem;
+  font-size: 0.875rem;
+  color: var(--text-dim);
+  transition:
+    color 120ms,
+    border-color 120ms;
+}
+
+.day-tab:hover {
+  color: var(--text);
+  border-bottom-color: var(--border-strong);
+}
+
+.day-tab[data-active="true"] {
+  border-bottom-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/*
+ * 주차 넘기는 화살표.
+ *
+ * padding으로만 크기를 잡으면 글자의 줄 상자가 그대로 높이가 되어 세로로 길쭉해진다.
+ * 글리프가 작아 더 도드라진다. 정사각형으로 못박고 가운데 정렬한다.
+ */
+.week-arrow {
+  display: inline-flex;
+  height: 1.5rem;
+  width: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  line-height: 1;
+  color: var(--text-dim);
+  transition: color 120ms, border-color 120ms;
+}
+
+.week-arrow:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.day-badge {
+  display: inline-flex;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--surface-2);
+  padding: 0 0.3rem;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+}
+
+.day-tab[data-active="true"] .day-badge {
+  background: var(--accent);
+  color: var(--accent-contrast);
 }
 
 /*

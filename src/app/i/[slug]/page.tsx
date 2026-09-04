@@ -68,31 +68,34 @@ export default async function BoardPage({
       {/* 다른 화면에 갔다 돌아왔을 때 보던 요일로 열리게 한다. */}
       <RememberDay day={day} />
 
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <nav className="flex flex-wrap gap-1">
+      {/* 밑줄이 놓일 레일. 이게 없으면 켜진 탭의 밑줄만 허공에 떠 보인다. */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border">
+        <nav className="flex flex-wrap">
           {WEEK_DAYS.map((d) => {
             const count = countByDay.get(d) ?? 0;
             return (
               <Link
                 key={d}
                 href={href({ day: d })}
-                className={`rounded px-3 py-1.5 text-sm transition-colors ${
-                  d === day
-                    ? "bg-accent/15 font-semibold text-accent"
-                    : "text-text-dim hover:bg-surface-2 hover:text-text"
-                }`}
+                className="day-tab"
+                data-active={d === day}
+                aria-current={d === day ? "page" : undefined}
               >
                 {dayNameFull(d)}
-                {count > 0 && <span className="ml-1 text-xs text-text-faint tabular">{count}</span>}
+                {count > 0 && (
+                  <span className="day-badge" title={`레이드 ${count}개`}>
+                    {count}
+                  </span>
+                )}
               </Link>
             );
           })}
         </nav>
 
-        <div className="ml-auto flex items-center gap-1 text-sm">
+        <div className="ml-auto flex items-center gap-1 pb-1.5 text-sm">
           <Link
             href={href({ week: toWeekParam(addWeeks(weekStart, -1)) })}
-            className="rounded border border-border px-2 py-1 text-text-dim hover:text-text"
+            className="week-arrow"
           >
             ‹
           </Link>
@@ -101,7 +104,7 @@ export default async function BoardPage({
           </span>
           <Link
             href={href({ week: toWeekParam(addWeeks(weekStart, 1)) })}
-            className="rounded border border-border px-2 py-1 text-text-dim hover:text-text"
+            className="week-arrow"
           >
             ›
           </Link>
