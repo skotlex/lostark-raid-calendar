@@ -107,11 +107,8 @@ export function SlotForm({
         </button>
       )}
 
-      {state.status !== "idle" && (
-        <span className={`text-xs ${state.status === "error" ? "text-danger" : "text-ok"}`}>
-          {state.message}
-        </span>
-      )}
+      {/* 성공은 목록에 바로 나타나므로 알리지 않는다. 실패만 말한다. */}
+      {state.status === "error" && <span className="text-xs text-danger">{state.message}</span>}
 
       <datalist id="raid-presets">
         {RAID_PRESETS.map((preset) => (
