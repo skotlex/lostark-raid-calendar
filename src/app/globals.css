@@ -171,6 +171,49 @@ body {
 }
 
 /*
+ * 빈 자리 표식.
+ *
+ * 입력창을 칸 아래에 붙이고 남는 가운데를 이 표식이 채운다. flex-1이라 칸 높이가
+ * 달라져도 표식이 늘 가운데 온다.
+ *
+ * 자리마다 색이 다르지만 흐리게 둔다. 빈 자리가 채워진 자리보다 눈에 띄면
+ * 편성표를 훑는 순서가 뒤집힌다. 칸에 손이 닿을 때만 조금 진해진다.
+ */
+.empty-mark {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  color: var(--text-faint);
+  opacity: 0.3;
+  transition:
+    opacity 140ms,
+    color 140ms;
+}
+
+.empty-mark[data-kind="DPS"] {
+  color: var(--dps);
+}
+.empty-mark[data-kind="SUP"] {
+  color: var(--support);
+}
+
+.empty-mark svg {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.char-card--empty:hover .empty-mark,
+.char-card--empty:focus-within .empty-mark {
+  opacity: 0.55;
+}
+
+/* 드롭을 받는 칸은 표식이 또렷해진다. 어디에 놓이는지 손이 알아채게 한다. */
+.char-card--dropping .empty-mark {
+  opacity: 0.8;
+}
+
+/*
  * 닉네임 자동완성.
  *
  * `<datalist>`는 브라우저가 펼침 화살표를 그려 콤보박스처럼 보이게 하고, 목록 모양을

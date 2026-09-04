@@ -3,7 +3,7 @@
 import { type DragEvent, startTransition, useActionState, useState } from "react";
 
 import type { CellView } from "@/lib/board";
-import { positionLabel } from "@/lib/positions";
+import { positionKind, positionLabel } from "@/lib/positions";
 
 import { NameInput } from "./NameInput";
 import { readMyName } from "./MyNameField";
@@ -130,20 +130,22 @@ export function Cell({
         {/* 빈 칸에는 자리 이름을 남긴다. 어느 자리를 채우는지 알 단서가 이것뿐이다. */}
         <div className="char-label">{positionLabel(cell.position)}</div>
 
+        {/* 가운데는 자리 표식이 차지한다. 입력창은 아래에 붙는다. */}
+        <PositionMark position={cell.position} />
+
         {/*
           입력창은 처음부터 보인다. 예전에는 "+ 닉네임 입력"을 눌러야 나타났는데,
           누르기 전과 후의 높이가 달라 칸이 들썩였고 채우려면 클릭이 한 번 더 들었다.
           시트에서 셀에 바로 치던 동작에 가깝게 둔다.
         */}
         {!editable ? (
-          <div className="char-faint mt-auto mb-auto text-center text-xs">비어 있음</div>
+          <div className="char-faint text-center text-xs">비어 있음</div>
         ) : (
           <form
             action={(formData) => {
               formData.set("actorLabel", readMyName());
               assign(formData);
             }}
-            className="mt-auto mb-auto"
           >
             {hidden}
             <NameInput name="characterName" disabled={assigning} />
@@ -280,6 +282,44 @@ export function Cell({
           </ul>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * 빈 자리 표식.
+ *
+ * 채워진 칸은 초상이 있어 한눈에 알아보는데 빈 칸은 회색 상자뿐이라 나란히 놓이면
+ * 격자가 허전하다. 남는 자리에 표식을 넣어 짝을 맞춘다.
+ *
+ * 딜과 폿을 다른 그림·다른 색으로 둔다. 시너지 요약을 읽지 않아도 어느 쪽이 비었는지
+ * 훑는 것만으로 걸린다. 색은 칩에 쓰는 --dps/--support 그대로다.
+ *
+ * 흐리게 두는 것이 중요하다. 빈 자리가 채워진 자리보다 눈에 띄면 읽는 순서가 뒤집힌다.
+ */
+function PositionMark({ position }: { position: string }) {
+  const kind = positionKind(position);
+
+  return (
+    <div className="empty-mark" data-kind={kind ?? ""} aria-hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6}>
+        {kind === "SUP" ? (
+          // 방패. 서폿은 지키는 자리다.
+          <path
+            d="M12 3l7 3v6c0 4.4-3.1 7.6-7 9-3.9-1.4-7-4.6-7-9V6z"
+            strokeLinejoin="round"
+          />
+        ) : (
+          // 검. 곧게 세우면 날과 가드가 십자가로 읽힌다. 비스듬히 눕히고 날에 두께를
+          // 줘야 이 크기에서도 검으로 보인다.
+          <g strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9.5 17.5 21 6V3h-3L6.5 14.5" />
+            <path d="M11 19 5 13" />
+            <path d="M8 16 4 20" />
+            <path d="M5 21 3 19" />
+          </g>
+        )}
+      </svg>
     </div>
   );
 }
