@@ -451,16 +451,22 @@ button:disabled,
 }
 
 /*
- * 파티 요약의 칩(.syn)과 같은 색을 쓰되 모양은 카드의 칩(.char-chip)을 따른다.
- * 요약은 테마 배경 위라 글자색에서 배경을 뽑아 쓰지만, 카드는 초상 위에 얹히므로
- * 어둡게 깔지 않으면 밝은 옷이나 이펙트 위에서 글자가 사라진다.
+ * 파티 요약의 칩(.syn)과 같은 색을 쓴다.
+ *
+ * 처음에는 카드의 다른 칩(.char-chip)처럼 검게만 깔았는데, 카드 바탕이 이미 검어서
+ * 상자가 보이지 않고 글자만 떠 있었다. 그렇다고 요약처럼 글자색만 옅게 깔면 이번에는
+ * 인물의 밝은 옷이나 이펙트 위에서 글자가 사라진다.
+ *
+ * 그래서 **어두운 바탕에 제 색을 섞는다.** 불투명도는 검은 쪽이 끌고 가 인물 위에서도
+ * 읽히고, 섞인 색이 종류를 알려준다. 테두리도 같은 색에서 뽑아 상자를 닫는다.
  */
 .char-syn {
   border-radius: 0.25rem;
-  background: rgb(6 9 14 / 66%);
-  padding: 0 0.3rem;
+  background: color-mix(in srgb, currentcolor 20%, rgb(6 9 14 / 74%));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentcolor 45%, transparent);
+  padding: 0.05rem 0.35rem;
   font-size: 10px;
-  line-height: 1.4;
+  line-height: 1.35;
   white-space: nowrap;
   color: var(--c-dim);
 }
