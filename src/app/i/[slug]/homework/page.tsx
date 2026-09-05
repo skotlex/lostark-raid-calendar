@@ -15,6 +15,20 @@ export const dynamic = "force-dynamic";
 const gold = new Intl.NumberFormat("ko-KR");
 
 /**
+ * 줄 앞뒤에 서는 두 뱃지(순번·요일)의 색.
+ *
+ * 아직 안 간 숙제는 악센트로 띄우고 다녀온 숙제는 가라앉힌다. 이 카드에서 눈이 찾는
+ * 것은 "어디까지 갔나"뿐이라, 남은 줄만 떠오르면 이름을 읽지 않아도 답이 나온다.
+ * 악센트는 테마마다 다른 값이라(globals.css) 라이트에서는 짙은 금색, 다크에서는
+ * 밝은 금색이 된다.
+ *
+ * 두 뱃지가 같은 값을 쓰므로 한곳에 둔다. 각자 적어두면 한쪽만 고쳐진다.
+ */
+function badgeTone(done: boolean) {
+  return done ? "bg-surface-2/60 text-text-faint" : "bg-accent/15 text-accent";
+}
+
+/**
  * 숙제 관리.
  *
  * **편성표에 넣은 것이 곧 숙제다.** 여기서 따로 체크하지 않는다. 요일과 시각이 이미
@@ -250,9 +264,9 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
                     "이 캐릭터는 셋 중 둘째까지 갔다"를 줄을 세지 않고 짚게 한다.
                   */}
                   <span
-                    className={`inline-flex h-4.5 min-w-4.5 shrink-0 items-center justify-center rounded px-1 text-[11px] font-semibold tabular ${
-                      entry.done ? "bg-surface-2/60 text-text-faint" : "bg-accent/15 text-accent"
-                    }`}
+                    className={`inline-flex h-4.5 min-w-4.5 shrink-0 items-center justify-center rounded px-1 text-[11px] font-semibold tabular ${badgeTone(
+                      entry.done,
+                    )}`}
                   >
                     {index + 1}
                   </span>
@@ -267,9 +281,7 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
                     난이도가 이름 뒤에 붙는 표기라 더 그렇다.
                   */}
                   <span
-                    className={`rounded px-1.5 py-0.5 text-[11px] tabular ${
-                      entry.done ? "bg-surface-2/60 text-text-faint" : "bg-surface-2 text-text-dim"
-                    }`}
+                    className={`rounded px-1.5 py-0.5 text-[11px] tabular ${badgeTone(entry.done)}`}
                   >
                     {dayName(entry.dayOfWeek)} {entry.startTime}
                   </span>
