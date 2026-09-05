@@ -1126,6 +1126,7 @@ button:disabled,
   font-size: 12px;
   line-height: 1.25rem;
   color: var(--text);
+  caret-color: var(--accent);
 }
 
 .board-input::placeholder {
@@ -1133,13 +1134,30 @@ button:disabled,
 }
 
 /*
- * 쓰는 동안에는 상자를 그린다. 어디에 치고 있는지는 보여야 한다.
- * 테두리 대신 안쪽 그림자를 쓴다. 테두리는 2px을 더해 줄 높이를 바꾼다.
+ * 쓰는 동안에도 상자를 그리지 않는다.
+ *
+ * 표에서 칸을 고쳐 쓰는 감각이라 상자가 뜨면 오히려 낯설다. 칸 자체가 이미 테두리를
+ * 갖고 있으니 어디를 고치는지는 그것으로 충분하다. 커서만 강조색으로 둔다.
+ *
+ * placeholder는 누르는 순간 지운다. 남겨두면 "닉네임 입력"이 글자와 겹쳐 보인다.
  */
 .board-input:focus {
-  background: var(--bg);
-  box-shadow: inset 0 0 0 1px var(--accent);
+  background: none;
   outline: none;
+}
+
+.board-input:focus::placeholder {
+  color: transparent;
+}
+
+/*
+ * 키보드로 온 경우에만 테두리를 보여준다.
+ *
+ * 눌러서 들어온 사람은 어디를 눌렀는지 알지만, 탭으로 옮겨 다니는 사람은 표시가 없으면
+ * 지금 어느 칸인지 알 길이 없다. :focus-visible이 그 둘을 갈라준다.
+ */
+.board-input:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 
 .board-warn {
