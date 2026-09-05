@@ -3,7 +3,7 @@ import "server-only";
 import { Prisma } from "@/generated/prisma/client";
 
 import type { ArkGridData, ArkPassiveData, EngravingData, SkillSynergy } from "./armory";
-import { type CharacterSpec, enlightenmentNames, toCharacterSpec } from "./armory";
+import { type CharacterSpec, enlightenmentNames, stripTags, toCharacterSpec } from "./armory";
 import { summarizeArkGrid } from "./arkGridCores";
 import { pickClassEngraving } from "./classEngravings";
 import { LostArkError, fetchArmory, fetchSiblings } from "./lostark";
@@ -97,7 +97,14 @@ export function toCharacterView(row: CharacterRow, now = Date.now()): CharacterV
     id: row.id,
     name: row.name,
     className: row.className,
-    title: row.title,
+    /*
+     * 태그를 한 번 더 벗긴다.
+     *
+     * 정규화(armory.ts)에서 이미 벗기지만 저장된 값은 조회 시점 형식으로 굳어 있어
+     * 전체 갱신 전까지는 `<img src='emoticon_…'>심연의 군주`가 그대로 남는다.
+     * 읽는 쪽에서 받아내지 않으면 그 사이 칸에 태그가 글자로 찍힌다(CLAUDE.md 8).
+     */
+    title: stripTags(row.title),
     itemLevel: toNumber(row.itemLevel),
     combatPower: toNumber(row.combatPower),
     serverName: row.serverName,

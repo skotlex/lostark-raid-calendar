@@ -309,7 +309,17 @@ export function toCharacterSpec(armory: ArmoryResponse | null | undefined): Char
 
   return {
     className,
-    title: profile.Title?.trim() || null,
+    /*
+     * 칭호에 게임 내 이모티콘이 섞여 온다.
+     *
+     *   <img src='emoticon_Kazeroth_firstevent_4' size='130' vspace='-7'></img>심연의 군주
+     *
+     * src가 URL이 아니라 게임 클라이언트의 리소스 이름이라 웹에서 띄울 수 없다.
+     * 로아 CDN의 경로 후보를 모두 두드려봤지만 전부 404였고, 공식 전적 페이지도
+     * `[src^=emoticon][vspace]{display:none}` 한 줄로 이 태그를 통째로 감춘다.
+     * 즉 공식도 안 보여주는 그림이다. 태그를 벗기고 글자만 남긴다.
+     */
+    title: stripTags(profile.Title),
     itemLevel: parseNumeric(profile.ItemAvgLevel),
     combatPower: parseNumeric(profile.CombatPower),
     serverName: profile.ServerName ?? null,
