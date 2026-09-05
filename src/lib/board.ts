@@ -15,6 +15,7 @@ import {
   partiesFor,
   partyIndexOf,
   positionKind,
+  positionLabel,
 } from "./positions";
 import { type SlotView, toSlotView } from "./slots";
 import {
@@ -25,7 +26,9 @@ import {
 } from "./synergy";
 import {
   TUESDAY,
+  dayName,
   getPlanningWeekStart,
+  isUndecided,
   previousWeek,
   tuesdayWeekFor,
   weekStartForDay,
@@ -75,6 +78,29 @@ export interface BoardSlotView extends SlotView {
    * 칸의 자동완성에서 미리 빼두면 경고가 뜰 편성을 애초에 만들지 않는다.
    */
   takenNames: string[];
+}
+
+/** 한 캐릭터가 이번 주 같은 레이드에 앉은 자리. 중복 경고에 위치를 적으려고 모은다. */
+interface RaidSeat {
+  assignmentId: string;
+  slotId: string;
+  dayOfWeek: number;
+  startTime: string;
+  difficulty: string | null;
+  position: string;
+}
+
+/**
+ * 중복이 어디에 있는지 한 조각으로 적는다. "목 20:50 하드", "이 공대 딜러 2".
+ *
+ * 같은 공대 안이면 요일·시각이 지금 보는 칸과 같아 그것만으로는 어느 자리인지 알 수
+ * 없다. 그때만 자리 이름을 적는다.
+ */
+function seatBrief(seat: RaidSeat, currentSlotId: string): string {
+  if (seat.slotId === currentSlotId) return `이 공대 ${positionLabel(seat.position)}`;
+  // 미정 칸은 시각이 없다. 저장된 00:00을 적으면 없는 약속 시간이 생긴다(week.ts).
+  const time = isUndecided(seat.dayOfWeek) ? "" : ` ${seat.startTime}`;
+  return `${dayName(seat.dayOfWeek)}${time}${seat.difficulty ? ` ${seat.difficulty}` : ""}`;
 }
 
 const characterSelect = {
@@ -219,7 +245,7 @@ export async function getBoard(
   //
   // 서로 다른 레이드는 몇 개를 가든 상관없고, 부캐를 바꿔 같은 레이드를 또 가는 것도
   // 정상이다. 사람(원정대) 단위로 세면 그 정상 편성에 경고가 붙는다.
-  const characterRaidCount = new Map<string, number>();
+  const characterRaidSeats = new Map<string, RaidSeat[]>();
   /** 레이드 이름 → 이번 주 그 레이드에 들어간 캐릭터 이름들 */
   const raidRoster = new Map<string, Set<string>>();
   for (const slot of slots) {
@@ -228,7 +254,16 @@ export async function getBoard(
     for (const a of slot.assignments) {
       if (a.weekStart.getTime() !== mine.getTime()) continue;
       const key = `${a.character.id}::${raid}`;
-      characterRaidCount.set(key, (characterRaidCount.get(key) ?? 0) + 1);
+      const seats = characterRaidSeats.get(key) ?? [];
+      seats.push({
+        assignmentId: a.id,
+        slotId: slot.id,
+        dayOfWeek: slot.dayOfWeek,
+        startTime: slot.startTime,
+        difficulty: slot.difficulty,
+        position: a.position,
+      });
+      characterRaidSeats.set(key, seats);
 
       const roster = raidRoster.get(raid) ?? new Set<string>();
       roster.add(a.character.name);
@@ -278,9 +313,17 @@ export async function getBoard(
       }
 
       const raid = view.raidName.trim();
-      if ((characterRaidCount.get(`${character.id}::${raid}`) ?? 0) > 1) {
-        // 난이도가 달라도 중복이다.
-        warnings.push("이 캐릭터가 이번 주 같은 레이드에 중복");
+      // 난이도가 달라도 중복이다.
+      //
+      // **어디와 겹치는지를 함께 적는다.** 겹치는 자리는 대개 다른 요일에 있어 지금
+      // 열린 탭에 보이지 않는다. "같은 레이드에 중복"만 띄우면 눈앞의 다른 캐릭터를
+      // 빼 보다가 경고가 그대로 남는 것을 보고 화면이 갱신되지 않았다고 읽게 된다.
+      const elsewhere = (characterRaidSeats.get(`${character.id}::${raid}`) ?? []).filter(
+        (seat) => seat.assignmentId !== assignment.id,
+      );
+      if (elsewhere.length > 0) {
+        const where = elsewhere.map((seat) => seatBrief(seat, slot.id)).join(", ");
+        warnings.push(`이 캐릭터가 이번 주 같은 레이드에 중복 (${where})`);
       }
 
       // 시너지 트라이포드를 안 찍었다. 막지 않고 알리기만 한다(CLAUDE.md 3.4).
