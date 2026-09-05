@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 
 import { classColor } from "@/lib/classColors";
+import { anchorY, cropTop } from "@/lib/classPortraits";
 
 /**
  * 캐릭터 초상 — 증명사진 크기로 잘라낸 썸네일.
@@ -36,16 +37,24 @@ import { classColor } from "@/lib/classColors";
  */
 const UNOPTIMIZED = process.env.NODE_ENV !== "production";
 
-/** 잘라낼 구간. 이미지 크기와 무관한 비율이라 해상도가 바뀌어도 유지된다. */
-const CROP = { x: 0.34, y: 0.085, w: 0.32, h: 0.339 };
+/**
+ * 잘라낼 구간. 이미지 크기와 무관한 비율이라 해상도가 바뀌어도 유지된다.
+ *
+ * 세로 시작점만 클래스가 정한다. **인물이 실제 키대로 서 있어서** 머리가 걸리는 높이가
+ * 클래스마다 다르다(classPortraits.ts). 한 값으로 고정하면 키 큰 쪽에 맞을 때 작은 쪽은
+ * 창 아래에 머리만 걸린다.
+ */
+const CROP = { x: 0.34, w: 0.32, h: 0.339 };
 
 /** 늘릴 배율과 밀어낼 거리. 칸 크기에 대한 비율이라 크기가 달라져도 같은 구도가 나온다. */
-const IMAGE_STYLE = {
-  width: `${(1 / CROP.w) * 100}%`,
-  height: "auto",
-  left: `${-(CROP.x / CROP.w) * 100}%`,
-  top: `${-(CROP.y / CROP.h) * 100}%`,
-} as const;
+function imageStyle(className: string | null) {
+  return {
+    width: `${(1 / CROP.w) * 100}%`,
+    height: "auto",
+    left: `${-(CROP.x / CROP.w) * 100}%`,
+    top: `${-(cropTop(className) / CROP.h) * 100}%`,
+  };
+}
 
 const SIZES = {
   sm: { box: "w-[3.25rem]", px: "52px" },
@@ -92,7 +101,7 @@ export function Portrait({
         unoptimized={UNOPTIMIZED}
         // Tailwind가 img에 max-width:100%를 걸어두므로 풀어야 확대가 먹는다.
         className="absolute max-w-none"
-        style={IMAGE_STYLE}
+        style={imageStyle(className)}
         onError={() => setBroken(true)}
       />
     </div>
@@ -115,8 +124,15 @@ export function Portrait({
  */
 /** 글자와 만나는 왼쪽을 지운다. 반복되면 칸 밖으로 새므로 no-repeat와 함께 쓴다. */
 const BLEED_MASK = "linear-gradient(to right, transparent 0%, #000 62%)";
-/** 확대 원점을 머리 근처에 두고 키운다. 머리 위 여백을 조금 남겨 답답하지 않게 한다. */
-const BLEED_ORIGIN = "50% 14%";
+/**
+ * 확대 원점을 얼굴 근처에 두고 키운다. 머리 위 여백을 조금 남겨 답답하지 않게 한다.
+ *
+ * 여기도 클래스마다 다르다(classPortraits.ts). 잘라내는 것이 아니라 한 점을 잡고
+ * 키우는 방식이라, 그 점이 인물 밖에 있으면 배경만 크게 보인다.
+ */
+function bleedOrigin(className: string | null) {
+  return `50% ${(anchorY(className) * 100).toFixed(1)}%`;
+}
 const BLEED_SCALE = 2.1;
 
 export function PortraitBleed({
@@ -157,7 +173,11 @@ export function PortraitBleed({
           sizes="400px"
           unoptimized={UNOPTIMIZED}
           className="object-cover"
-          style={{ objectPosition: BLEED_ORIGIN, transform: `scale(${BLEED_SCALE})`, transformOrigin: BLEED_ORIGIN }}
+          style={{
+            objectPosition: bleedOrigin(className),
+            transform: `scale(${BLEED_SCALE})`,
+            transformOrigin: bleedOrigin(className),
+          }}
           onError={() => setBroken(true)}
         />
       )}
@@ -173,7 +193,8 @@ export function PortraitBleed({
  * 알아볼 수 없이 작아지고, 넓은 칸에서 가운데에 세우면 글자가 인물 위로 올라탄다.
  *
  * 구도를 전환하는 것은 CSS다(globals.css의 char-portrait). 여기서 인라인 스타일로
- * 잡으면 컨테이너 쿼리가 손댈 수 없다. 클래스 색만 변수로 넘긴다.
+ * 잡으면 컨테이너 쿼리가 손댈 수 없다. 그래서 클래스마다 다른 값은 **변수로만** 넘기고
+ * 쓰는 것은 CSS가 한다. 색과 확대 원점 둘이다.
  */
 export function PortraitCard({
   src,
@@ -187,7 +208,12 @@ export function PortraitCard({
   return (
     <div
       className="char-portrait"
-      style={{ "--class-color": classColor(className) } as React.CSSProperties}
+      style={
+        {
+          "--class-color": classColor(className),
+          "--portrait-y": `${(anchorY(className) * 100).toFixed(1)}%`,
+        } as React.CSSProperties
+      }
       aria-hidden
     >
       {/* 클래스 색 글로우. 이미지가 없거나 깨져도 칸이 비어 보이지 않는다. */}

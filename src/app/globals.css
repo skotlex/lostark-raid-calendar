@@ -330,11 +330,20 @@ button:disabled,
   background: radial-gradient(75% 60% at 50% 26%, var(--class-color), transparent 78%);
 }
 
+/*
+ * 확대 원점의 세로 위치는 클래스가 정한다(--portrait-y, Portrait.tsx).
+ *
+ * 인물이 실제 키대로 서 있어서 얼굴이 걸리는 높이가 클래스마다 다르다. 한 값으로
+ * 고정하면 키 큰 쪽에 맞을 때 작은 쪽은 얼굴 위 허공을 확대하게 된다.
+ *
+ * 좁은 칸은 배율이 낮아 더 아래를 잡아야 인물이 가운데 온다. 넓은 칸(아래 컨테이너
+ * 쿼리)은 2.1배까지 키우므로 얼굴을 그대로 잡는다.
+ */
 .char-portrait-img {
   object-fit: cover;
-  object-position: 50% 20%;
+  object-position: 50% calc(var(--portrait-y, 14%) + 6%);
   transform: scale(1.15);
-  transform-origin: 50% 20%;
+  transform-origin: 50% calc(var(--portrait-y, 14%) + 6%);
 }
 
 .char-top {
@@ -580,10 +589,10 @@ button:disabled,
   }
 
   .char-portrait-img {
-    /* 확대 원점을 머리 근처에 두고 키운다. 칸 높이가 달라져도 구도가 유지된다. */
-    object-position: 50% 14%;
+    /* 확대 원점을 얼굴 근처에 두고 키운다. 칸 높이가 달라져도 구도가 유지된다. */
+    object-position: 50% var(--portrait-y, 14%);
     transform: scale(2.1);
-    transform-origin: 50% 14%;
+    transform-origin: 50% var(--portrait-y, 14%);
   }
 
   .char-top,
