@@ -2,8 +2,7 @@
 
 import { useActionState, useState } from "react";
 
-import { type PartySize, isPartySize } from "@/lib/positions";
-import { RAID_PRESETS, difficultiesFor } from "@/lib/raids";
+import { RAID_PRESETS, difficultiesFor, sizeFor } from "@/lib/raids";
 import type { SlotView } from "@/lib/slots";
 import { WEEK_DAYS, dayNameFull } from "@/lib/week";
 
@@ -64,19 +63,9 @@ export function SlotForm({
   const [startTime, setStartTime] = useState(slot?.startTime ?? "20:00");
   const [raidName, setRaidName] = useState(slot?.raidName ?? "");
   const [difficulty, setDifficulty] = useState(slot?.difficulty ?? "");
-  const [partySize, setPartySize] = useState<PartySize>(slot?.partySize ?? 8);
-
-  /**
-   * 레이드를 프리셋에서 고르면 인원도 함께 맞춘다.
-   *
-   * 4인인지 8인인지는 레이드가 정하는 것이지 사람이 매번 고를 일이 아니다.
-   * 목록에 없는 이름은 손대지 않고 고른 값을 그대로 둔다.
-   */
-  function pickRaid(name: string) {
-    setRaidName(name);
-    const preset = RAID_PRESETS.find((r) => r.name === name);
-    if (preset) setPartySize(preset.size);
-  }
+  // 4인인지 8인인지는 레이드가 정하는 값이라 고르게 하지 않는다. 이름에서 끌어내
+  // 보여주기만 하고, 저장할 때 서버가 같은 규칙으로 다시 정한다(slots.ts).
+  const partySize = sizeFor(raidName);
 
   return (
     <form
@@ -125,7 +114,7 @@ export function SlotForm({
           name="raidName"
           required
           value={raidName}
-          onChange={pickRaid}
+          onChange={setRaidName}
           options={RAID_NAMES}
           placeholder="벨가르딘"
           wrapClassName="w-32"
@@ -146,18 +135,7 @@ export function SlotForm({
       </Field>
 
       <Field label="인원">
-        <select
-          name="partySize"
-          value={partySize}
-          onChange={(e) => {
-            const next = Number(e.target.value);
-            if (isPartySize(next)) setPartySize(next);
-          }}
-          className={`w-20 ${CONTROL}`}
-        >
-          <option value={8}>8인</option>
-          <option value={4}>4인</option>
-        </select>
+        <span className="flex h-9 w-12 items-center text-sm text-text-dim tabular">{partySize}인</span>
       </Field>
 
       <button

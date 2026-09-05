@@ -2,6 +2,7 @@ import "server-only";
 
 import { DEFAULT_PARTY_SIZE, type PartySize, isPartySize } from "./positions";
 import { prisma } from "./prisma";
+import { sizeFor } from "./raids";
 
 /** 고정 요일표의 한 칸. 주차 개념이 없고 영속적이다. */
 export interface SlotView {
@@ -80,6 +81,7 @@ export interface SlotInput {
   startTime: string;
   raidName: string;
   difficulty?: string | null;
+  /** 보통은 비워 둔다. 레이드 이름에서 끌어낸다. */
   partySize?: number;
   keepRoster?: boolean;
 }
@@ -112,7 +114,9 @@ function normalize(input: SlotInput) {
     startTime: input.startTime,
     raidName: input.raidName.trim(),
     difficulty: trim(input.difficulty),
-    partySize: isPartySize(input.partySize) ? input.partySize : DEFAULT_PARTY_SIZE,
+    // 4인인지 8인인지는 레이드가 정하는 값이라 사람에게 묻지 않는다.
+    // 프리셋에 없는 이름은 8인으로 둔다(sizeFor).
+    partySize: isPartySize(input.partySize) ? input.partySize : sizeFor(input.raidName),
     keepRoster: input.keepRoster ?? false,
   };
 }

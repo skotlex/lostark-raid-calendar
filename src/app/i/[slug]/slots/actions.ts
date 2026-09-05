@@ -26,7 +26,6 @@ function readInput(formData: FormData): SlotInput {
     startTime: String(formData.get("startTime") ?? "").trim(),
     raidName: String(formData.get("raidName") ?? ""),
     difficulty: String(formData.get("difficulty") ?? ""),
-    partySize: Number(formData.get("partySize")),
   };
 }
 
