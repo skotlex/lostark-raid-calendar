@@ -8,6 +8,8 @@ import { classColor } from "@/lib/classColors";
 import { classEmblem } from "@/lib/classEmblems";
 import { dayName } from "@/lib/week";
 
+import { CombatPowerIcon, ItemLevelIcon } from "../icons";
+
 export const dynamic = "force-dynamic";
 
 const gold = new Intl.NumberFormat("ko-KR");
@@ -186,9 +188,17 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
 
               <div className="min-w-0">
                 <div className="truncate font-semibold">{character.name}</div>
-                <div className="text-xs tabular opacity-90">
-                  {character.itemLevel?.toFixed(2) ?? "-"}
-                  {character.combatPower !== null && ` · ${character.combatPower.toFixed(2)}`}
+                <div className="flex items-center gap-x-2 text-xs tabular opacity-90">
+                  <span className="flex items-center gap-1" title="아이템 레벨">
+                    <ItemLevelIcon />
+                    {character.itemLevel?.toFixed(2) ?? "-"}
+                  </span>
+                  {character.combatPower !== null && (
+                    <span className="flex items-center gap-1" title="전투력">
+                      <CombatPowerIcon />
+                      {character.combatPower.toFixed(2)}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

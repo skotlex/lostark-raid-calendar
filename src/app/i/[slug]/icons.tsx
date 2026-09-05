@@ -142,3 +142,35 @@ export function PinTabIcon() {
     </svg>
   );
 }
+
+/**
+ * 스펙 두 값 앞에 서는 표시.
+ *
+ * `1791.66 · 8326.34`처럼 숫자만 나란히 두면 어느 쪽이 템레벨이고 어느 쪽이 전투력인지
+ * 아는 사람만 안다. 자릿수가 비슷한 구간도 있어 크기로도 못 가른다. 라벨을 붙이면
+ * 확실하지만 좁은 머리띠에서 글자 넷이 숫자보다 길어진다.
+ *
+ * 카드 머리띠는 직업색 위에 흰 글씨라 currentColor를 그대로 따라간다.
+ */
+const STAT_ICON = { ...ICON_PROPS, className: "size-3 shrink-0" } as const;
+
+/** 아이템 레벨. 위로 겹친 갈매기 — 올라간 단계. */
+export function ItemLevelIcon() {
+  return (
+    <svg {...STAT_ICON} strokeWidth={2}>
+      <path d="m5 12 7-6.5 7 6.5" />
+      <path d="m5 19 7-6.5 7 6.5" />
+    </svg>
+  );
+}
+
+/** 전투력. 검 한 자루. */
+export function CombatPowerIcon() {
+  return (
+    <svg {...STAT_ICON} strokeWidth={1.8}>
+      <path d="M20 3.5v3.2L10.6 16H7.4v-3.2L16.8 3.5z" />
+      <path d="m4 20 4-4" />
+      <path d="M4.2 16.4 7.6 19.8" />
+    </svg>
+  );
+}
