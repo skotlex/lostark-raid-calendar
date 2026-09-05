@@ -256,6 +256,17 @@ export function missingSynergy(
   return table.some((s) => s.kind !== "서폿");
 }
 
+/**
+ * 위 경고에 붙는 문구.
+ *
+ * 경고를 만드는 곳은 board.ts인데 문구가 거기 있으면 안 된다. board.ts는 server-only라
+ * 상수 하나를 가져가려던 간략 보기(클라이언트)가 서버 모듈을 통째로 번들에 끌어들여
+ * 빌드가 깨진다. 타입만 가져올 때는 컴파일에서 지워져 드러나지 않던 문제다.
+ *
+ * 판정(missingSynergy)과 문구는 늘 함께 움직이므로 판정 옆에 둔다.
+ */
+export const MISSING_SYNERGY_WARNING = "시너지 트라이포드를 찍지 않았습니다";
+
 /** 한 줄로 찍을 문구. 워로드처럼 둘이면 쉼표로 잇는다. */
 export function synergyLabel(
   className: string | null | undefined,

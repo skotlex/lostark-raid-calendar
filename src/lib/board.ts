@@ -17,7 +17,12 @@ import {
   positionKind,
 } from "./positions";
 import { type SlotView, toSlotView } from "./slots";
-import { type PartySynergy, missingSynergy, partySynergies } from "./synergy";
+import {
+  MISSING_SYNERGY_WARNING,
+  type PartySynergy,
+  missingSynergy,
+  partySynergies,
+} from "./synergy";
 import {
   TUESDAY,
   getPlanningWeekStart,
@@ -32,14 +37,6 @@ export class BoardError extends Error {
     this.name = "BoardError";
   }
 }
-
-/**
- * 시너지 트라이포드를 안 찍은 캐릭터에 붙는 경고 문구.
- *
- * 간략 보기는 칸이 좁아 이 문장을 줄여 쓴다(CompactSlot). 두 곳이 문자열을 따로
- * 적으면 한쪽만 고쳐져 어긋나므로 원문을 여기서 내보낸다.
- */
-export const MISSING_SYNERGY_WARNING = "시너지 트라이포드를 찍지 않았습니다";
 
 export interface CellView {
   position: string;

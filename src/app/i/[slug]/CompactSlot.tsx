@@ -2,9 +2,10 @@
 
 import { type DragEvent, startTransition, useActionState, useState } from "react";
 
-import { MISSING_SYNERGY_WARNING, type BoardSlotView, type CellView } from "@/lib/board";
+// board.ts는 server-only다. 타입만 가져온다.
+import type { BoardSlotView, CellView } from "@/lib/board";
 import { positionLabel } from "@/lib/positions";
-import { getSynergies } from "@/lib/synergy";
+import { MISSING_SYNERGY_WARNING, getSynergies } from "@/lib/synergy";
 
 import { NameInput } from "./NameInput";
 import { SlotHeader } from "./SlotHeader";
