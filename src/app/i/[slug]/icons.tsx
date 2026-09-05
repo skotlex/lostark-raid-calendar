@@ -152,7 +152,7 @@ export function PinTabIcon() {
  *
  * 카드 머리띠는 직업색 위에 흰 글씨라 currentColor를 그대로 따라간다.
  */
-const STAT_ICON = { ...ICON_PROPS, className: "size-3 shrink-0" } as const;
+const STAT_ICON = { ...ICON_PROPS, className: "size-3.5 shrink-0" } as const;
 
 /** 아이템 레벨. 위로 겹친 갈매기 — 올라간 단계. */
 export function ItemLevelIcon() {
@@ -164,13 +164,25 @@ export function ItemLevelIcon() {
   );
 }
 
-/** 전투력. 검 한 자루. */
+/**
+ * 전투력. 검 한 자루.
+ *
+ * 비스듬히 누운 윤곽선으로 먼저 그렸더니 연필로 보였다. 14px에서는 기울어진 가는 선이
+ * 날인지 심인지 구분이 안 되고, 자루와 날의 굵기 차이도 1px 안쪽이라 사라진다.
+ *
+ * 그래서 세워서 속을 채운다. 좌우 대칭이면 기울기를 읽을 필요가 없고, 면으로 그리면
+ * 폭 차이가 남아 뾰족한 날 · 넓은 코등이 · 가는 자루 셋이 작아도 구분된다.
+ */
 export function CombatPowerIcon() {
   return (
-    <svg {...STAT_ICON} strokeWidth={1.8}>
-      <path d="M20 3.5v3.2L10.6 16H7.4v-3.2L16.8 3.5z" />
-      <path d="m4 20 4-4" />
-      <path d="M4.2 16.4 7.6 19.8" />
+    <svg {...STAT_ICON} strokeWidth={0} fill="currentColor">
+      {/* 날. 위로 갈수록 좁아져 끝이 뾰족하다 */}
+      <path d="M12 1.5 14.5 7.5V15h-5V7.5z" />
+      {/* 코등이. 날보다 넉넉히 넓어야 검으로 읽힌다 */}
+      <path d="M5 15.2h14v2.2H5z" />
+      {/* 자루와 손잡이 끝 */}
+      <path d="M10.9 17.6h2.2v3.2h-2.2z" />
+      <path d="M9 20.6h6v1.9H9z" />
     </svg>
   );
 }
