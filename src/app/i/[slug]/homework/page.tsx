@@ -203,17 +203,38 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
               ))}
             </ul>
 
-            <div className="flex flex-wrap items-baseline gap-x-2 border-t border-border px-3 py-2 text-xs">
-              <span className="text-text-dim">
-                남은 숙제 <span className="tabular">{character.remaining}</span>개
-              </span>
-              <span className="ml-auto tabular text-text-dim">
-                {gold.format(character.clearGold)} G
-              </span>
-              {character.moreCost > 0 && (
-                <span className="tabular text-danger">
-                  더보기 -{gold.format(character.moreCost)}
+            {/*
+              더보기는 골드를 주는 것이 아니라 **쓰는** 것이다. 그래서 두 줄로 나눈다.
+              위는 그냥 클리어만 했을 때, 아래는 더보기를 다 켰을 때 손에 남는 골드다.
+              한 줄에 "75,000 G 더보기 -24,000"으로만 두면 결국 얼마가 남는지는
+              머리로 빼야 한다.
+            */}
+            <div className="space-y-0.5 border-t border-border px-3 py-2 text-xs">
+              <div className="flex items-baseline gap-x-2">
+                <span className="text-text-dim">
+                  남은 숙제 <span className="tabular">{character.remaining}</span>개
                 </span>
+              </div>
+
+              <div className="flex items-baseline gap-x-2">
+                <span className="text-text-faint">더보기 안 함</span>
+                <span className="ml-auto tabular text-text-dim">
+                  {gold.format(character.clearGold)} G
+                </span>
+              </div>
+
+              {character.moreCost > 0 && (
+                <div className="flex items-baseline gap-x-2">
+                  <span className="text-text-faint">
+                    더보기 함{" "}
+                    <span className="tabular text-danger">
+                      -{gold.format(character.moreCost)}
+                    </span>
+                  </span>
+                  <span className="ml-auto tabular text-text-dim">
+                    {gold.format(character.clearGold - character.moreCost)} G
+                  </span>
+                </div>
               )}
             </div>
             </li>
