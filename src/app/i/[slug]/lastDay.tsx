@@ -54,10 +54,12 @@ export function RememberDay({ day }: { day: number }) {
 export function BoardTabLink({
   href,
   className,
+  title,
   children,
 }: {
   href: string;
   className?: string;
+  title?: string;
   children: React.ReactNode;
 }) {
   const router = useRouter();
@@ -66,6 +68,7 @@ export function BoardTabLink({
     <Link
       href={href}
       className={className}
+      title={title}
       onClick={(e) => {
         // 새 탭·새 창으로 여는 조작은 브라우저에 맡긴다.
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;

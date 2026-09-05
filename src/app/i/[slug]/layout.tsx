@@ -46,8 +46,8 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
     { href: `/i/${slug}/history`, label: "편집 이력", icon: <HistoryIcon />, remember: false },
   ];
 
-  const tabClass =
-    "flex items-center gap-1.5 rounded px-3 py-1.5 text-sm text-text-dim transition-colors hover:bg-surface-2 hover:text-text";
+  // 평소에는 아이콘만, 올리면 이름이 열린다(globals.css의 .tab-link).
+  const tabClass = "tab-link";
 
   return (
     <div className="flex min-h-full flex-col">
@@ -72,14 +72,19 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
           <nav className="flex gap-1">
             {tabs.map((tab) =>
               tab.remember ? (
-                <BoardTabLink key={tab.href} href={tab.href} className={tabClass}>
+                <BoardTabLink
+                  key={tab.href}
+                  href={tab.href}
+                  className={tabClass}
+                  title={tab.label}
+                >
                   {tab.icon}
-                  {tab.label}
+                  <span className="tab-label">{tab.label}</span>
                 </BoardTabLink>
               ) : (
-                <Link key={tab.href} href={tab.href} className={tabClass}>
+                <Link key={tab.href} href={tab.href} className={tabClass} title={tab.label}>
                   {tab.icon}
-                  {tab.label}
+                  <span className="tab-label">{tab.label}</span>
                 </Link>
               ),
             )}
