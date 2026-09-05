@@ -448,10 +448,16 @@ const syncingInstances = new Set<string>();
  * 사람이 `갱신`을 눌러야 최신이 되는 구조는 시트의 `#REF!`와 같은 문제를 만든다.
  * 아무도 누르지 않으면 낡은 숫자가 그대로 편성 근거가 된다.
  *
- * 한 번에 `limit`개까지만 본다. 분당 100회 한도가 있고, 남은 것은 다음 조회에서
- * 이어 처리하면 된다. 오래 묵은 것부터 간다.
+ * 한 번에 `limit`개까지만 본다. 오래 묵은 것부터 간다.
+ *
+ * 60인 이유는 분당 한도(95, lostark.ts)에서 손 입력과 수동 갱신 몫을 남긴 것이다.
+ * 한도를 넘으면 큐가 알아서 다음 분까지 재우므로 한도 자체가 깨지지는 않지만,
+ * 그러는 동안 칸에 닉네임을 친 사람이 기다리게 된다.
+ *
+ * 중간에 함수가 끊겨도 안전하다. 캐릭터마다 따로 저장하므로 거기까지는 남고
+ * 나머지는 다음 조회에서 이어 간다.
  */
-export async function syncStaleCharacters(instanceId: string, limit = 20): Promise<number> {
+export async function syncStaleCharacters(instanceId: string, limit = 60): Promise<number> {
   if (syncingInstances.has(instanceId)) return 0;
   syncingInstances.add(instanceId);
   try {

@@ -8,6 +8,10 @@ import { SyncAllButton } from "./SyncAllButton";
 
 export const dynamic = "force-dynamic";
 
+// 이 페이지의 서버 액션에 적용된다. 자동 갱신이 캐릭터 수십 개를 순차로 조회하므로
+// 기본 제한(10초)으로는 중간에 끊긴다.
+export const maxDuration = 60;
+
 export default async function CharactersPage({ params }: PageProps<"/i/[slug]/characters">) {
   const { slug } = await params;
   const instance = await requireInstance(slug);
