@@ -52,16 +52,27 @@ model UserSetting {
 
 /// 한 사람. 부캐 여럿이 동일인임을 표현해 중복 참여 경고에 쓴다.
 model Member {
-  id         String   @id @default(cuid())
-  instanceId String
+  id            String   @id @default(cuid())
+  instanceId    String
   /// 사람을 가리키는 이름. 디스코드 길드 닉네임을 기본값으로 채운다.
-  label      String
-  createdAt  DateTime @default(now())
+  label         String
+  /// 원정대를 클레임한 디스코드 계정. 클레임 전에는 비어 있다.
+  discordUserId String?
+  /// 클레임한 원정대의 캐릭터 이름.
+  ///
+  /// 나중에 등록되는 캐릭터도 이 목록에 있으면 자동으로 이 사람에게 붙는다.
+  /// 편성 칸에 남이 대신 넣어줘도 소속이 잡히는 이유가 이것이다.
+  /// 계정이 여럿인 사람은 클레임을 여러 번 해서 이름이 계속 쌓인다.
+  claimedNames  String[] @default([])
+  createdAt     DateTime @default(now())
 
   instance   Instance    @relation(fields: [instanceId], references: [id], onDelete: Cascade)
   characters Character[]
 
   @@unique([instanceId, label])
+  // 유니크가 아니라 인덱스다. 이미 있는 표에 유니크를 얹으려면 데이터 손실을 감수하는
+  // 플래그가 필요한데, 클레임은 사람당 한 번 있는 일이라 코드에서 막는 편이 싸다.
+  @@index([instanceId, discordUserId])
   @@index([instanceId])
 }
 

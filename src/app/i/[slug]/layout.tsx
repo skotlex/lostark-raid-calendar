@@ -6,6 +6,13 @@ import { requireInstance } from "@/lib/instance";
 import { requireSession } from "@/lib/session";
 
 import { THEME_COOKIE, toThemeChoice } from "../../theme";
+import {
+  BoardIcon,
+  HistoryIcon,
+  MembersIcon,
+  PinTabIcon,
+  ScheduleIcon,
+} from "./icons";
 import { ThemeToggle } from "../../ThemeToggle";
 import { BoardTabLink } from "./lastDay";
 import { Viewer } from "./Viewer";
@@ -24,18 +31,23 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
 
   // `remember`가 켜진 탭은 마지막으로 보던 요일로 돌아간다(lastDay.tsx 참조).
   const tabs = [
-    { href: `/i/${slug}`, label: "편성표", remember: true },
+    { href: `/i/${slug}`, label: "편성표", icon: <BoardIcon />, remember: true },
     // 편성표를 보다가 "무엇이 다음 주로 넘어가지?"를 확인하는 흐름이라 바로 옆에 둔다.
-    { href: `/i/${slug}/pinned`, label: "고정 현황", remember: false },
-    { href: `/i/${slug}/slots`, label: "요일표 편집", remember: false },
+    { href: `/i/${slug}/pinned`, label: "고정 현황", icon: <PinTabIcon />, remember: false },
+    { href: `/i/${slug}/slots`, label: "요일표 편집", icon: <ScheduleIcon />, remember: false },
     // 편성은 칸에서 바로 하므로 여기는 정리용 화면이다. 그래서 뒤로 뺐다.
-    { href: `/i/${slug}/characters`, label: "캐릭터 관리", remember: false },
+    {
+      href: `/i/${slug}/characters`,
+      label: "캐릭터 관리",
+      icon: <MembersIcon />,
+      remember: false,
+    },
     // 막지 않는 대신 남긴다(CLAUDE.md 3.4). 무엇이 바뀌었는지 보는 곳이다.
-    { href: `/i/${slug}/history`, label: "편집 이력", remember: false },
+    { href: `/i/${slug}/history`, label: "편집 이력", icon: <HistoryIcon />, remember: false },
   ];
 
   const tabClass =
-    "rounded px-3 py-1.5 text-sm text-text-dim transition-colors hover:bg-surface-2 hover:text-text";
+    "flex items-center gap-1.5 rounded px-3 py-1.5 text-sm text-text-dim transition-colors hover:bg-surface-2 hover:text-text";
 
   return (
     <div className="flex min-h-full flex-col">
@@ -61,10 +73,12 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
             {tabs.map((tab) =>
               tab.remember ? (
                 <BoardTabLink key={tab.href} href={tab.href} className={tabClass}>
+                  {tab.icon}
                   {tab.label}
                 </BoardTabLink>
               ) : (
                 <Link key={tab.href} href={tab.href} className={tabClass}>
+                  {tab.icon}
                   {tab.label}
                 </Link>
               ),

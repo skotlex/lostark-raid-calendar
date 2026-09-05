@@ -148,7 +148,7 @@ export function NameInput({
         readOnly={pending}
         required
         autoComplete="off"
-        placeholder={placeholder ?? "닉네임"}
+        placeholder={placeholder ?? "캐릭터 입력"}
         role="combobox"
         aria-expanded={showing}
         aria-controls={listId}

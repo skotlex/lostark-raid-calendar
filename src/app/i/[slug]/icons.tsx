@@ -64,3 +64,69 @@ export function GripIcon() {
     </svg>
   );
 }
+
+/**
+ * 탭 아이콘.
+ *
+ * 글자만 늘어놓으면 다섯 탭이 한 덩어리로 보인다. 그림이 앞에 서면 위치를 외우기 전에도
+ * 눈이 먼저 찾는다. 칸 아이콘보다 한 치수 크게 그린다.
+ */
+const TAB_ICON = { ...ICON_PROPS, className: "size-4 shrink-0" } as const;
+
+/** 편성표. 자리 여덟 개가 격자로 늘어선 모양. */
+export function BoardIcon() {
+  return (
+    <svg {...TAB_ICON} strokeWidth={1.6}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M3 10h18" />
+      <path d="M9 10v10" />
+      <path d="M15 10v10" />
+    </svg>
+  );
+}
+
+/** 요일표 편집. 목록에 연필. */
+export function ScheduleIcon() {
+  return (
+    <svg {...TAB_ICON} strokeWidth={1.6}>
+      <path d="M4 6h10" />
+      <path d="M4 12h7" />
+      <path d="M4 18h5" />
+      <path d="M14.5 19.5 20 14l1.8 1.8-5.5 5.5-2.4.6z" />
+    </svg>
+  );
+}
+
+/** 캐릭터 관리. 사람 둘. */
+export function MembersIcon() {
+  return (
+    <svg {...TAB_ICON} strokeWidth={1.6}>
+      <circle cx="9" cy="8" r="3" />
+      <path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
+      <path d="M16 5.5a3 3 0 0 1 0 5.8" />
+      <path d="M17.5 14.2a5.5 5.5 0 0 1 3 4.8" />
+    </svg>
+  );
+}
+
+/** 편집 이력. 시곗바늘이 거꾸로 도는 모양. */
+export function HistoryIcon() {
+  return (
+    <svg {...TAB_ICON} strokeWidth={1.6}>
+      <path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1" />
+      <path d="M3.5 4.5V10h5.5" />
+      <path d="M12 7.5V12l3 1.8" />
+    </svg>
+  );
+}
+
+/** 고정 현황. 압정을 탭 크기로 다시 그린다. */
+export function PinTabIcon() {
+  return (
+    <svg {...TAB_ICON} strokeWidth={1.6}>
+      <path d="M9 4h6" />
+      <path d="M10 4v5L7.3 13h9.4L14 9V4z" />
+      <path d="M12 13v7" />
+    </svg>
+  );
+}
