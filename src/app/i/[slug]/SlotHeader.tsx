@@ -58,9 +58,18 @@ export function SlotHeader({
           점수컷 — 걸어 둔 공대만 내건다.
           자리 수 바로 뒤에 서는 이유는 "몇 자리 남았나" 다음에 "내가 들어갈 수 있나"가
           오기 때문이다. 이름·시각과 섞이지 않게 색으로 갈라 둔다.
+
+          **둘을 한 덩어리로 묶는다.** 낱개로 두면 줄이 접힐 때 딜러만 위에 남고 서폿이
+          다음 줄로 떨어진다. 하나는 이름 옆, 하나는 저 아래에 서니 같은 종류의 값으로
+          읽히지 않고 서폿 컷만 빠뜨리고 지나가게 된다. 둘을 합쳐야 200px 남짓이라
+          어느 폭에서든 함께 접힌다.
         */}
-        <ScoreCut kind="dps" value={slot.dpsScoreCut} />
-        <ScoreCut kind="sup" value={slot.supScoreCut} />
+        {(slot.dpsScoreCut !== null || slot.supScoreCut !== null) && (
+          <span className="flex shrink-0 items-center gap-x-2">
+            <ScoreCut kind="dps" value={slot.dpsScoreCut} />
+            <ScoreCut kind="sup" value={slot.supScoreCut} />
+          </span>
+        )}
 
         {editable && (
           <form action={toggleKeep} className="ml-auto">

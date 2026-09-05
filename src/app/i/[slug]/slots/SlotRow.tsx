@@ -50,15 +50,22 @@ export function SlotRow({ slug, slot }: { slug: string; slot: SlotView }) {
           전원 고정
         </span>
       )}
-      {/* 편성표에 걸리는 뱃지와 같은 모양이다. 저장한 값을 확인하러 편성표로 가지 않는다. */}
-      {slot.dpsScoreCut !== null && (
-        <span className="slot-badge tabular" data-cut="dps">
-          딜러 {formatScoreCut(slot.dpsScoreCut)}
-        </span>
-      )}
-      {slot.supScoreCut !== null && (
-        <span className="slot-badge tabular" data-cut="sup">
-          서폿 {formatScoreCut(slot.supScoreCut)}
+      {/*
+        편성표에 걸리는 뱃지와 같은 모양이다. 저장한 값을 확인하러 편성표로 가지 않는다.
+        묶어 두는 이유도 같다(SlotHeader) — 낱개면 줄이 접힐 때 둘이 갈라선다.
+      */}
+      {(slot.dpsScoreCut !== null || slot.supScoreCut !== null) && (
+        <span className="flex shrink-0 items-center gap-x-3">
+          {slot.dpsScoreCut !== null && (
+            <span className="slot-badge tabular" data-cut="dps">
+              딜러 {formatScoreCut(slot.dpsScoreCut)}
+            </span>
+          )}
+          {slot.supScoreCut !== null && (
+            <span className="slot-badge tabular" data-cut="sup">
+              서폿 {formatScoreCut(slot.supScoreCut)}
+            </span>
+          )}
         </span>
       )}
 
