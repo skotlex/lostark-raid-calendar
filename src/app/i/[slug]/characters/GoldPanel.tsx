@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 
+import { classEmblem } from "@/lib/classEmblems";
 import { GOLD_LIMIT, goldEarnerIds, isManual } from "@/lib/goldEarners";
 
 import { type GoldState, setGoldEarnersAction } from "./actions";
@@ -142,7 +143,23 @@ function GoldForm({
                   className="accent-[var(--accent)]"
                 />
                 <span className="min-w-0 flex-1 truncate">{character.name}</span>
-                <span className="shrink-0 text-xs text-text-faint">
+                {/*
+                  직업 문장. 여섯 줄이 이름만으로 늘어서 있으면 어느 줄이 무엇인지
+                  글자를 읽어야 한다. 편성표 간략 보기와 같은 그림·같은 자리다.
+                */}
+                <span className="flex shrink-0 items-center gap-1 text-xs text-text-faint">
+                  {classEmblem(character.className) && (
+                    // 게임 자산 SVG라 next/image를 거치지 않는다(숙제 화면과 같은 이유).
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={classEmblem(character.className)!}
+                      alt=""
+                      width={16}
+                      height={16}
+                      loading="lazy"
+                      className="board-emblem"
+                    />
+                  )}
                   {character.className ?? "?"}
                 </span>
                 <span className="shrink-0 text-xs tabular text-text-faint">
