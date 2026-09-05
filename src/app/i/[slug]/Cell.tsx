@@ -5,7 +5,7 @@ import { type DragEvent, startTransition, useActionState, useState } from "react
 import type { CellView } from "@/lib/board";
 import { classEmblem } from "@/lib/classEmblems";
 import { positionKind, positionLabel } from "@/lib/positions";
-import { getSynergies } from "@/lib/synergy";
+import { getSynergies, synergyLabel } from "@/lib/synergy";
 
 import { DRAG_TYPE, moveForm, readDragSource, writeDragSource } from "./dragCell";
 import { ConfirmButton } from "./ConfirmButton";
@@ -352,7 +352,7 @@ export function Cell({
           <div className="char-syn-line">
             {synergies.map((synergy) => (
               <span key={synergy.kind} className="char-syn" data-kind={synergy.kind}>
-                {synergy.kind}
+                {synergyLabel(synergy.kind)}
                 {/* 수치는 종류마다 고정이다. 서폿은 딜러마다 달라 비어 있다. */}
                 {synergy.value && ` ${synergy.value}`}
               </span>

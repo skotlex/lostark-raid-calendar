@@ -1,7 +1,7 @@
 "use client";
 
 import type { BoardSlotView, PartyView } from "@/lib/board";
-import type { SynergyKind } from "@/lib/synergy";
+import { synergyLabel, type SynergyKind } from "@/lib/synergy";
 
 import { Cell } from "./Cell";
 import { SlotHeader } from "./SlotHeader";
@@ -98,7 +98,7 @@ function Party({
               title={`${synergy.label} — ${synergy.sources.join(", ")}`}
             >
               <span>
-                {synergy.kind}
+                {synergyLabel(synergy.kind)}
                 {/* 수치는 종류마다 고정이라 함께 보여준다. 서폿은 딜러마다 달라 비어 있다. */}
                 {synergy.value && ` ${synergy.value}`}
               </span>

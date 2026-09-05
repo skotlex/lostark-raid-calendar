@@ -4,7 +4,7 @@ import { useActionState } from "react";
 
 import type { CharacterView } from "@/lib/characters";
 import { classEmblem } from "@/lib/classEmblems";
-import { getSynergies } from "@/lib/synergy";
+import { getSynergies, synergyLabel } from "@/lib/synergy";
 
 import { ConfirmButton } from "../ConfirmButton";
 
@@ -123,7 +123,7 @@ export function CharacterCard({
               <div className="char-syn-line char-syn-line--open">
                 {synergies.map((synergy) => (
                   <span key={synergy.kind} className="char-syn" data-kind={synergy.kind}>
-                    {synergy.kind}
+                    {synergyLabel(synergy.kind)}
                     {/* 수치는 종류마다 고정이다. 서폿은 딜러마다 달라 비어 있다. */}
                     {synergy.value && ` ${synergy.value}`}
                   </span>

@@ -21,6 +21,29 @@ export type SynergyKind =
 
 export type Role = "DPS" | "SUPPORT";
 
+/**
+ * 화면에 찍는 이름.
+ *
+ * `kind`는 저장된 값(`Character.skillSynergies`)과 armory 파싱 규칙이 함께 쓰는
+ * 열쇠라 바꾸면 옛 데이터가 통째로 안 읽힌다. 그래서 보여줄 이름만 여기서 갈아끼운다.
+ * 나머지 종류는 이름이 곧 약어라 그대로 둔다.
+ */
+export const SYNERGY_LABEL: Record<SynergyKind, string> = {
+  공증: "공증",
+  받피증: "받피증",
+  방깍: "방깎",
+  치적: "치적",
+  치피증: "치피증",
+  백헤드: "백헤드",
+  마나: "마회",
+  서폿: "서폿",
+};
+
+/** 표에 없는 종류가 저장돼 있으면 이름을 그대로 쓴다. */
+export function synergyLabel(kind: string): string {
+  return SYNERGY_LABEL[kind as SynergyKind] ?? kind;
+}
+
 export interface Synergy {
   kind: SynergyKind;
   /** 칸에 그대로 찍는 짧은 문구 */
@@ -42,7 +65,7 @@ export interface ClassInfo {
 
 const 공증: Synergy = { kind: "공증", label: "공증 6%", value: "6%" };
 const 받피증: Synergy = { kind: "받피증", label: "받피증 6%", value: "6%" };
-const 방깍: Synergy = { kind: "방깍", label: "방깍 12%", value: "12%" };
+const 방깍: Synergy = { kind: "방깍", label: "방깎 12%", value: "12%" };
 const 치적: Synergy = { kind: "치적", label: "치적 10%", value: "10%" };
 const 치피증: Synergy = { kind: "치피증", label: "치피증 8%", value: "8%" };
 const 백헤드: Synergy = { kind: "백헤드", label: "백/헤드 9%", value: "9%" };
@@ -240,7 +263,7 @@ export function getSynergies(
           .filter((d) => KINDS.has(d.kind))
           .map((d) => ({
             kind: d.kind as SynergyKind,
-            label: `${d.kind} ${d.value}`,
+            label: `${synergyLabel(d.kind)} ${d.value}`,
             value: d.value,
           }));
 

@@ -17,7 +17,7 @@ import {
 import type { BoardSlotView, CellView } from "@/lib/board";
 import { classEmblem } from "@/lib/classEmblems";
 import { positionLabel } from "@/lib/positions";
-import { getSynergies } from "@/lib/synergy";
+import { getSynergies, synergyLabel } from "@/lib/synergy";
 
 import { NameInput } from "./NameInput";
 import { SlotHeader } from "./SlotHeader";
@@ -130,7 +130,7 @@ function synergyText(cell: CellView): string {
   if (!character) return "";
 
   return getSynergies(character.className, character.role, character.skillSynergies)
-    .map((s) => (s.value ? `${s.kind} ${s.value}` : s.kind))
+    .map((s) => (s.value ? `${synergyLabel(s.kind)} ${s.value}` : synergyLabel(s.kind)))
     .join(", ");
 }
 
