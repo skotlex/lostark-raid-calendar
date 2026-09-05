@@ -70,7 +70,7 @@ export function CompactSlot({
 
           <tbody>
             <tr>
-              <th className="board-label">닉네임</th>
+              <th className="board-label">캐릭터</th>
               {cells.map((cell) => (
                 <NameCell
                   key={cell.position}
