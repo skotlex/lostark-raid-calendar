@@ -7,6 +7,7 @@ import {
   type ReactNode,
   startTransition,
   useActionState,
+  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -446,6 +447,15 @@ function NameCell({
 const BUBBLE_MARGIN = 8;
 
 /**
+ * 열려 있는 말풍선은 화면에 하나뿐이다.
+ *
+ * 경고 아이콘은 한 이름의 양옆에 같은 것이 둘 서고 둘이 같은 문장을 띄운다(위).
+ * 각자 자기 상태만 보면 왼쪽을 누른 뒤 오른쪽을 누를 때 같은 말풍선이 반 칸
+ * 어긋나 두 겹으로 선다. 여는 쪽이 나머지를 닫는다.
+ */
+const openBubbles = new Set<() => void>();
+
+/**
  * 경고 — 이름 옆의 표시와 눌러서 여는 말풍선.
  *
  * 문장을 이름 아래에 그대로 깔면 한 칸이 이름 너비뿐이라 서너 줄로 접히고, 그 줄만
@@ -474,20 +484,41 @@ function WarnBadge({ warnings }: { warnings: string[] }) {
     setLeft(Math.min(Math.max(anchor.x, min), max));
   }, [anchor]);
 
-  // 3초 뒤에 저절로 닫힌다. 닫는 법을 따로 알려주지 않아도 되고, 좁은 표에서 오래
-  // 떠 있으면 아래 줄을 가린다.
+  const close = useCallback(() => setAnchor(null), []);
+
   useEffect(() => {
     if (!anchor) return;
-    const timer = setTimeout(() => setAnchor(null), 3000);
-    return () => clearTimeout(timer);
-  }, [anchor]);
+
+    // 열려 있는 동안만 목록에 든다. 닫힌 것을 남겨두면 여는 쪽이 아무 일도 하지
+    // 않는 닫기를 매번 훑는다.
+    openBubbles.add(close);
+
+    // 3초 뒤에 저절로 닫힌다. 닫는 법을 따로 알려주지 않아도 되고, 좁은 표에서
+    // 오래 떠 있으면 아래 줄을 가린다.
+    const timer = setTimeout(close, 3000);
+
+    // 굴리면 바로 닫는다. 말풍선은 fixed라 표가 움직여도 제자리에 남아, 가리키던
+    // 아이콘은 이미 지나갔는데 화면에는 쪽지가 따라다니는 꼴이 된다. 표 안쪽
+    // 스크롤도 잡아야 하므로 캡처로 듣는다(scroll은 버블링하지 않는다).
+    window.addEventListener("scroll", close, { passive: true, capture: true });
+    window.addEventListener("resize", close);
+
+    return () => {
+      openBubbles.delete(close);
+      clearTimeout(timer);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [anchor, close]);
 
   function toggle(e: MouseEvent<HTMLButtonElement>) {
     // 열려 있는데 또 누르면 닫는다. 3초를 기다리게 하지 않는다.
     if (anchor) {
-      setAnchor(null);
+      close();
       return;
     }
+
+    for (const other of openBubbles) other();
 
     const box = e.currentTarget.getBoundingClientRect();
     const x = box.left + box.width / 2;
