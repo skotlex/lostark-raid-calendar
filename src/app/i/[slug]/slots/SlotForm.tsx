@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 
 import { RAID_PRESETS, difficultiesFor } from "@/lib/raids";
 import type { SlotView } from "@/lib/slots";
@@ -100,6 +100,9 @@ export function SlotForm({
    *
    * onSubmit으로 직접 보내면 그 초기화가 아예 일어나지 않는다. required·pattern 검사는
    * 브라우저가 submit 전에 하므로 그대로 걸린다.
+   *
+   * 디스패치는 트랜지션 안에서 부른다. `action` prop으로 넘길 때는 React가 알아서
+   * 감싸주지만, 직접 부를 때는 우리가 감싸야 pending이 제대로 켜진다.
    */
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -112,7 +115,7 @@ export function SlotForm({
     data.set("raidName", raidName);
     data.set("difficulty", difficulty);
 
-    submit(data);
+    startTransition(() => submit(data));
     // 수정은 저장 후 닫는다. 추가는 연달아 넣는 경우가 많아 열어둔다.
     if (editing) onDone?.();
   }
