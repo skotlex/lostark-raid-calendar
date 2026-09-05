@@ -8,7 +8,7 @@ import { classColor } from "@/lib/classColors";
 import { classEmblem } from "@/lib/classEmblems";
 import { dayName } from "@/lib/week";
 
-import { CombatPowerIcon, ItemLevelIcon } from "../icons";
+import { CombatPowerIcon, GoldIcon, ItemLevelIcon } from "../icons";
 
 export const dynamic = "force-dynamic";
 
@@ -202,7 +202,7 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
                 />
               )}
 
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="truncate font-semibold">{character.name}</div>
                 <div className="flex items-center gap-x-2 text-xs tabular opacity-90">
                   <span className="flex items-center gap-1" title="아이템 레벨">
@@ -217,6 +217,23 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
                   )}
                 </div>
               </div>
+
+              {/*
+                골드를 받는 캐릭터인가. 원정대 하나에서 여섯뿐이다(goldEarners.ts).
+
+                아래 골드 줄이 0으로 찍히는 이유가 여기 있어야 한다. 표시가 없으면
+                "왜 이 캐릭터만 0원이지"를 설명할 자리가 화면에 없다.
+              */}
+              <span
+                className={`shrink-0 ${character.goldEarner ? "" : "opacity-55"}`}
+                title={
+                  character.goldEarner
+                    ? "주간 골드를 받는 캐릭터입니다"
+                    : "골드를 받지 않는 캐릭터입니다. 대신 더보기가 무료입니다"
+                }
+              >
+                <GoldIcon earning={character.goldEarner} />
+              </span>
             </div>
 
             <ul className="divide-y divide-border">

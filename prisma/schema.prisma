@@ -30,6 +30,7 @@ model Instance {
   updatedAt    DateTime @updatedAt
 
   members    Member[]
+  rosters    Roster[]
   characters Character[]
   slots      RaidSlot[]
   changeLogs ChangeLog[]
@@ -68,6 +69,7 @@ model Member {
 
   instance   Instance    @relation(fields: [instanceId], references: [id], onDelete: Cascade)
   characters Character[]
+  rosters    Roster[]
 
   @@unique([instanceId, label])
   // 유니크가 아니라 인덱스다. 이미 있는 표에 유니크를 얹으려면 데이터 손실을 감수하는
@@ -76,10 +78,41 @@ model Member {
   @@index([instanceId])
 }
 
+/// 원정대 하나. 로아 계정 하나에 해당한다.
+///
+/// **골드 획득 제한이 원정대 단위라서 필요하다.** 한 원정대에서 주간 레이드 골드를
+/// 받는 캐릭터는 6명뿐이고, 그 6명이 누구인지는 사람이 아니라 원정대마다 갈린다.
+/// Member로는 셀 수 없다. 계정이 여럿인 사람은 한 Member 아래 원정대가 여럿이다.
+///
+/// **"내 원정대 불러오기" 한 번이 원정대 하나다.** 로아 `siblings`가 한 계정의 원정대만
+/// 주고 부계정을 이어 줄 방법이 API에 없어서, 사람이 계정마다 한 번씩 부르는 것이
+/// 곧 경계가 된다. 그때 친 대표 캐릭터명을 이름으로 삼는다.
+model Roster {
+  id         String   @id @default(cuid())
+  instanceId String
+  memberId   String
+  /// 불러올 때 친 대표 캐릭터명. 캐릭터 관리의 탭 이름으로 그대로 쓴다.
+  label      String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  instance   Instance    @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  member     Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  characters Character[]
+
+  @@unique([instanceId, label])
+  @@index([memberId])
+}
+
 model Character {
   id         String  @id @default(cuid())
   instanceId String
   memberId   String?
+  /// 어느 원정대의 캐릭터인가. 골드 6명 제한을 세는 단위다.
+  ///
+  /// 편성 칸에 남이 대신 쳐 넣어 만들어진 캐릭터는 비어 있다. 주인이 한 번
+  /// 불러오면 붙는다(members.ts의 claimNames).
+  rosterId   String?
   /// 로스트아크 캐릭터 닉네임. API 조회 키다.
   name       String
 
@@ -111,6 +144,15 @@ model Character {
   role       Role    @default(DPS)
   roleLocked Boolean @default(false)
 
+  /// 주간 레이드 골드를 받는 캐릭터인가.
+  ///
+  /// **null이면 자동이다.** 원정대에서 템레벨 상위 6명을 골드 획득으로 본다. 캐릭터를
+  /// 새로 등록할 때마다 사람이 손대지 않아도 맞는 답이 나오는 쪽이 기본이어야 한다.
+  ///
+  /// 사람이 한 번 지정하면 그 원정대의 캐릭터 전체에 true/false가 박힌다. 일부만
+  /// 박아 두면 "자동인데 왜 이 캐릭터가 빠지지"를 설명할 길이 없다(goldEarners.ts).
+  goldEarner Boolean?
+
   syncedAt  DateTime?
   /// 조회 실패 사유. 값이 있어도 기존 스펙은 지우지 않는다.
   syncError String?
@@ -119,11 +161,13 @@ model Character {
 
   instance    Instance     @relation(fields: [instanceId], references: [id], onDelete: Cascade)
   member      Member?      @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  roster      Roster?      @relation(fields: [rosterId], references: [id], onDelete: SetNull)
   assignments Assignment[]
 
   @@unique([instanceId, name])
   @@index([instanceId])
   @@index([memberId])
+  @@index([rosterId])
 }
 
 /// 고정 요일표의 한 칸. 주차 개념이 없다.

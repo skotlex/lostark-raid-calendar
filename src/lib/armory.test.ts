@@ -388,6 +388,85 @@ describe("트라이포드 시너지", () => {
     ]);
   });
 
+  it("방깍 — 적에게 거는 디버프라 파티원이 나오지 않는다", () => {
+    // 서머너(특이점 돌파). 실제 응답 문구다.
+    const skills = [
+      {
+        Name: "이끼 늪",
+        Level: 10,
+        Tripods: [
+          tripod(
+            "부식성 확산",
+            "이끼늪이 즉시 생성되며, 이끼늪에 적중된 적의 모든 방어력을 16.0초간 12.0% 감소 시킨다.",
+          ),
+        ],
+      },
+    ];
+    expect(normalizeSkillSynergies(skills)).toEqual([
+      { kind: "방깍", value: "12%", source: "이끼 늪 · 부식성 확산" },
+    ]);
+  });
+
+  it("방깍 — 적들/모든 방어력 같은 표현 차이를 넘긴다", () => {
+    // 블래스터와 환수사. 같은 갑옷 파괴인데 문구가 조금씩 다르다.
+    const 블래스터 = [
+      {
+        Name: "포탄 사격",
+        Level: 10,
+        Tripods: [
+          tripod("갑옷 파괴", "적중된 적의 모든 방어력을 8.0초간 12.0% 감소시킨다."),
+        ],
+      },
+    ];
+    const 환수사 = [
+      {
+        Name: "여우비",
+        Level: 10,
+        Tripods: [
+          tripod(
+            "갑옷 파괴",
+            "공격에 적중된 적들의 모든 방어력을 12.0초간 12.0% 감소시킨다.",
+          ),
+        ],
+      },
+    ];
+    expect(normalizeSkillSynergies(블래스터)[0]?.value).toBe("12%");
+    expect(normalizeSkillSynergies(환수사)[0]?.value).toBe("12%");
+  });
+
+  it("자기 방어력을 깎는 디메리트는 방깍이 아니다", () => {
+    const skills = [
+      {
+        Name: "아무 스킬",
+        Level: 10,
+        Tripods: [
+          tripod(
+            "무모한 돌진",
+            "적을 밀쳐내지만 자신의 방어력이 10.0초간 20.0% 감소한다.",
+          ),
+        ],
+      },
+    ];
+    expect(normalizeSkillSynergies(skills)).toEqual([]);
+  });
+
+  it("파티원이 받는 버프라도 시너지 종류가 아니면 세지 않는다", () => {
+    // 서머너 슈르디. 마나 회복은 시너지 표에 없는 종류다.
+    const skills = [
+      {
+        Name: "슈르디 소환",
+        Level: 10,
+        Tripods: [
+          tripod(
+            "마나 회복",
+            "슈르디 소환 중 자신 및 파티원의 마나 자연회복 속도가 40.0% 증가한다.",
+          ),
+        ],
+      },
+    ];
+    expect(normalizeSkillSynergies(skills)).toEqual([]);
+  });
+
   it("안 찍은 트라이포드는 세지 않는다", () => {
     const skills = [
       {
@@ -405,7 +484,7 @@ describe("트라이포드 시너지", () => {
     expect(normalizeSkillSynergies(skills)).toEqual([]);
   });
 
-  it("파티원이 없는 자버프는 시너지가 아니다", () => {
+  it("자기만 받는 버프는 시너지가 아니다", () => {
     const skills = [
       {
         Name: "아무 스킬",

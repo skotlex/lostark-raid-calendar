@@ -46,6 +46,10 @@ export interface CharacterView {
   roleLocked: boolean;
   memberId: string | null;
   memberLabel: string | null;
+  rosterId: string | null;
+  rosterLabel: string | null;
+  /** 주간 골드를 받는 캐릭터인가. null이면 자동 판정(goldEarners.ts) */
+  goldEarner: boolean | null;
   syncedAt: string | null;
   syncError: string | null;
   /** 다시 조회할 때가 됐는지. 화면이 열릴 때 자동 갱신 대상을 세는 데 쓴다 */
@@ -70,6 +74,9 @@ type CharacterRow = {
   roleLocked: boolean;
   memberId: string | null;
   member: { label: string } | null;
+  rosterId: string | null;
+  roster: { label: string } | null;
+  goldEarner: boolean | null;
   syncedAt: Date | null;
   syncError: string | null;
 };
@@ -119,6 +126,9 @@ export function toCharacterView(row: CharacterRow, now = Date.now()): CharacterV
     roleLocked: row.roleLocked,
     memberId: row.memberId,
     memberLabel: row.member?.label ?? null,
+    rosterId: row.rosterId,
+    rosterLabel: row.roster?.label ?? null,
+    goldEarner: row.goldEarner,
     syncedAt: row.syncedAt?.toISOString() ?? null,
     syncError: row.syncError,
     stale: !row.syncedAt || now - row.syncedAt.getTime() > SYNC_TTL_MS,
@@ -143,6 +153,9 @@ const characterSelect = {
   roleLocked: true,
   memberId: true,
   member: { select: { label: true } },
+  rosterId: true,
+  roster: { select: { label: true } },
+  goldEarner: true,
   syncedAt: true,
   syncError: true,
 } as const;

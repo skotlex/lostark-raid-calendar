@@ -186,3 +186,32 @@ export function CombatPowerIcon() {
     </svg>
   );
 }
+
+/**
+ * 주간 골드를 받는 캐릭터 표시.
+ *
+ * 원정대 하나에서 여섯뿐이라(goldEarners.ts) 나머지는 레이드를 가도 골드가 0이다.
+ * 숙제 카드에서 그 둘을 가려야 합계를 읽을 수 있다.
+ *
+ * 동전으로 그린다. 골드라는 말을 그림으로 옮길 때 가장 짧은 길이고, 안이 빈 원과
+ * 채운 원으로 "받는다 / 못 받는다"가 갈린다. 색만 다르게 두면 색약인 사람에게는
+ * 같은 그림 둘이 된다.
+ */
+export function GoldIcon({ earning }: { earning: boolean }) {
+  return (
+    <svg {...STAT_ICON} strokeWidth={1.8}>
+      <circle cx="12" cy="12" r="8.5" fill={earning ? "currentColor" : "none"} />
+      {earning ? (
+        // 받는 캐릭터: 동전 위에 어두운 G가 파여 있다.
+        <path
+          d="M14.6 9.6a3.6 3.6 0 1 0 .3 3.6h-2.4"
+          stroke="var(--surface)"
+          strokeWidth={1.7}
+        />
+      ) : (
+        // 못 받는 캐릭터: 빈 동전에 사선을 그어 막힌 것을 보인다.
+        <path d="m7.5 16.5 9-9" />
+      )}
+    </svg>
+  );
+}

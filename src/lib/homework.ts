@@ -1,5 +1,6 @@
 import "server-only";
 
+import { NO_ROSTER, goldEarnerIds } from "./goldEarners";
 import { prisma } from "./prisma";
 import { raidReward } from "./raidRewards";
 import { raidLabel } from "./raids";
@@ -42,6 +43,15 @@ export interface HomeworkCharacter {
   itemLevel: number | null;
   combatPower: number | null;
   entries: HomeworkEntry[];
+  /**
+   * 주간 골드를 받는 캐릭터인가.
+   *
+   * 원정대 하나에서 여섯뿐이다(goldEarners.ts). 아닌 캐릭터도 레이드는 가므로 숙제
+   * 목록에는 그대로 있고, 골드만 0으로 센다.
+   */
+  goldEarner: boolean;
+  /** 원정대 이름. 불러오기로 등록하지 않았으면 null */
+  rosterLabel: string | null;
   /** 아직 하지 않은 숙제 수 */
   remaining: number;
   /** 이번 주에 들어올 클리어 골드 합계. 표에 없는 레이드는 빠진다 */
@@ -135,6 +145,9 @@ export async function getHomework(
       className: true,
       itemLevel: true,
       combatPower: true,
+      goldEarner: true,
+      rosterId: true,
+      roster: { select: { label: true } },
       assignments: {
         where: { weekStart: { in: [planningWeek, tuesdayWeek] } },
         select: {
@@ -167,9 +180,41 @@ export async function getHomework(
     ],
   });
 
+  /*
+   * 골드를 받는 캐릭터를 원정대마다 가린다.
+   *
+   * **편성표에 있는 캐릭터만 보고 정하면 안 된다.** 이번 주에 안 넣은 만렙 부캐도
+   * 골드 여섯 자리를 하나 차지한다. 그래서 `withWork`로 걸러내기 전, 내 캐릭터
+   * 전체를 놓고 센다.
+   *
+   * 원정대가 없는 캐릭터(편성 칸으로 만들어진 것들)는 한 묶음으로 본다. 정확하지는
+   * 않지만 다 골드 획득으로 두는 것보다 낫고, 원정대를 불러오면 바로잡힌다.
+   */
+  const byRoster = new Map<string, typeof characters>();
+  for (const character of characters) {
+    const key = character.rosterId ?? NO_ROSTER;
+    const list = byRoster.get(key) ?? [];
+    list.push(character);
+    byRoster.set(key, list);
+  }
+
+  const earners = new Set<string>();
+  for (const list of byRoster.values()) {
+    for (const id of goldEarnerIds(
+      list.map((c) => ({
+        id: c.id,
+        itemLevel: c.itemLevel === null ? null : Number(c.itemLevel),
+        goldEarner: c.goldEarner,
+      })),
+    )) {
+      earners.add(id);
+    }
+  }
+
   const raids = new Map<string, RaidSummary>();
 
   const result: HomeworkCharacter[] = characters.map((character) => {
+    const goldEarner = earners.has(character.id);
     const entries: HomeworkEntry[] = [];
 
     for (const assignment of character.assignments) {
@@ -192,8 +237,16 @@ export async function getHomework(
         dayOfWeek: slot.dayOfWeek,
         startTime: slot.startTime,
         done: raidPassed(base, slot.dayOfWeek, slot.startTime),
-        clearGold: reward?.clearGold ?? null,
-        moreCost: reward?.moreCost ?? null,
+        /*
+         * 골드를 못 받는 캐릭터는 0이다. `null`이 아니다.
+         *
+         * null은 "보상 표에 없는 레이드"라는 뜻이고 화면이 `-`를 찍는다. 여기는 값을
+         * 아는데 이 캐릭터에게 안 들어오는 것이라 0이 맞다.
+         *
+         * 더보기도 공짜다. 골드를 못 받는 대신 더보기 비용이 붙지 않는다.
+         */
+        clearGold: goldEarner ? (reward?.clearGold ?? null) : 0,
+        moreCost: goldEarner ? (reward?.moreCost ?? null) : 0,
       });
     }
 
@@ -228,6 +281,8 @@ export async function getHomework(
       itemLevel: character.itemLevel === null ? null : Number(character.itemLevel),
       combatPower: character.combatPower === null ? null : Number(character.combatPower),
       entries,
+      goldEarner,
+      rosterLabel: character.roster?.label ?? null,
       remaining: entries.filter((e) => !e.done).length,
       clearGold: entries.reduce((sum, e) => sum + (e.clearGold ?? 0), 0),
       moreCost: entries.reduce((sum, e) => sum + (e.moreCost ?? 0), 0),

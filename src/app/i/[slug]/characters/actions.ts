@@ -135,6 +135,8 @@ export async function importSiblingsAction(
 ): Promise<ImportState> {
   const slug = String(formData.get("slug") ?? "");
   const names = formData.getAll("names").map(String).filter(Boolean);
+  // 조회할 때 친 대표 캐릭터명. 이 한 번이 원정대 하나가 된다(members.ts).
+  const rosterLabel = String(formData.get("roster") ?? "");
 
   if (names.length === 0) {
     return { status: "error", message: "등록할 캐릭터를 하나 이상 골라 주세요", result: null };
@@ -150,6 +152,7 @@ export async function importSiblingsAction(
         discordUserId: session.discordUserId,
         label: session.label,
         names: result.added,
+        rosterLabel,
       });
     }
     if (result.added.length > 0) {

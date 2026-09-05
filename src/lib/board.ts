@@ -95,6 +95,9 @@ const characterSelect = {
   roleLocked: true,
   memberId: true,
   member: { select: { label: true } },
+  rosterId: true,
+  roster: { select: { label: true } },
+  goldEarner: true,
   syncedAt: true,
   syncError: true,
 } as const;

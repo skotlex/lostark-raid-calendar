@@ -100,6 +100,14 @@ export async function claimNames(params: {
   discordUserId: string;
   label: string;
   names: string[];
+  /**
+   * 원정대 이름. 불러오기로 들어온 경우에만 있다.
+   *
+   * **불러오기 한 번이 원정대 하나다.** 골드 6명 제한이 원정대 단위라 경계가 필요한데,
+   * 로아 API에 계정을 잇는 값이 없어서 사람이 계정마다 한 번씩 부르는 것이 곧 경계가
+   * 된다(goldEarners.ts). 한 명씩 등록하는 경로는 어느 원정대인지 알 수 없어 비운다.
+   */
+  rosterLabel?: string;
 }): Promise<ClaimResult> {
   const wanted = params.names.map((n) => n.trim()).filter(Boolean);
   if (wanted.length === 0) return { added: 0, linked: 0, total: 0 };
@@ -121,6 +129,29 @@ export async function claimNames(params: {
     where: { instanceId: params.instanceId, name: { in: claimedNames }, memberId: null },
     data: { memberId: member.id },
   });
+
+  const rosterLabel = params.rosterLabel?.trim();
+  if (rosterLabel) {
+    const roster = await prisma.roster.upsert({
+      where: { instanceId_label: { instanceId: params.instanceId, label: rosterLabel } },
+      create: { instanceId: params.instanceId, memberId: member.id, label: rosterLabel },
+      update: { memberId: member.id },
+      select: { id: true },
+    });
+
+    /*
+     * 이번에 부른 이름들만 이 원정대로 옮긴다.
+     *
+     * 같은 원정대를 다시 부르면 그 사이 새로 키운 캐릭터가 따라 들어온다. 반대로 다른
+     * 원정대를 부를 때 이미 붙어 있던 캐릭터를 빼앗지는 않는다 — 이름이 겹칠 수 없으니
+     * 넘어올 일 자체가 없고, 혹시 사람이 원정대를 잘못 불렀더라도 앞의 지정이 통째로
+     * 흔들리는 편이 더 나쁘다.
+     */
+    await prisma.character.updateMany({
+      where: { instanceId: params.instanceId, name: { in: wanted } },
+      data: { rosterId: roster.id },
+    });
+  }
 
   return {
     added: claimedNames.length - before,

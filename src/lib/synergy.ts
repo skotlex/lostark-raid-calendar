@@ -267,16 +267,6 @@ export function missingSynergy(
  */
 export const MISSING_SYNERGY_WARNING = "시너지 트라이포드를 찍지 않았습니다";
 
-/** 한 줄로 찍을 문구. 워로드처럼 둘이면 쉼표로 잇는다. */
-export function synergyLabel(
-  className: string | null | undefined,
-  role?: Role,
-  detected?: DetectedSynergy[] | null,
-): string {
-  const list = getSynergies(className, role, detected);
-  return list.length > 0 ? list.map((s) => s.label).join(", ") : "-";
-}
-
 export interface PartySynergy {
   kind: SynergyKind;
   label: string;

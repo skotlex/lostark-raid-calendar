@@ -180,6 +180,11 @@ function SiblingsForm({ slug }: { slug: string }) {
       {search.status === "ok" && search.siblings.length > 0 && (
         <form action={importSubmit} className="space-y-3">
           <input type="hidden" name="slug" value={slug} />
+          {/*
+            조회할 때 친 이름을 그대로 넘긴다. 이 한 번이 원정대 하나가 되고 이 이름이
+            캐릭터 관리의 탭 이름이 된다(members.ts의 claimNames).
+          */}
+          <input type="hidden" name="roster" value={search.searched} />
 
           <div className="flex flex-wrap items-end gap-2">
             <div className="flex gap-1 text-xs">

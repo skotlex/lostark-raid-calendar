@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 
 import type { CharacterView } from "@/lib/characters";
-import { synergyLabel } from "@/lib/synergy";
+import { getSynergies } from "@/lib/synergy";
 
 import { ConfirmButton } from "../ConfirmButton";
 
@@ -35,6 +35,13 @@ export function CharacterCard({
 
   const busy = syncing || deleting;
   const isSupport = character.role === "SUPPORT";
+
+  // 편성 칸(Cell)과 같은 판정을 쓴다. 여기서 다시 구현하면 두 화면이 다른 말을 한다.
+  const synergies = getSynergies(
+    character.className,
+    character.role,
+    character.skillSynergies,
+  );
 
   const feedback = [deleteState, syncState].find((s) => s.status !== "idle");
 
@@ -80,10 +87,27 @@ export function CharacterCard({
             {character.arkGridSummary && (
               <div className="truncate tabular">아크그리드 {character.arkGridSummary}</div>
             )}
-            <div className="truncate">
-              시너지{" "}
-              {synergyLabel(character.className, character.role, character.skillSynergies)}
-            </div>
+            {/*
+              시너지는 편성 칸과 같은 칩으로 보여준다. 같은 캐릭터가 두 화면에서 다르게
+              보이면 대조하기 어렵고, 종류마다 붙는 색이 곧 구분이라 글로 이어 적으면
+              "치적 10%, 서폿"이 한 덩어리 글자가 된다.
+
+              칸과 달리 폭이 좁아진다고 지우지 않는다. 여기는 스펙을 확인하러 오는
+              화면이라 시너지가 곁다리가 아니다.
+            */}
+            {synergies.length > 0 ? (
+              <div className="char-syn-line char-syn-line--open">
+                {synergies.map((synergy) => (
+                  <span key={synergy.kind} className="char-syn" data-kind={synergy.kind}>
+                    {synergy.kind}
+                    {/* 수치는 종류마다 고정이다. 서폿은 딜러마다 달라 비어 있다. */}
+                    {synergy.value && ` ${synergy.value}`}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <div className="truncate">시너지 없음</div>
+            )}
           </div>
         </div>
 
