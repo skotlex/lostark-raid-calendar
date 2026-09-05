@@ -1203,3 +1203,70 @@ button:disabled,
   background: color-mix(in srgb, var(--danger) 16%, transparent);
   color: var(--danger);
 }
+
+/*
+ * 확인 창.
+ *
+ * 브라우저 기본 confirm()은 OS가 그려서 앱 이름이 제목으로 뜨고 글꼴도 화면과 따로 논다.
+ * 되돌릴 수 없는 일을 묻는 자리라 이 사이트의 물건처럼 보여야 한다.
+ *
+ * <dialog>라 top-layer에 뜬다. z-index를 다투지 않아도 무엇 위에든 올라간다.
+ */
+.confirm {
+  margin: auto;
+  width: min(24rem, calc(100vw - 2rem));
+  border: 1px solid var(--border-strong);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  padding: 1rem;
+  color: var(--text);
+  box-shadow: 0 18px 40px rgb(0 0 0 / 35%);
+}
+
+.confirm::backdrop {
+  background: rgb(6 9 14 / 55%);
+}
+
+.confirm-message {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.confirm-cancel,
+.confirm-ok {
+  border-radius: 0.25rem;
+  padding: 0.375rem 0.875rem;
+  font-size: 0.8125rem;
+  transition: opacity 120ms, background-color 120ms;
+}
+
+.confirm-cancel {
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+.confirm-cancel:hover {
+  color: var(--text);
+}
+
+.confirm-ok {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 500;
+}
+.confirm-ok:hover {
+  opacity: 0.9;
+}
+
+/* 지우는 일은 붉게. 무르지 못한다는 것을 색이 먼저 말한다. */
+.confirm-ok.is-danger {
+  background: var(--danger);
+  color: var(--bg);
+}

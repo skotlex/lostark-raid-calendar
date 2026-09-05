@@ -16,6 +16,7 @@ import {
   unassignAction,
 } from "./actions";
 import { DRAG_TYPE, moveForm, readDragSource, writeDragSource } from "./dragCell";
+import { ConfirmButton } from "./ConfirmButton";
 import { CloseIcon, GripIcon, PinIcon } from "./icons";
 
 const IDLE: CellState = { status: "idle", message: "" };
@@ -245,29 +246,20 @@ function HeadCell({
               </button>
             </form>
 
-            <form
-              action={remove}
-              onSubmit={(e) => {
-                // 남이 넣은 신청을 지울 때만 한 번 확인한다. 카드 쪽과 같은 규칙이다.
-                if (cell.createdByLabel && !cell.mine && character) {
-                  if (
-                    !confirm(`${cell.createdByLabel}님이 넣은 ${character.name}을(를) 빼시겠습니까?`)
-                  ) {
-                    e.preventDefault();
-                  }
-                }
-              }}
-            >
+            <form action={remove}>
               {hidden}
-              <button
-                type="submit"
+              {/* 남이 넣은 신청을 지울 때만 묻는다. 카드 쪽과 같은 규칙이다. */}
+              <ConfirmButton
+                when={Boolean(cell.createdByLabel) && !cell.mine}
+                message={`${cell.createdByLabel}님이 넣은 ${character?.name}을(를) 빼시겠습니까?`}
+                confirmLabel="빼기"
                 disabled={busy}
                 title="자리 비우기"
                 aria-label="자리 비우기"
                 className="flex text-text-faint transition-colors hover:text-danger disabled:opacity-50"
               >
                 <CloseIcon />
-              </button>
+              </ConfirmButton>
             </form>
           </span>
         )}

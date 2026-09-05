@@ -7,6 +7,7 @@ import type { SlotView } from "@/lib/slots";
 import { dayName } from "@/lib/week";
 
 import { type SlotState, archiveSlotAction } from "./actions";
+import { ConfirmButton } from "../ConfirmButton";
 import { SlotForm } from "./SlotForm";
 
 const IDLE: SlotState = { status: "idle", message: "" };
@@ -45,28 +46,18 @@ export function SlotRow({ slug, slot }: { slug: string; slot: SlotView }) {
         >
           수정
         </button>
-        <form
-          action={archive}
-          onSubmit={(e) => {
-            if (
-              !confirm(
-                `${raidLabel(slot.raidName, slot.difficulty)}을(를) 요일표에서 내리시겠습니까?\n` +
-                  "과거 편성 기록은 남습니다.",
-              )
-            ) {
-              e.preventDefault();
-            }
-          }}
-        >
+        <form action={archive}>
           <input type="hidden" name="slug" value={slug} />
           <input type="hidden" name="slotId" value={slot.id} />
-          <button
-            type="submit"
+          <ConfirmButton
+            message={`${raidLabel(slot.raidName, slot.difficulty)}을(를) 요일표에서 내리시겠습니까?
+과거 편성 기록은 남습니다.`}
+            confirmLabel="내리기"
             disabled={archiving}
             className="rounded border border-transparent px-2 py-1 text-xs text-text-faint hover:border-danger/40 hover:text-danger disabled:opacity-50"
           >
             내리기
-          </button>
+          </ConfirmButton>
         </form>
       </div>
 

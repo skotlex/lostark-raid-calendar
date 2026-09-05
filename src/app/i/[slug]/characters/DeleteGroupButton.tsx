@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { ConfirmButton } from "../ConfirmButton";
 import { type RowState, deleteMemberAction } from "./actions";
 
 const IDLE: RowState = { status: "idle", message: "" };
@@ -27,28 +28,18 @@ export function DeleteGroupButton({
   const who = label || "소속 미지정";
 
   return (
-    <form
-      action={remove}
-      onSubmit={(e) => {
-        if (
-          !confirm(
-            `${who} 캐릭터 ${count}개를 모두 삭제하시겠습니까? 편성 기록도 함께 사라집니다.`,
-          )
-        ) {
-          e.preventDefault();
-        }
-      }}
-      className="flex items-center gap-2"
-    >
+    <form action={remove} className="flex items-center gap-2">
       <input type="hidden" name="slug" value={slug} />
       <input type="hidden" name="label" value={label} />
-      <button
-        type="submit"
+      <ConfirmButton
+        message={`${who} 캐릭터 ${count}개를 모두 삭제하시겠습니까?
+편성 기록도 함께 사라집니다.`}
+        confirmLabel="모두 삭제"
         disabled={pending}
         className="rounded border border-border px-2 py-0.5 text-xs font-normal text-text-faint transition-colors hover:border-danger hover:text-danger disabled:opacity-50"
       >
         {pending ? "삭제 중…" : "일괄 삭제"}
-      </button>
+      </ConfirmButton>
       {state.status === "error" && (
         <span className="text-xs font-normal text-danger">{state.message}</span>
       )}

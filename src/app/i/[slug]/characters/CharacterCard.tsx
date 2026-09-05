@@ -5,6 +5,8 @@ import { useActionState } from "react";
 import type { CharacterView } from "@/lib/characters";
 import { synergyLabel } from "@/lib/synergy";
 
+import { ConfirmButton } from "../ConfirmButton";
+
 import { PortraitBleed } from "../Portrait";
 import { type RowState, deleteAction, syncAction } from "./actions";
 
@@ -98,19 +100,18 @@ export function CharacterCard({
             </button>
           </form>
 
-          <form
-            action={remove}
-            onSubmit={(e) => {
-              if (!confirm(`${character.name} 캐릭터를 삭제하시겠습니까? 편성 기록도 함께 사라집니다.`)) {
-                e.preventDefault();
-              }
-            }}
-          >
+          <form action={remove}>
             <input type="hidden" name="slug" value={slug} />
             <input type="hidden" name="id" value={character.id} />
-            <button type="submit" disabled={busy} className="char-btn char-btn--danger">
+            <ConfirmButton
+              message={`${character.name} 캐릭터를 삭제하시겠습니까?
+편성 기록도 함께 사라집니다.`}
+              confirmLabel="삭제"
+              disabled={busy}
+              className="char-btn char-btn--danger"
+            >
               삭제
-            </button>
+            </ConfirmButton>
           </form>
         </div>
 

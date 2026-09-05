@@ -6,6 +6,7 @@ import type { CellView } from "@/lib/board";
 import { positionKind, positionLabel } from "@/lib/positions";
 
 import { DRAG_TYPE, moveForm, readDragSource, writeDragSource } from "./dragCell";
+import { ConfirmButton } from "./ConfirmButton";
 import { CloseIcon, PinIcon } from "./icons";
 import { NameInput } from "./NameInput";
 import { PortraitCard } from "./Portrait";
@@ -244,28 +245,23 @@ export function Cell({
                 <PinIcon pinned={cell.pinned} />
               </button>
             </form>
-            <form
-              action={remove}
-              onSubmit={(e) => {
-                // 남이 넣은 신청을 지울 때만 한 번 확인한다.
-                // 누구 것인지는 서버가 정한다(board.ts의 CellView.mine).
-                if (cell.createdByLabel && !cell.mine) {
-                  if (!confirm(`${cell.createdByLabel}님이 넣은 ${character.name}을(를) 빼시겠습니까?`)) {
-                    e.preventDefault();
-                  }
-                }
-              }}
-            >
+            <form action={remove}>
               {hidden}
-              <button
-                type="submit"
+              {/*
+                남이 넣은 신청을 지울 때만 묻는다.
+                누구 것인지는 서버가 정한다(board.ts의 CellView.mine).
+              */}
+              <ConfirmButton
+                when={Boolean(cell.createdByLabel) && !cell.mine}
+                message={`${cell.createdByLabel}님이 넣은 ${character.name}을(를) 빼시겠습니까?`}
+                confirmLabel="빼기"
                 disabled={busy}
                 title="자리 비우기"
                 aria-label="자리 비우기"
                 className="char-icon-btn hover:text-[color:var(--c-danger)]"
               >
                 <CloseIcon />
-              </button>
+              </ConfirmButton>
             </form>
           </div>
         )}
