@@ -316,7 +316,7 @@ function NameCell({
               pending={assigning}
               resetOn={assignState.status === "ok" ? assignState : null}
               error={error?.message}
-              placeholder="닉네임 입력"
+              placeholder="캐릭터 입력"
               className="board-input"
             />
           </form>
