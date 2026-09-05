@@ -1433,6 +1433,28 @@ button:disabled,
   font-weight: 600;
 }
 
+/*
+ * 눌러서 고쳐 쓰는 이름.
+ *
+ * 버튼이지만 버튼처럼 보이지 않아야 한다. 여덟 칸이 한 줄에 늘어서는 표라 칸마다
+ * 상자가 뜨면 이름이 아니라 버튼 여덟 개가 먼저 보인다. 글자는 그대로 두고 마우스를
+ * 얹었을 때만 답한다. 밑줄로 답하는 이유는 색을 바꾸면 경고색·강조색과 헷갈리기
+ * 때문이고, 밑줄이 글자 높이를 늘리지 않아 줄이 흔들리지도 않는다.
+ */
+.board-name-edit {
+  min-width: 0;
+  cursor: text;
+  font: inherit;
+  font-weight: inherit;
+  color: inherit;
+}
+
+.board-name-edit:hover {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+
 .board-warn {
   display: flex;
 }

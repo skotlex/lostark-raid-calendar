@@ -318,6 +318,20 @@ function HeadCell({
  *
  * 빈 칸의 입력창은 테두리 없이 둔다. 상자를 그리면 그 줄만 키가 커져 표가 어긋나고,
  * 여덟 칸이 모두 비어 있을 때는 상자 여덟 개가 늘어서 표가 입력 폼처럼 보인다.
+ *
+ * **차 있는 칸도 이름을 눌러 그 자리에서 고쳐 쓴다.** 사람을 바꾸려면 x로 비우고 다시
+ * 치는 두 걸음이었다. 표는 칸을 눌러 덮어쓰는 것이 몸에 익은 모양이고 시트에서도
+ * 그랬다. 걸음이 하나 줄기도 하지만, 비워 놓고 새로 칠 이름이 생각나지 않아 칸만
+ * 비는 일이 없어지는 쪽이 크다. x는 그대로 둔다. 빼기만 할 때는 그쪽이 맞다.
+ *
+ * **엔터 전까지는 아무 일도 일어나지 않는다.** Esc나 칸 밖 클릭이면 원래 이름이 그대로
+ * 남는다. 잘못 눌러 여는 일이 잦을 자리라 되돌리는 길이 늘 열려 있어야 한다.
+ *
+ * 열면서 이름을 지우고 빈 칸으로 시작한다. 남겨두면 지우고 치게 되고, 지우다 만 채로
+ * 물러났을 때 무엇이 원래 이름이었는지가 흐려진다.
+ *
+ * 카드 보기에는 넣지 않는다. 이름이 초상·각인과 한 덩어리라 누를 자리로 보이지 않고,
+ * 칸이 넓어 x도 눈에 잘 띈다.
  */
 function NameCell({
   slug,
@@ -336,31 +350,62 @@ function NameCell({
   editable: boolean;
 }) {
   const [assignState, assign, assigning] = useActionState(assignAction, IDLE);
+  /** 차 있는 칸을 눌러 입력을 연 상태. 빈 칸은 늘 입력이라 이 값과 상관없다. */
+  const [editing, setEditing] = useState(false);
   const error = assignState.status === "error" ? assignState : null;
   const character = cell.character;
 
-  if (!character) {
+  /*
+   * 넣고 나면 입력을 닫는다.
+   *
+   * 이 컴포넌트는 자리에 붙어 있어 배정이 바뀌어도 살아남는다. 그냥 두면 방금 넣은
+   * 이름 위에 빈 입력이 계속 떠 있다.
+   *
+   * 상태가 **바뀐 순간**만 본다. "지금 ok"로 보면 넣고 난 뒤 같은 칸을 다시 눌렀을 때
+   * 옛 성공 상태가 그대로 남아 있어 열자마자 닫힌다.
+   */
+  const [lastState, setLastState] = useState(assignState);
+  if (assignState !== lastState) {
+    setLastState(assignState);
+    if (assignState.status === "ok") setEditing(false);
+  }
+
+  if (!character && !editable) {
     return (
       <td className="board-cell board-cell--name">
-        {editable ? (
-          <form action={assign}>
-            <input type="hidden" name="slug" value={slug} />
-            <input type="hidden" name="slotId" value={slotId} />
-            <input type="hidden" name="week" value={week} />
-            <input type="hidden" name="position" value={cell.position} />
-            <NameInput
-              name="characterName"
-              pending={assigning}
-              resetOn={assignState.status === "ok" ? assignState : null}
-              error={error?.message}
-              taken={taken}
-              placeholder="캐릭터 입력"
-              className="board-input"
-            />
-          </form>
-        ) : (
-          <span className="text-text-faint">-</span>
-        )}
+        <span className="text-text-faint">-</span>
+      </td>
+    );
+  }
+
+  if (editable && (!character || editing)) {
+    return (
+      <td className="board-cell board-cell--name">
+        <form action={assign}>
+          <input type="hidden" name="slug" value={slug} />
+          <input type="hidden" name="slotId" value={slotId} />
+          <input type="hidden" name="week" value={week} />
+          <input type="hidden" name="position" value={cell.position} />
+          <NameInput
+            name="characterName"
+            pending={assigning}
+            resetOn={assignState.status === "ok" ? assignState : null}
+            error={error?.message}
+            taken={taken}
+            placeholder="캐릭터 입력"
+            className="board-input"
+            autoFocus={editing}
+            onCancel={
+              editing
+                ? () => {
+                    // 보내는 중이면 물러나지 않는다. 폼이 사라지면 결과가 닿을 곳이
+                    // 없어져, 넣긴 넣었는데 칸은 옛 이름인 상태가 된다.
+                    if (!assigning) setEditing(false);
+                  }
+                : undefined
+            }
+          />
+        </form>
       </td>
     );
   }
@@ -377,9 +422,20 @@ function NameCell({
       */}
       <div className="board-name">
         {warned && <WarnBadge warnings={cell.warnings} />}
-        <span className="truncate" title={character.name}>
-          {character.name}
-        </span>
+        {editable ? (
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="board-name-edit truncate"
+            title={`${character!.name} — 눌러서 다른 캐릭터로 바꿉니다`}
+          >
+            {character!.name}
+          </button>
+        ) : (
+          <span className="truncate" title={character!.name}>
+            {character!.name}
+          </span>
+        )}
         {warned && <WarnBadge warnings={cell.warnings} />}
       </div>
     </td>

@@ -102,6 +102,8 @@ export function NameInput({
   taken,
   placeholder,
   className,
+  autoFocus,
+  onCancel,
 }: {
   name: string;
   /** 조회 중. 칸 자체가 상태를 말하므로 아래에 줄을 더하지 않는다. */
@@ -115,6 +117,15 @@ export function NameInput({
   placeholder?: string;
   /** 표에서는 테두리 없는 칸으로 쓴다. 기본은 카드 안의 입력창이다. */
   className?: string;
+  /** 차 있는 칸을 눌러 연 입력은 열자마자 손이 가 있어야 한다. */
+  autoFocus?: boolean;
+  /**
+   * 넣지 않고 그만두었다. **Esc와 칸 밖 클릭 두 가지뿐이다.**
+   *
+   * 차 있는 칸을 눌러 여는 입력(간략 보기)이 쓴다. 아무것도 하지 않고 물러난 것이므로
+   * 부르는 쪽이 원래 이름을 되돌린다. 빈 칸은 되돌릴 것이 없어 넘기지 않는다.
+   */
+  onCancel?: () => void;
 }) {
   const characters = useContext(KnownNamesContext);
   const [value, setValue] = useState("");
@@ -181,11 +192,13 @@ export function NameInput({
     }
     if (e.key === "Escape") {
       if (showing) {
+        // 목록부터 닫는다. 목록을 닫자고 누른 Esc가 칸까지 되돌리면 치던 이름이 함께 날아간다.
         e.preventDefault();
         setOpen(false);
         setActive(-1);
       } else {
         setValue("");
+        onCancel?.();
       }
       return;
     }
@@ -209,6 +222,8 @@ export function NameInput({
       <input
         ref={inputRef}
         name={name}
+        // 사람이 칸을 눌러 연 입력이다. 열어 놓고 다시 누르게 하지 않는다.
+        autoFocus={autoFocus}
         // 조회하는 동안 칸이 곧 상태 표시다. 값을 잠깐 바꿔 끼우고 손대지 못하게 둔다.
         value={pending ? "조회 중…" : value}
         readOnly={pending}
@@ -234,8 +249,18 @@ export function NameInput({
           setActive(-1);
         }}
         onKeyDown={onKeyDown}
-        // 후보를 클릭하는 중에도 blur가 먼저 나므로 닫는 것을 조금 미룬다.
-        onBlur={() => setTimeout(() => setOpen(false), 120)}
+        /*
+         * 후보를 클릭하는 중에도 blur가 먼저 나므로 닫는 것을 조금 미룬다.
+         *
+         * 그만두는 것도 여기서 알린다. 후보 줄은 mousedown을 막아 focus를 뺏지 않으니
+         * 여기까지 온 blur는 정말로 칸 밖으로 나간 것이다.
+         */
+        onBlur={() =>
+          setTimeout(() => {
+            setOpen(false);
+            onCancel?.();
+          }, 120)
+        }
         onFocus={() => setOpen(!pending)}
         className={className ?? "char-input"}
       />
