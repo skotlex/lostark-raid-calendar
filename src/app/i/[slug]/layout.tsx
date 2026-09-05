@@ -28,6 +28,8 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
     { href: `/i/${slug}/slots`, label: "요일표 편집", remember: false },
     // 편성은 칸에서 바로 하므로 여기는 정리용 화면이다. 그래서 뒤로 뺐다.
     { href: `/i/${slug}/characters`, label: "캐릭터 관리", remember: false },
+    // 막지 않는 대신 남긴다(CLAUDE.md 3.4). 무엇이 바뀌었는지 보는 곳이다.
+    { href: `/i/${slug}/history`, label: "편집 이력", remember: false },
   ];
 
   const tabClass =

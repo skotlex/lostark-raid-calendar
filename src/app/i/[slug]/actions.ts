@@ -149,13 +149,14 @@ export async function pinAction(_prev: CellState, formData: FormData): Promise<C
   const slug = String(formData.get("slug") ?? "");
 
   try {
-    const { instanceId } = await authorize(slug);
+    const { instanceId, session } = await authorize(slug);
     await setPinned({
       instanceId,
       slotId: String(formData.get("slotId") ?? ""),
       weekStart: parseWeekParam(String(formData.get("week") ?? "")),
       position: String(formData.get("position") ?? ""),
       pinned: formData.get("pinned") === "true",
+      actorLabel: session.label,
     });
     revalidatePath(`/i/${slug}`);
     return ok();
@@ -172,11 +173,12 @@ export async function keepRosterAction(
   const slug = String(formData.get("slug") ?? "");
 
   try {
-    const { instanceId } = await authorize(slug);
+    const { instanceId, session } = await authorize(slug);
     await setKeepRoster(
       instanceId,
       String(formData.get("slotId") ?? ""),
       formData.get("keepRoster") === "true",
+      session.label,
     );
     revalidatePath(`/i/${slug}`);
     revalidatePath(`/i/${slug}/pinned`);

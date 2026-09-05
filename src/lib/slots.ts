@@ -1,8 +1,10 @@
 import "server-only";
 
+import { Prisma } from "@/generated/prisma/client";
+
 import { DEFAULT_PARTY_SIZE, type PartySize, isPartySize } from "./positions";
 import { prisma } from "./prisma";
-import { sizeFor } from "./raids";
+import { raidLabel, sizeFor } from "./raids";
 
 /** 고정 요일표의 한 칸. 주차 개념이 없고 영속적이다. */
 export interface SlotView {
@@ -15,6 +17,24 @@ export interface SlotView {
   partySize: PartySize;
   keepRoster: boolean;
   sortOrder: number;
+}
+
+/**
+ * 요일표 변경을 기록에 남긴다.
+ *
+ * 누구나 남의 슬롯을 고치고 내릴 수 있으므로(하드 블로킹을 두지 않는다), 무엇이
+ * 어떻게 바뀌었는지는 남아 있어야 한다. 편성 변경과 같은 표에 쌓아 한 줄로 읽는다.
+ */
+async function log(
+  instanceId: string,
+  action: string,
+  slotId: string | null,
+  actorLabel: string | null | undefined,
+  detail: Prisma.InputJsonObject,
+): Promise<void> {
+  await prisma.changeLog.create({
+    data: { instanceId, slotId, actorLabel: actorLabel ?? null, action, detail },
+  });
 }
 
 export class SlotError extends Error {
@@ -121,7 +141,11 @@ function normalize(input: SlotInput) {
   };
 }
 
-export async function createSlot(instanceId: string, input: SlotInput): Promise<SlotView> {
+export async function createSlot(
+  instanceId: string,
+  input: SlotInput,
+  actorLabel?: string | null,
+): Promise<SlotView> {
   validate(input);
   const last = await prisma.raidSlot.findFirst({
     where: { instanceId, dayOfWeek: input.dayOfWeek },
@@ -137,6 +161,13 @@ export async function createSlot(instanceId: string, input: SlotInput): Promise<
     },
     select: slotSelect,
   });
+
+  await log(instanceId, "slot_create", row.id, actorLabel, {
+    raid: raidLabel(row.raidName, row.difficulty),
+    dayOfWeek: row.dayOfWeek,
+    startTime: row.startTime,
+  });
+
   return toSlotView(row);
 }
 
@@ -144,6 +175,7 @@ export async function updateSlot(
   instanceId: string,
   slotId: string,
   input: SlotInput,
+  actorLabel?: string | null,
 ): Promise<SlotView> {
   validate(input);
   const result = await prisma.raidSlot.updateMany({
@@ -156,6 +188,13 @@ export async function updateSlot(
     where: { id: slotId },
     select: slotSelect,
   });
+
+  await log(instanceId, "slot_update", row.id, actorLabel, {
+    raid: raidLabel(row.raidName, row.difficulty),
+    dayOfWeek: row.dayOfWeek,
+    startTime: row.startTime,
+  });
+
   return toSlotView(row);
 }
 
@@ -168,12 +207,27 @@ export async function setKeepRoster(
   instanceId: string,
   slotId: string,
   keepRoster: boolean,
+  actorLabel?: string | null,
 ): Promise<void> {
   const result = await prisma.raidSlot.updateMany({
     where: { id: slotId, instanceId },
     data: { keepRoster },
   });
   if (result.count === 0) throw new SlotError("슬롯을 찾을 수 없습니다");
+
+  await log(instanceId, "slot_keep", slotId, actorLabel, {
+    raid: await slotLabel(slotId),
+    keepRoster,
+  });
+}
+
+/** 기록에 남길 이름. 슬롯이 그새 사라졌으면 빈 값으로 둔다. */
+async function slotLabel(slotId: string): Promise<string> {
+  const row = await prisma.raidSlot.findUnique({
+    where: { id: slotId },
+    select: { raidName: true, difficulty: true },
+  });
+  return row ? raidLabel(row.raidName, row.difficulty) : "";
 }
 
 /**
@@ -182,10 +236,19 @@ export async function setKeepRoster(
  * 실제로 지우면 과거 주차의 편성 기록까지 함께 사라진다. 누가 언제 무엇을 갔는지가
  * 이 앱의 유일한 기록이므로 되돌릴 수 없는 삭제를 기본으로 두지 않는다.
  */
-export async function archiveSlot(instanceId: string, slotId: string): Promise<void> {
+export async function archiveSlot(
+  instanceId: string,
+  slotId: string,
+  actorLabel?: string | null,
+): Promise<void> {
+  // 이름은 지우기 전에 읽는다. 내린 뒤에는 목록에서 찾을 수 없다.
+  const label = await slotLabel(slotId);
+
   const result = await prisma.raidSlot.updateMany({
     where: { id: slotId, instanceId, archivedAt: null },
     data: { archivedAt: new Date() },
   });
   if (result.count === 0) throw new SlotError("슬롯을 찾을 수 없습니다");
+
+  await log(instanceId, "slot_archive", slotId, actorLabel, { raid: label });
 }

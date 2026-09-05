@@ -511,14 +511,26 @@ export async function setPinned(params: {
   weekStart: Date;
   position: string;
   pinned: boolean;
+  actorLabel?: string | null;
 }): Promise<void> {
-  const { instanceId, slotId, weekStart, position, pinned } = params;
+  const { instanceId, slotId, weekStart, position, pinned, actorLabel } = params;
   requireCurrentWeek(weekStart);
-  await requireSlot(instanceId, slotId);
+  const slot = await requireSlot(instanceId, slotId);
 
   await prisma.assignment.update({
     where: { slotId_weekStart_position: { slotId, weekStart, position } },
     data: { pinned },
+  });
+
+  await prisma.changeLog.create({
+    data: {
+      instanceId,
+      weekStart,
+      slotId,
+      actorLabel: actorLabel ?? null,
+      action: "pin",
+      detail: { position, pinned, raid: slot.raidName },
+    },
   });
 }
 

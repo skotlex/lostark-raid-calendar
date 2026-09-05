@@ -3,16 +3,16 @@
 import { revalidatePath } from "next/cache";
 
 import { findInstance } from "@/lib/instance";
-import { requireSession } from "@/lib/session";
+import { type Session, requireSession } from "@/lib/session";
 import { type SlotInput, SlotError, archiveSlot, createSlot, updateSlot } from "@/lib/slots";
 
-async function resolveInstanceId(slug: unknown): Promise<string> {
+async function authorize(slug: unknown): Promise<{ instanceId: string; session: Session }> {
   // 레이아웃의 입장 검사를 거치지 않는 경로다. 여기서 다시 확인한다.
-  await requireSession();
+  const session = await requireSession();
   if (typeof slug !== "string" || !slug) throw new SlotError("잘못된 요청입니다");
   const instance = await findInstance(slug);
   if (!instance) throw new SlotError("인스턴스를 찾을 수 없습니다");
-  return instance.id;
+  return { instanceId: instance.id, session };
 }
 
 function toMessage(error: unknown): string {
@@ -40,8 +40,8 @@ export async function createSlotAction(
 ): Promise<SlotState> {
   const slug = String(formData.get("slug") ?? "");
   try {
-    const instanceId = await resolveInstanceId(slug);
-    const slot = await createSlot(instanceId, readInput(formData));
+    const { instanceId, session } = await authorize(slug);
+    const slot = await createSlot(instanceId, readInput(formData), session.label);
     revalidatePath(`/i/${slug}/slots`);
     revalidatePath(`/i/${slug}`);
     return { status: "ok", message: `${slot.raidName} 추가됨` };
@@ -56,8 +56,13 @@ export async function updateSlotAction(
 ): Promise<SlotState> {
   const slug = String(formData.get("slug") ?? "");
   try {
-    const instanceId = await resolveInstanceId(slug);
-    await updateSlot(instanceId, String(formData.get("slotId") ?? ""), readInput(formData));
+    const { instanceId, session } = await authorize(slug);
+    await updateSlot(
+      instanceId,
+      String(formData.get("slotId") ?? ""),
+      readInput(formData),
+      session.label,
+    );
     revalidatePath(`/i/${slug}/slots`);
     revalidatePath(`/i/${slug}`);
     return { status: "ok", message: "저장됨" };
@@ -76,8 +81,8 @@ export async function archiveSlotAction(
 ): Promise<SlotState> {
   const slug = String(formData.get("slug") ?? "");
   try {
-    const instanceId = await resolveInstanceId(slug);
-    await archiveSlot(instanceId, String(formData.get("slotId") ?? ""));
+    const { instanceId, session } = await authorize(slug);
+    await archiveSlot(instanceId, String(formData.get("slotId") ?? ""), session.label);
     revalidatePath(`/i/${slug}/slots`);
     revalidatePath(`/i/${slug}`);
     return { status: "ok", message: "목록에서 내렸습니다" };
