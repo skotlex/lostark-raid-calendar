@@ -20,9 +20,6 @@ import { type SlotView, toSlotView } from "./slots";
 import { type PartySynergy, missingSynergy, partySynergies } from "./synergy";
 import { getWeekStart, previousWeek } from "./week";
 
-/** 한 캐릭터가 한 주에 갈 수 있는 레이드 수. */
-const WEEKLY_RAID_LIMIT = 3;
-
 export class BoardError extends Error {
   constructor(message: string) {
     super(message);
@@ -179,23 +176,18 @@ export async function getBoard(
     orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }, { sortOrder: "asc" }],
   });
 
-  // 주간 제한은 **캐릭터마다** 걸린다. 사람(원정대) 단위가 아니다.
-  // 부캐를 바꿔 같은 레이드를 또 가는 것은 정상이고, 실제로 그렇게 돌린다.
+  // 주간 제한은 하나뿐이고 **캐릭터마다** 걸린다.
+  // **같은 레이드는 난이도가 달라도 한 번이다.** 하드를 갔으면 노말은 못 간다.
+  // 그래서 raidName만 보고 난이도는 빼고 센다.
   //
-  //   같은 레이드 중복 — 난이도가 달라도 한 번뿐이다. 하드를 갔으면 노말은 못 간다.
-  //                     그래서 raidName만 보고 난이도는 빼고 센다.
-  //   주 3개          — 한 캐릭터가 한 주에 갈 수 있는 레이드 수.
+  // 서로 다른 레이드는 몇 개를 가든 상관없고, 부캐를 바꿔 같은 레이드를 또 가는 것도
+  // 정상이다. 사람(원정대) 단위로 세면 그 정상 편성에 경고가 붙는다.
   const characterRaidCount = new Map<string, number>();
-  const characterRaids = new Map<string, Set<string>>();
   for (const slot of slots) {
     const raid = slot.raidName.trim();
     for (const a of slot.assignments) {
       const key = `${a.character.id}::${raid}`;
       characterRaidCount.set(key, (characterRaidCount.get(key) ?? 0) + 1);
-
-      const raids = characterRaids.get(a.character.id) ?? new Set<string>();
-      raids.add(raid);
-      characterRaids.set(a.character.id, raids);
     }
   }
 
@@ -237,11 +229,6 @@ export async function getBoard(
       if ((characterRaidCount.get(`${character.id}::${raid}`) ?? 0) > 1) {
         // 난이도가 달라도 중복이다.
         warnings.push("이 캐릭터가 이번 주 같은 레이드에 중복");
-      }
-
-      const raidCount = characterRaids.get(character.id)?.size ?? 0;
-      if (raidCount > WEEKLY_RAID_LIMIT) {
-        warnings.push(`이번 주 레이드 ${raidCount}개 (${WEEKLY_RAID_LIMIT}개까지)`);
       }
 
       // 시너지 트라이포드를 안 찍었다. 막지 않고 알리기만 한다(CLAUDE.md 3.4).
