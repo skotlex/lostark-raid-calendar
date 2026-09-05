@@ -19,9 +19,9 @@ export interface RaidPreset {
 
 export const RAID_PRESETS: RaidPreset[] = [
   { name: "벨가르딘", size: 8, difficulties: ["노말", "하드", "나이트메어"] },
+  { name: "지평의 성당", size: 4, difficulties: ["1단계", "2단계", "3단계"] },
   { name: "세르카", size: 4, difficulties: ["노말", "하드", "나이트메어"] },
   { name: "종막:최후의 날", size: 8, difficulties: ["노말", "하드"] },
-  { name: "지평의 성당", size: 4, difficulties: ["1단계", "2단계", "3단계"] },
 ];
 
 function presetFor(raidName: string): RaidPreset | undefined {
