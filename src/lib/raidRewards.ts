@@ -87,3 +87,20 @@ export function raidReward(
 export function hasReward(raidName: string): boolean {
   return Boolean(REWARDS[raidName.trim()]);
 }
+
+/**
+ * 입장 템레벨. 표에 없으면 `null`이다.
+ *
+ * 보상 표에 얹혀 있는 이유는 출처가 같기 때문이다. 로아 API가 레이드도 난이도도 주지
+ * 않으니(CLAUDE.md 3.3-1) 입장 레벨도 손으로 들고 있는 수밖에 없고, 난이도마다 하나씩
+ * 붙는 값이라 같은 표의 한 칸으로 두는 편이 짧다.
+ *
+ * 모르는 레이드에 0이나 추정치를 채우지 않는다. `null`이면 부르는 쪽이 아무 말도
+ * 하지 않는다. 틀린 컷으로 멀쩡한 편성에 경고를 붙이는 것이 침묵보다 나쁘다.
+ */
+export function raidMinLevel(
+  raidName: string,
+  difficulty: string | null | undefined,
+): number | null {
+  return raidReward(raidName, difficulty)?.minLevel ?? null;
+}

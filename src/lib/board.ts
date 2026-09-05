@@ -7,6 +7,7 @@ import {
   toCharacterView,
 } from "./characters";
 import { prisma } from "./prisma";
+import { raidMinLevel } from "./raidRewards";
 import {
   DEFAULT_PARTY_SIZE,
   type PartySize,
@@ -312,6 +313,22 @@ export async function getBoard(
       }
       if (position.startsWith("DPS") && character.role === "SUPPORT") {
         warnings.push("딜러 자리에 서폿 클래스");
+      }
+
+      // 입장 템레벨 미달. **막지 않는다**(CLAUDE.md 3.4). 게임이 입장에서 다시 막으므로
+      // 앱까지 막아 세울 이유가 없고, 그날까지 올려 오기로 하고 미리 자리를 잡아 두는
+      // 일이 흔하다.
+      //
+      // 슬롯의 딜러컷·서폿컷(3.4-2)과 다른 값이다. 그쪽은 공대장이 적어 둔 글이라
+      // 무엇을 재는 숫자인지도 앱이 모르지만, 이것은 게임이 정한 입장 조건이라
+      // 표(raidRewards.ts)에 있고 템레벨과 곧바로 견줄 수 있다.
+      //
+      // 표에 없는 레이드·난이도와 스펙을 못 받아온 캐릭터는 그냥 지나간다.
+      const minLevel = raidMinLevel(view.raidName, view.difficulty);
+      if (minLevel !== null && character.itemLevel !== null && character.itemLevel < minLevel) {
+        // 템레벨은 이 앱 어디서도 세 자리마다 끊지 않는다(칸의 1752.50). 여기만 끊으면
+        // 같은 줄의 두 숫자가 다른 표기가 된다.
+        warnings.push(`레벨컷 ${minLevel} 미달 (${character.itemLevel.toFixed(2)})`);
       }
 
       const raid = view.raidName.trim();
