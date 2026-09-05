@@ -228,7 +228,7 @@ function HeadCell({
         <span className="truncate">{positionLabel(cell.position)}</span>
 
         {editable && filled && (
-          <span className="ml-auto flex items-center gap-0.5">
+          <span className="board-actions">
             <form action={pin}>
               {hidden}
               <input type="hidden" name="pinned" value={cell.pinned ? "false" : "true"} />

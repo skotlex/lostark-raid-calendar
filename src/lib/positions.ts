@@ -45,12 +45,12 @@ export function positionKind(position: string): PositionKind | null {
   return null;
 }
 
-/** "DPS1" → "딜 1", "SUP2" → "폿 2" */
+/** "DPS1" → "딜러 1", "SUP2" → "서폿 2" */
 export function positionLabel(position: string): string {
   const kind = positionKind(position);
   const index = position.replace(/\D/g, "");
-  if (kind === "DPS") return `딜 ${index}`;
-  if (kind === "SUP") return `폿 ${index}`;
+  if (kind === "DPS") return `딜러 ${index}`;
+  if (kind === "SUP") return `서폿 ${index}`;
   return position;
 }
 
