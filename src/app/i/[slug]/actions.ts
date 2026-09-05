@@ -162,6 +162,8 @@ export async function keepRosterAction(
       instanceId,
       String(formData.get("slotId") ?? ""),
       formData.get("keepRoster") === "true",
+      // 자리 고정을 함께 움직이므로 어느 주차인지 알아야 한다(slots.ts).
+      parseWeekParam(String(formData.get("week") ?? "")),
       session.label,
     );
     revalidatePath(`/i/${slug}`);

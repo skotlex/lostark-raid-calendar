@@ -53,9 +53,11 @@ export function UnpinButton({
 /** 레이드 단위 고정을 끈다. 켜는 것은 편성표의 슬롯 머리글에서 한다. */
 export function KeepRosterOffButton({
   slug,
+  week,
   slotId,
 }: {
   slug: string;
+  week: string;
   slotId: string;
 }) {
   const [state, toggle, pending] = useActionState(keepRosterAction, IDLE);
@@ -64,6 +66,7 @@ export function KeepRosterOffButton({
     <form action={toggle} className="flex items-center gap-2">
       <input type="hidden" name="slug" value={slug} />
       <input type="hidden" name="slotId" value={slotId} />
+      <input type="hidden" name="week" value={week} />
       <input type="hidden" name="keepRoster" value="false" />
       <button
         type="submit"

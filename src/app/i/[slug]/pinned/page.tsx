@@ -99,7 +99,7 @@ export default async function PinnedPage({ params }: PageProps<"/i/[slug]/pinned
 
                 {slot.keepRoster && (
                   <span className="ml-auto">
-                    <KeepRosterOffButton slug={slug} slotId={slot.slotId} />
+                    <KeepRosterOffButton slug={slug} week={week} slotId={slot.slotId} />
                   </span>
                 )}
               </div>

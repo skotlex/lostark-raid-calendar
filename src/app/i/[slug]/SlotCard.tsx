@@ -37,7 +37,7 @@ export function SlotCard({
 }) {
   return (
     <section className="rounded border border-border bg-surface">
-      <SlotHeader slug={slug} slot={slot} editable={editable} />
+      <SlotHeader slug={slug} week={week} slot={slot} editable={editable} />
 
       <div className="space-y-3 p-3">
         {slot.parties.map((party) => (

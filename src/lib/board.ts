@@ -280,7 +280,7 @@ export async function getBoard(
 async function requireSlot(instanceId: string, slotId: string) {
   const slot = await prisma.raidSlot.findFirst({
     where: { id: slotId, instanceId, archivedAt: null },
-    select: { id: true, raidName: true, partySize: true },
+    select: { id: true, raidName: true, partySize: true, keepRoster: true },
   });
   if (!slot) throw new BoardError("슬롯을 찾을 수 없습니다");
   return {
@@ -521,6 +521,20 @@ export async function setPinned(params: {
     where: { slotId_weekStart_position: { slotId, weekStart, position } },
     data: { pinned },
   });
+
+  /*
+   * 한 자리라도 풀리면 "전원 고정"이 아니다.
+   *
+   * 토글만 켜져 있고 실제로는 일곱만 넘어가는 상태를 두면, 다음 주에 한 자리가 왜
+   * 비었는지 아무도 설명하지 못한다. 나머지 핀은 그대로 둔다. 방금 한 일은 "한 명을
+   * 뺀 것"이지 "고정을 전부 푼 것"이 아니다.
+   */
+  if (!pinned && slot.keepRoster) {
+    await prisma.raidSlot.updateMany({
+      where: { id: slotId, instanceId },
+      data: { keepRoster: false },
+    });
+  }
 
   await prisma.changeLog.create({
     data: {

@@ -48,7 +48,7 @@ export function CompactSlot({
 
   return (
     <section className="rounded border border-border bg-surface">
-      <SlotHeader slug={slug} slot={slot} editable={editable} />
+      <SlotHeader slug={slug} week={week} slot={slot} editable={editable} />
 
       {/* 좁은 화면에서는 표가 가로로 스크롤된다. 칸을 더 줄여 뭉개는 것보다 낫다. */}
       <div className="overflow-x-auto">

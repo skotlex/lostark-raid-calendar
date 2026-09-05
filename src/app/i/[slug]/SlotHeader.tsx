@@ -18,10 +18,13 @@ const IDLE: CellState = { status: "idle", message: "" };
  */
 export function SlotHeader({
   slug,
+  week,
   slot,
   editable,
 }: {
   slug: string;
+  /** 전원 고정이 그 주차의 자리 핀까지 움직이므로 함께 보낸다. */
+  week: string;
   slot: BoardSlotView;
   editable: boolean;
 }) {
@@ -50,6 +53,7 @@ export function SlotHeader({
           <form action={toggleKeep} className="ml-auto">
             <input type="hidden" name="slug" value={slug} />
             <input type="hidden" name="slotId" value={slot.id} />
+            <input type="hidden" name="week" value={week} />
             <input type="hidden" name="keepRoster" value={slot.keepRoster ? "false" : "true"} />
             <button
               type="submit"

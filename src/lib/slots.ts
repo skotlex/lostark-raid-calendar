@@ -201,11 +201,17 @@ export async function updateSlot(
  * 레이드 단위 리셋 제외 토글.
  *
  * 켜는 순간 이번 주 편성이 다음 주로 넘어가게 된다.
+ *
+ * **자리 고정도 함께 움직인다.** 켜면 그 주 인원 전체에 핀이 꽂히고, 끄면 모두 빠진다.
+ * 그러지 않으면 "전원 고정"이라 해놓고 카드에는 아무 표시가 없어, 무엇이 넘어가는지
+ * 칸을 보고는 알 수 없다. 한 명만 풀면 더 이상 "전원"이 아니므로 토글이 꺼진다
+ * (board.ts의 setPinned).
  */
 export async function setKeepRoster(
   instanceId: string,
   slotId: string,
   keepRoster: boolean,
+  weekStart: Date,
   actorLabel?: string | null,
 ): Promise<void> {
   const result = await prisma.raidSlot.updateMany({
@@ -213,6 +219,11 @@ export async function setKeepRoster(
     data: { keepRoster },
   });
   if (result.count === 0) throw new SlotError("슬롯을 찾을 수 없습니다");
+
+  await prisma.assignment.updateMany({
+    where: { slotId, weekStart },
+    data: { pinned: keepRoster },
+  });
 
   await log(instanceId, "slot_keep", slotId, actorLabel, {
     raid: await slotLabel(slotId),
