@@ -863,7 +863,7 @@ Discord OAuth2로 입장부터 막는다. 길드 디스코드 서버의 멤버�
 |---|---|
 | 스택 | Next.js 16 (App Router) + React 19 + Tailwind 4 |
 | DB | Postgres. Prisma 7 + `@prisma/adapter-pg` |
-| 배포 | **Vercel + Neon. 돌고 있다.** https://loa-raid.vercel.app |
+| 배포 | **Vercel + Neon. 돌고 있다.** |
 | 지역 | **둘 다 싱가포르.** Neon `aws-ap-southeast-1`, Vercel `sin1` |
 | 테스트 | vitest |
 
