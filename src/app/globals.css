@@ -157,6 +157,20 @@ button:disabled,
   --c-support: #74b1de;
 
   /*
+   * 시너지 색은 다크 값으로 고정한다.
+   *
+   * 파티 요약의 칩은 테마를 따르는 배경 위에 있어 라이트에서 어두운 색을 쓴다.
+   * 카드는 라이트 모드에서도 어두우므로(위 주석) 그 값을 그대로 들이면 글자가 묻는다.
+   */
+  --syn-atk: #e58b6d;
+  --syn-taken: #e97fa6;
+  --syn-def: #b79ae8;
+  --syn-crit: #e0bf5a;
+  --syn-critdmg: #e0a05a;
+  --syn-back: #5fc39a;
+  --syn-sup: #6aa9d9;
+
+  /*
    * 빈 칸과 채워진 칸이 함께 쓰는 최소 높이.
    *
    * 4열로 좁아지면서 초상이 칸을 가득 채우게 됐다. 인물이 알아볼 만한 최소 높이다.
@@ -423,6 +437,63 @@ button:disabled,
 }
 
 /*
+ * 이 사람이 주는 시너지. 온전한 카드에서만 나온다.
+ *
+ * 좁은 칸에서는 이름과 템레벨이 먼저다. 시너지는 파티 요약이 이미 말하고 있어
+ * 여기서 빠져도 없어지는 정보가 아니다.
+ */
+.char-syn-line {
+  display: none;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  width: 100%;
+  margin-top: 0.125rem;
+}
+
+/*
+ * 파티 요약의 칩(.syn)과 같은 색을 쓰되 모양은 카드의 칩(.char-chip)을 따른다.
+ * 요약은 테마 배경 위라 글자색에서 배경을 뽑아 쓰지만, 카드는 초상 위에 얹히므로
+ * 어둡게 깔지 않으면 밝은 옷이나 이펙트 위에서 글자가 사라진다.
+ */
+.char-syn {
+  border-radius: 0.25rem;
+  background: rgb(6 9 14 / 66%);
+  padding: 0 0.3rem;
+  font-size: 10px;
+  line-height: 1.4;
+  white-space: nowrap;
+  color: var(--c-dim);
+}
+
+/*
+ * 종류별 색. 클래스가 아니라 data-kind로 건다.
+ *
+ * `.syn-crit` 같은 색 클래스를 덧붙이면 .char-syn과 특정도가 같아 순서로 승부가 갈린다.
+ * 파일 어딘가를 옮기면 색이 조용히 사라지므로 이길 것이 확실한 선택자를 쓴다.
+ */
+.char-syn[data-kind="공증"] {
+  color: var(--syn-atk);
+}
+.char-syn[data-kind="받피증"] {
+  color: var(--syn-taken);
+}
+.char-syn[data-kind="방깍"] {
+  color: var(--syn-def);
+}
+.char-syn[data-kind="치적"] {
+  color: var(--syn-crit);
+}
+.char-syn[data-kind="치피증"] {
+  color: var(--syn-critdmg);
+}
+.char-syn[data-kind="백헤드"] {
+  color: var(--syn-back);
+}
+.char-syn[data-kind="서폿"] {
+  color: var(--syn-sup);
+}
+
+/*
  * 좁아질 때 버리는 순서.
  * 남길 것부터 정한다. 이름 > 템렙 > 직업 각인 > 클래스 > 아크그리드.
  */
@@ -572,6 +643,10 @@ button:disabled,
     flex-basis: 100%;
     margin-left: 0;
     max-width: 100%;
+  }
+
+  .char-syn-line {
+    display: flex;
   }
 
   .char-notices {

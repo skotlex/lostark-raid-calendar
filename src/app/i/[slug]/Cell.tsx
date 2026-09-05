@@ -4,6 +4,7 @@ import { type DragEvent, startTransition, useActionState, useState } from "react
 
 import type { CellView } from "@/lib/board";
 import { positionKind, positionLabel } from "@/lib/positions";
+import { getSynergies } from "@/lib/synergy";
 
 import { DRAG_TYPE, moveForm, readDragSource, writeDragSource } from "./dragCell";
 import { ConfirmButton } from "./ConfirmButton";
@@ -99,6 +100,12 @@ export function Cell({
     (s) => s.status === "error",
   );
   const character = cell.character;
+
+  // 파티 요약과 같은 판정을 쓴다(board.ts도 이 함수를 거친다). 여기서 다시 구현하면
+  // 카드와 요약이 서로 다른 말을 하게 된다.
+  const synergies = character
+    ? getSynergies(character.className, character.role, character.skillSynergies)
+    : [];
 
   const hidden = (
     <>
@@ -290,6 +297,28 @@ export function Cell({
             <div className="char-arkgrid char-faint tabular">{character.arkGridSummary}</div>
           )}
         </div>
+
+        {/*
+          이 사람이 파티에 넣는 시너지. 넓은 칸에서만 보인다(globals.css).
+          좁은 칸은 이름과 템레벨을 지키는 것이 먼저고, 시너지는 파티 요약이 이미 말한다.
+
+          요약과 다른 것을 보여준다. 요약은 파티에 **들어온** 종류를 합쳐 적으므로 그것이
+          누구에게서 나오는지는 sources를 읽어야 안다. 자리를 바꿔볼 때 필요한 것은
+          "이 사람을 빼면 무엇이 빠지나"라서, 사람 옆에 붙어 있어야 한다.
+
+          판정은 트라이포드가 먼저다(CLAUDE.md 2-1-3). getSynergies가 그 순서를 안다.
+        */}
+        {synergies.length > 0 && (
+          <div className="char-syn-line">
+            {synergies.map((synergy) => (
+              <span key={synergy.kind} className="char-syn" data-kind={synergy.kind}>
+                {synergy.kind}
+                {/* 수치는 종류마다 고정이다. 서폿은 딜러마다 달라 비어 있다. */}
+                {synergy.value && ` ${synergy.value}`}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {(cell.warnings.length > 0 || error) && (
