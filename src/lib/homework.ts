@@ -9,6 +9,7 @@ import {
   TUESDAY,
   dayOffsetInWeek,
   getPlanningWeekStart,
+  isUndecided,
   tuesdayWeekFor,
   weekStartForDay,
 } from "./week";
@@ -32,12 +33,20 @@ export interface HomeworkEntry {
   dayOfWeek: number;
   startTime: string;
   /**
-   * 레이드 시각이 지났는가. 지나면 다녀온 것으로 본다.
+   * 다녀온 숙제인가.
    *
-   * **미정 슬롯은 끝까지 false다.** 지났는지를 잴 시각이 없다. 주차가 넘어가면서
-   * 편성이 비워질 때 함께 사라진다.
+   * 요일이 있는 슬롯은 **레이드 시각이 지났는가**로 정한다. 미정 슬롯만 사람이
+   * 직접 누른 표시(`Assignment.homeworkDone`)를 본다. 잴 시각이 없어 시각 판정이
+   * 서지 않기 때문이다.
    */
   done: boolean;
+  /**
+   * 이 줄을 손으로 켜고 끌 수 있는가. 미정 슬롯만 true다.
+   *
+   * 요일이 있는 슬롯에 버튼을 달지 않는다. 손 체크와 시각 판정이 갈리는 순간
+   * 어느 쪽이 맞는지 알 수 없어진다(CLAUDE.md 2-3).
+   */
+  claimable: boolean;
   /**
    * 이 캐릭터가 이 레이드에서 실제로 받는 골드. 표에 없으면 null.
    *
@@ -129,8 +138,9 @@ interface Row extends Omit<HomeworkEntry, "clearGold"> {
  * 요일 순서는 `WEEK_DAYS`(수 → 화)와 같아야 하므로 거리는 week.ts에서 받는다.
  * 일요일부터 세면 주말 레이드가 지난 주 것으로 계산된다.
  *
- * 미정 슬롯은 거리가 -1로 와서 여기서 끊긴다. 언제 갈지 모르는 칸이라 지났다고
- * 말할 근거가 없고, 그래서 그 주 내내 남은 숙제로 서 있는다.
+ * 미정 슬롯은 여기까지 오지 않는다. 부르는 쪽이 먼저 갈라 사람이 누른 표시를 본다.
+ * 거리가 -1로 오는 경우를 그래도 막아 둔다. 그 값을 날짜에 더하면 지난 주 시각이
+ * 되어 "이미 다녀온 것"으로 조용히 뒤집힌다.
  */
 function raidPassed(weekStart: Date, dayOfWeek: number, startTime: string): boolean {
   const offset = dayOffsetInWeek(dayOfWeek);
@@ -196,6 +206,7 @@ export async function getHomework(
           },
           weekStart: true,
           homeworkOrder: true,
+          homeworkDone: true,
         },
       },
     },
@@ -262,6 +273,7 @@ export async function getHomework(
 
       const reward = raidReward(slot.raidName, slot.difficulty);
       const base = slot.dayOfWeek === TUESDAY ? tuesdayWeek : planningWeek;
+      const claimable = isUndecided(slot.dayOfWeek);
 
       rows.push({
         slotId: slot.id,
@@ -270,7 +282,14 @@ export async function getHomework(
         label: raidLabel(slot.raidName, slot.difficulty),
         dayOfWeek: slot.dayOfWeek,
         startTime: slot.startTime,
-        done: raidPassed(base, slot.dayOfWeek, slot.startTime),
+        /*
+         * 미정만 사람이 누른 표시를 본다. 나머지는 시각이 정한다.
+         *
+         * 둘을 섞어 `지났거나 눌렀거나`로 두지 않는다. 요일 슬롯에 손 체크가 붙으면
+         * 편성표와 어긋나는 목록이 하나 더 생기고, 그러면 아무도 믿지 않는다.
+         */
+        done: claimable ? assignment.homeworkDone : raidPassed(base, slot.dayOfWeek, slot.startTime),
+        claimable,
         /*
          * 골드를 못 받는 캐릭터는 0이다. `null`이 아니다.
          *
@@ -302,6 +321,7 @@ export async function getHomework(
       dayOfWeek: row.dayOfWeek,
       startTime: row.startTime,
       done: row.done,
+      claimable: row.claimable,
       clearGold: goldAt(row.baseGold, index),
       moreCost: row.moreCost,
       baseGold: row.baseGold,
@@ -425,4 +445,74 @@ export async function setHomeworkOrder(
       }),
     ),
   );
+}
+
+/**
+ * 미정 레이드를 다녀온 것으로 켜고 끈다.
+ *
+ * **미정에만 있는 버튼이다.** 요일이 있는 슬롯은 시각이 지났는지로 정해지고
+ * (`raidPassed`), 거기에 손 체크를 겹치면 편성표와 어긋나는 목록이 하나 더 생긴다.
+ * 미정은 잴 시각이 없어 그 판정 자체가 서지 않으므로 사람이 대신 말해 준다.
+ *
+ * **내 캐릭터만 바꿀 수 있다.** `setHomeworkOrder`와 같은 이유다. 편성이 아니라
+ * 내 숙제 기록이고, 남이 바꿔 봐야 그 사람 화면에는 보이지도 않는다.
+ */
+export async function setHomeworkDone(
+  instanceId: string,
+  memberId: string | null,
+  characterId: string,
+  slotId: string,
+  done: boolean,
+): Promise<void> {
+  if (!memberId) throw new HomeworkError("내 원정대를 먼저 불러와 주세요");
+
+  const character = await prisma.character.findFirst({
+    where: { id: characterId, instanceId, memberId },
+    select: { id: true },
+  });
+  if (!character) throw new HomeworkError("내 캐릭터가 아닙니다");
+
+  const planningWeek = getPlanningWeekStart();
+  const tuesdayWeek = tuesdayWeekFor(planningWeek);
+
+  /*
+   * 두 주차를 함께 읽고 제 것만 고른다. `setHomeworkOrder`와 같은 모양이다.
+   *
+   * 미정은 수~월 무리라 `planningWeek`가 답이지만 그것을 여기서 단정하지 않는다.
+   * 요일에서 주차를 구하는 길은 `weekStartForDay` 하나로 모아 둔다(week.ts).
+   */
+  const assignment = await prisma.assignment.findFirst({
+    where: {
+      characterId,
+      slotId,
+      weekStart: { in: [planningWeek, tuesdayWeek] },
+      slot: { instanceId, archivedAt: null },
+    },
+    select: {
+      id: true,
+      weekStart: true,
+      homeworkDone: true,
+      slot: { select: { dayOfWeek: true } },
+    },
+  });
+  // 지난 주차이거나 요일표에서 내린 슬롯이면 여기서 걸린다. 과거는 읽기 전용이다.
+  if (
+    !assignment ||
+    assignment.weekStart.getTime() !==
+      weekStartForDay(planningWeek, assignment.slot.dayOfWeek).getTime()
+  ) {
+    throw new HomeworkError("이번 주 편성이 아닙니다");
+  }
+
+  // 미정에만 있는 버튼이다. 다른 요일이 오면 화면이 아니라 요청이 잘못된 것이다.
+  if (!isUndecided(assignment.slot.dayOfWeek)) {
+    throw new HomeworkError("요일이 정해진 레이드는 시각이 지나면 자동으로 처리됩니다");
+  }
+
+  if (assignment.homeworkDone === done) return;
+
+  await prisma.assignment.update({
+    where: { id: assignment.id },
+    data: { homeworkDone: done },
+  });
 }

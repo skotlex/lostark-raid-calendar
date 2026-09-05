@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { HomeworkError, setHomeworkOrder } from "@/lib/homework";
+import { HomeworkError, setHomeworkDone, setHomeworkOrder } from "@/lib/homework";
 import { findInstance } from "@/lib/instance";
 import { findMyMember } from "@/lib/members";
 import { requireSession } from "@/lib/session";
@@ -40,6 +40,45 @@ export async function reorderHomeworkAction(
       String(formData.get("slotIds") ?? "")
         .split(",")
         .filter(Boolean),
+    );
+
+    revalidatePath(`/i/${slug}/homework`);
+    return { status: "ok", message: "" };
+  } catch (error) {
+    if (error instanceof HomeworkError) {
+      return { status: "error", message: error.message };
+    }
+    throw error;
+  }
+}
+
+/**
+ * 미정 레이드 보상 수령 표시.
+ *
+ * 미정에만 있다. 요일이 있는 슬롯은 시각이 지났는지로 정해지므로 누를 것이 없다
+ * (homework.ts). 화면 위쪽의 주간 진행률과 레이드별 현황이 함께 바뀌어야 해서
+ * 여기서 다시 그리게 한다 — 순서 바꾸기와 달리 이건 남은 숙제 수를 움직인다.
+ */
+export async function claimHomeworkAction(
+  _prev: HomeworkState,
+  formData: FormData,
+): Promise<HomeworkState> {
+  const slug = String(formData.get("slug") ?? "");
+  try {
+    // 레이아웃의 입장 검사를 거치지 않는 경로다. 여기서 다시 확인한다.
+    const session = await requireSession();
+    if (!slug) throw new HomeworkError("잘못된 요청입니다");
+
+    const instance = await findInstance(slug);
+    if (!instance) throw new HomeworkError("인스턴스를 찾을 수 없습니다");
+
+    const member = await findMyMember(instance.id, session.discordUserId);
+    await setHomeworkDone(
+      instance.id,
+      member?.id ?? null,
+      String(formData.get("characterId") ?? ""),
+      String(formData.get("slotId") ?? ""),
+      formData.get("done") === "1",
     );
 
     revalidatePath(`/i/${slug}/homework`);

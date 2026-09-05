@@ -8,7 +8,7 @@ import { goldAt, isGoldCapped } from "@/lib/homeworkOrder";
 import { dayName, isUndecided } from "@/lib/week";
 
 import { GripIcon } from "../icons";
-import { type HomeworkState, reorderHomeworkAction } from "./actions";
+import { type HomeworkState, claimHomeworkAction, reorderHomeworkAction } from "./actions";
 
 const IDLE: HomeworkState = { status: "idle", message: "" };
 
@@ -69,6 +69,20 @@ export function EntryList({
   entries: readonly HomeworkEntry[];
 }) {
   const [state, save, saving] = useActionState(reorderHomeworkAction, IDLE);
+
+  /*
+   * 미정 줄의 "보상 수령".
+   *
+   * **낙관적으로 그리지 않는다.** 이 값은 카드의 남은 숙제 수뿐 아니라 화면 위쪽의
+   * 주간 진행률과 레이드별 현황까지 움직이는데, 그쪽은 서버가 다시 그린다. 줄만
+   * 먼저 바꿔 두면 같은 화면의 두 곳이 한 박자 어긋난 채 보인다. 순서 바꾸기와
+   * 다른 점이다 — 그건 이 카드 안에서만 끝나고, 끄는 동안 손이 결과를 기다린다.
+   *
+   * 대신 누른 줄에만 표시를 남긴다. `claiming`은 카드 하나에 하나뿐이라
+   * 어느 줄을 눌렀는지는 따로 기억해야 한다.
+   */
+  const [claimState, claim, claiming] = useActionState(claimHomeworkAction, IDLE);
+  const [claimingSlot, setClaimingSlot] = useState<string | null>(null);
 
   const serverOrder = entries.map((e) => e.slotId).join(",");
   /*
@@ -224,6 +238,17 @@ export function EntryList({
     startTransition(() => save(data));
   }
 
+  /** 미정 줄의 보상 수령을 켜고 끈다. 지금 상태의 반대를 보낸다. */
+  function toggleClaim(entry: HomeworkEntry) {
+    const data = new FormData();
+    data.set("slug", slug);
+    data.set("characterId", characterId);
+    data.set("slotId", entry.slotId);
+    data.set("done", entry.done ? "" : "1");
+    setClaimingSlot(entry.slotId);
+    startTransition(() => claim(data));
+  }
+
   /**
    * 위·아래 화살표로도 옮긴다.
    *
@@ -319,6 +344,39 @@ export function EntryList({
                 {!isUndecided(entry.dayOfWeek) && ` ${entry.startTime}`}
               </span>
 
+              {/*
+                미정 줄만 갖는 손 체크. 요일 뱃지 바로 오른쪽이라 "미정이라서 여기에
+                이게 있다"가 나란히 읽힌다.
+
+                아직 안 받았으면 파란색으로 띄운다. 이 카드에서 악센트(금색)는
+                "안 간 숙제"의 색이라(badgeTone) 같은 색을 쓰면 눌러야 할 것과 그냥
+                남은 줄이 구분되지 않는다. 받고 나면 나머지 뱃지와 같이 회색으로
+                가라앉아 줄 전체가 한 번에 다녀온 것으로 읽힌다.
+
+                **pointerdown을 여기서 끊는다.** 줄 전체가 끌기 손잡이라(위) 그냥 두면
+                누르는 순간 이 줄을 집어 든 상태가 된다.
+              */}
+              {entry.claimable && (
+                <button
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => toggleClaim(entry)}
+                  disabled={claiming && claimingSlot === entry.slotId}
+                  title={
+                    entry.done
+                      ? "보상을 받은 것으로 표시했습니다. 다시 누르면 취소합니다"
+                      : "요일이 없어 시각으로 알 수 없습니다. 다녀왔으면 눌러 주세요"
+                  }
+                  className={`cursor-pointer rounded px-1.5 py-0.5 text-[11px] transition-colors disabled:opacity-50 ${
+                    entry.done
+                      ? "bg-surface-2/60 text-text-faint hover:bg-surface-2"
+                      : "bg-support/15 text-support hover:bg-support/25"
+                  }`}
+                >
+                  보상 수령
+                </button>
+              )}
+
               <span
                 className={`ml-auto text-xs tabular ${capped ? "text-text-faint" : ""}`}
                 title={
@@ -380,7 +438,9 @@ export function EntryList({
 
         {/* 저장은 조용히 끝난다. 실패만 말한다. 순서가 서버와 어긋난 채 남기 때문이다. */}
         {state.status === "error" && <p className="text-danger">{state.message}</p>}
+        {claimState.status === "error" && <p className="text-danger">{claimState.message}</p>}
         {saving && <p className="sr-only">순서를 저장하는 중입니다</p>}
+        {claiming && <p className="sr-only">보상 수령을 저장하는 중입니다</p>}
       </div>
     </>
   );

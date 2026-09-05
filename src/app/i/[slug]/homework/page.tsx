@@ -323,7 +323,8 @@ function Header() {
       <h1 className="text-xl font-bold">숙제 관리</h1>
       <p className="mt-1 text-sm text-text-dim">
         편성표에 넣은 <strong>내 캐릭터</strong>의 이번 주 숙제입니다. 따로 체크하지 않아도
-        레이드 시각이 지나면 다녀온 것으로 봅니다.
+        레이드 시각이 지나면 다녀온 것으로 봅니다. 시각이 없는 <strong>미정</strong>만
+        보상 수령을 눌러 주세요.
       </p>
     </div>
   );
