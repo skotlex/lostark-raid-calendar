@@ -112,15 +112,21 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
               </span>
             </div>
 
-            {/* 이 레이드가 이번 주에 주는 골드. 다녀온 것까지 합친 값이다. */}
-            <div className="mt-1 flex items-baseline gap-x-2 text-sm">
+            {/*
+              이 레이드가 이번 주에 주는 골드. 다녀온 것까지 합친 값이다.
+
+              오른쪽 여백은 위 뱃지와 맞춘 값이다. 뱃지는 안쪽 여백이 있어 글자가 카드
+              끝에서 조금 들어와 있는데, 이 줄에 여백이 없으면 두 숫자의 오른쪽 끝이
+              어긋나 보인다.
+            */}
+            <div className="mt-1 flex items-baseline gap-x-2 pr-1.5 text-sm">
               <span className="text-xs text-text-faint">골드</span>
               <span
                 className={`ml-auto tabular ${
                   raid.remaining > 0 ? "text-accent" : "text-text-dim"
                 }`}
               >
-                {raid.totalGold > 0 ? gold.format(raid.totalGold) : "-"}
+                {raid.totalGold > 0 ? `${gold.format(raid.totalGold)} G` : "-"}
               </span>
             </div>
 
