@@ -4,6 +4,10 @@ import { syncStaleCharacters } from "@/lib/characters";
 import { findInstance } from "@/lib/instance";
 import { readSession } from "@/lib/session";
 
+// 캐릭터를 수십 개 순차로 조회한다. 서버리스 기본 제한(10초)으로는 중간에 끊긴다.
+// 끊겨도 거기까지는 저장돼 있고 다음 조회에서 이어 간다.
+export const maxDuration = 60;
+
 /**
  * 오래된 캐릭터 스펙을 뒤에서 갱신한다.
  *

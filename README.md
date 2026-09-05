@@ -59,6 +59,62 @@ npm run dev
 | `npm run db:seed` | 기본 인스턴스 생성 (`-- --with-samples`로 예시 슬롯까지) |
 | `npm run db:studio` | Prisma Studio로 데이터 직접 확인 |
 
+## 배포 (Vercel)
+
+지역은 `vercel.json`에 **싱가포르(`sin1`)** 로 박아뒀다. Neon과 같은 지역이어야 페이지마다
+나가는 여러 번의 쿼리가 태평양을 왕복하지 않는다.
+
+### 1. 프로젝트 연결
+
+Vercel에서 이 저장소를 Import한다. 프레임워크는 자동으로 Next.js로 잡힌다.
+빌드 명령은 그대로 둔다(`npm run build`가 `prisma generate`를 먼저 돌린다.
+생성된 클라이언트는 커밋되지 않으므로 이 단계가 없으면 빌드가 깨진다).
+
+### 2. 환경변수
+
+Production·Preview 양쪽에 넣는다.
+
+| 이름 | 값 |
+|---|---|
+| `DATABASE_URL` | Neon 풀링 문자열(호스트에 `-pooler`) |
+| `DATABASE_URL_UNPOOLED` | Neon 직결 문자열 |
+| `LOSTARK_API_KEY` | 로아 OpenAPI JWT (여러 개면 `LOSTARK_API_KEYS`에 쉼표로) |
+| `INSTANCE_SESSION_SECRET` | 긴 랜덤 문자열 |
+| `DISCORD_CLIENT_ID` | 디스코드 앱 ID |
+| `DISCORD_CLIENT_SECRET` | 디스코드 앱 시크릿 |
+| `DISCORD_GUILD_ID` | 길드(서버) ID |
+
+**`NEXT_PUBLIC_` 접두사를 붙이지 않는다.** 붙는 순간 브라우저 번들로 새어 나간다.
+
+### 3. 디스코드 리다이렉트 URI
+
+콜백 주소는 요청이 들어온 도메인에서 만들어진다. 그래서 **디스코드 앱 설정에 실제
+도메인을 등록해야** 한다. 개발용 주소도 함께 남겨둔다.
+
+```
+https://<배포-도메인>/api/auth/discord/callback
+http://localhost:3100/api/auth/discord/callback
+```
+
+Preview 배포는 도메인이 매번 바뀌어 로그인이 되지 않는다. 필요하면 그 URL도 그때그때
+등록하거나, 확인은 Production에서 한다.
+
+### 4. 스키마와 기본 데이터
+
+이미 쓰던 Neon DB를 그대로 가리키면 할 일이 없다. 새 DB라면 로컬에서 한 번 돌린다.
+
+```bash
+npm run db:push
+npm run db:seed
+```
+
+### 5. 배포 후 확인
+
+- `/` 를 열면 `/login`으로 튕기는지
+- 디스코드 로그인 후 길드 멤버만 들어오는지
+- 편성 칸에 닉네임을 넣어 로아 조회가 되는지(키가 서버에만 있는지)
+
+
 ## 권한과 개인정보
 
 - 로아 OpenAPI는 **공개 캐릭터 정보만** 읽는다. 계정 정보에 접근하지 않는다
