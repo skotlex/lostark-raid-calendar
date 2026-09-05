@@ -377,6 +377,39 @@ button:disabled,
   background: rgb(6 9 14 / 62%);
 }
 
+/*
+ * 직업 문장 + (칭호·이름) 한 덩어리.
+ *
+ * 문장이 두 줄 옆에 서므로 세로 가운데를 잡는다. 칭호가 없는 캐릭터는 이름 한 줄만
+ * 남아 문장이 줄보다 커지는데, 그래도 크기를 줄이지 않는다. 같은 파티 안에서 문장만
+ * 캐릭터마다 다른 크기로 서면 훑을 때 눈이 걸린다.
+ */
+.char-id {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* 이름의 말줄임이 살아 있으려면 flex 자식이 0까지 줄어들 수 있어야 한다. */
+.char-id-text {
+  min-width: 0;
+}
+
+/*
+ * 직업 문장. 좁은 칸에는 없다(넓어질 때만 아래 컨테이너 쿼리가 켠다).
+ *
+ * 좁은 칸은 클래스 칩부터 이미 숨는 폭이라 같은 것을 그림으로 한 번 더 말할 자리가
+ * 없다. 흰색으로 뒤집는 필터는 .class-emblem이 갖는다.
+ */
+.char-emblem {
+  display: none;
+  flex: 0 0 auto;
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
 .char-name {
   max-width: 100%;
 }
@@ -642,6 +675,11 @@ button:disabled,
   }
 
   .char-title {
+    display: block;
+  }
+
+  /* 글자를 읽지 않아도 직업이 걸린다. 여러 칸을 나란히 볼 때 이쪽이 먼저 들어온다. */
+  .char-emblem {
     display: block;
   }
 

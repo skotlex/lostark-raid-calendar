@@ -3,6 +3,7 @@
 import { type DragEvent, startTransition, useActionState, useState } from "react";
 
 import type { CellView } from "@/lib/board";
+import { classEmblem } from "@/lib/classEmblems";
 import { positionKind, positionLabel } from "@/lib/positions";
 import { getSynergies } from "@/lib/synergy";
 
@@ -106,6 +107,9 @@ export function Cell({
   const synergies = character
     ? getSynergies(character.className, character.role, character.skillSynergies)
     : [];
+
+  // 표에 없는 직업이면 null이고, 그때는 글자만 남는다.
+  const emblem = classEmblem(character?.className);
 
   const hidden = (
     <>
@@ -282,10 +286,39 @@ export function Cell({
       <div className="char-gap" />
 
       <div className="char-bottom">
-        {character.title && <div className="char-title">{character.title}</div>}
-        <div className="char-name truncate">{character.name}</div>
+        {/*
+          직업 문장 + 칭호 + 이름.
 
-{/*
+          문장은 넓은 칸에서만 보인다(globals.css). 좁은 칸은 클래스 칩부터 이미 숨는
+          마당이라 같은 것을 그림으로 한 번 더 말할 자리가 없다.
+
+          넓은 칸에서는 반대다. 클래스 칩이 위에 있어도 글자를 읽어야 알아보는데,
+          문장은 훑는 것만으로 걸린다. 여러 칸을 한눈에 비교할 때 이쪽이 먼저 들어온다.
+
+          alt는 비운다. 같은 직업을 위의 칩이 글자로 말하므로 낭독기가 두 번 읽을
+          이유가 없다.
+        */}
+        <div className="char-id">
+          {emblem && (
+            // 게임 자산 SVG라 next/image를 거치지 않는다(숙제 화면과 같은 이유).
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={emblem}
+              alt=""
+              width={28}
+              height={28}
+              loading="lazy"
+              className="class-emblem char-emblem"
+            />
+          )}
+
+          <div className="char-id-text">
+            {character.title && <div className="char-title">{character.title}</div>}
+            <div className="char-name truncate">{character.name}</div>
+          </div>
+        </div>
+
+        {/*
           좁은 칸에서는 아크그리드가 스탯과 같은 줄 오른쪽에 붙어 한 줄을 아낀다.
           넓어지면 아래로 내려가 제자리를 찾는다(globals.css).
         */}
