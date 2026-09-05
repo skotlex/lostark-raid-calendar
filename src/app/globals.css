@@ -1180,3 +1180,9 @@ button:disabled,
   font-size: 11px;
   color: var(--text-dim);
 }
+
+/* 자리가 다 찼다. 요일 하나에 슬롯이 여럿 늘어서므로 색으로 갈라야 눈에 걸린다. */
+.slot-badge[data-full] {
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+  color: var(--danger);
+}

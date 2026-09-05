@@ -33,7 +33,16 @@ export function SlotHeader({
         <h3 className="font-semibold">{raidLabel(slot.raidName, slot.difficulty)}</h3>
 
         <span className="slot-badge tabular">{slot.startTime}</span>
-        <span className="slot-badge tabular" title={`${slot.partySize}자리 중 ${slot.filled}명`}>
+        {/* 자리가 다 차면 색이 바뀐다. 더 넣을 곳이 없다는 뜻이라 훑을 때 걸려야 한다. */}
+        <span
+          className="slot-badge tabular"
+          data-full={slot.filled >= slot.partySize ? "" : undefined}
+          title={
+            slot.filled >= slot.partySize
+              ? "자리가 모두 찼습니다"
+              : `${slot.partySize}자리 중 ${slot.filled}명`
+          }
+        >
           {slot.filled}/{slot.partySize}
         </span>
 
