@@ -14,7 +14,7 @@ import {
   ScheduleIcon,
 } from "./icons";
 import { ThemeToggle } from "../../ThemeToggle";
-import { BoardTabLink } from "./lastDay";
+import { TabLink } from "./lastDay";
 import { Viewer } from "./Viewer";
 
 // Prisma로 DB를 읽으므로 빌드 시점에 미리 굽지 않는다.
@@ -46,9 +46,6 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
     { href: `/i/${slug}/history`, label: "편집 이력", icon: <HistoryIcon />, remember: false },
   ];
 
-  // 평소에는 아이콘만, 올리면 이름이 열린다(globals.css의 .tab-link).
-  const tabClass = "tab-link";
-
   return (
     <div className="flex min-h-full flex-col">
       <header className="border-b border-border bg-surface">
@@ -70,24 +67,15 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
           </Link>
 
           <nav className="flex gap-1">
-            {tabs.map((tab) =>
-              tab.remember ? (
-                <BoardTabLink
-                  key={tab.href}
-                  href={tab.href}
-                  className={tabClass}
-                  title={tab.label}
-                >
-                  {tab.icon}
-                  <span className="tab-label">{tab.label}</span>
-                </BoardTabLink>
-              ) : (
-                <Link key={tab.href} href={tab.href} className={tabClass} title={tab.label}>
-                  {tab.icon}
-                  <span className="tab-label">{tab.label}</span>
-                </Link>
-              ),
-            )}
+            {tabs.map((tab) => (
+              <TabLink
+                key={tab.href}
+                href={tab.href}
+                label={tab.label}
+                icon={tab.icon}
+                remember={tab.remember}
+              />
+            ))}
           </nav>
 
           <div className="ml-auto flex items-center gap-3">

@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, type ReactNode } from "react";
 
 /**
  * 마지막으로 보던 요일.
@@ -51,25 +51,32 @@ export function RememberDay({ day }: { day: number }) {
  * href는 요일 없는 주소로 둔다. 서버 렌더 결과와 어긋나지 않고, 새 탭으로 열거나
  * 주소를 복사하면 오늘 요일이 열린다.
  */
-export function BoardTabLink({
+export function TabLink({
   href,
-  className,
-  title,
-  children,
+  label,
+  icon,
+  remember,
 }: {
   href: string;
-  className?: string;
-  title?: string;
-  children: React.ReactNode;
+  label: string;
+  icon: ReactNode;
+  /** 편성표 탭만. 마지막으로 보던 요일로 되돌아간다 */
+  remember?: boolean;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  // 지금 보고 있는 탭은 좁은 화면에서도 이름을 펼쳐 둔다. 어디에 있는지 모르게 되지 않게.
+  const active = pathname === href;
 
   return (
     <Link
       href={href}
-      className={className}
-      title={title}
+      className="tab-link"
+      title={label}
+      data-active={active ? "" : undefined}
+      aria-current={active ? "page" : undefined}
       onClick={(e) => {
+        if (!remember) return;
         // 새 탭·새 창으로 여는 조작은 브라우저에 맡긴다.
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
         const day = readLastDay();
@@ -78,7 +85,8 @@ export function BoardTabLink({
         router.push(`${href}?day=${day}`);
       }}
     >
-      {children}
+      {icon}
+      <span className="tab-label">{label}</span>
     </Link>
   );
 }
