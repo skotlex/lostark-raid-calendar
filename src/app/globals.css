@@ -645,7 +645,17 @@ button:disabled,
   z-index: 20;
   top: calc(100% + 0.25rem);
   left: 0;
-  right: 0;
+  /*
+   * 칸보다 넓어져도 된다.
+   *
+   * 편성 칸은 4열이라 좁다. 목록을 칸 폭에 맞추면 닉네임부터 잘리는데, 정작 골라야 하는
+   * 것이 닉네임이다. 내용만큼 늘리되 화면을 넘지 않게 상한을 둔다. 목록은 떠 있는
+   * 상자라 옆 칸을 잠깐 덮어도 상관없다.
+   */
+  right: auto;
+  min-width: 100%;
+  width: max-content;
+  max-width: min(18rem, 70vw);
   overflow: hidden auto;
   max-height: 11rem;
   border: 1px solid var(--border-strong);
@@ -1283,14 +1293,36 @@ button:disabled,
   gap: 0.375rem;
 }
 
+/*
+ * 좁아질 때 줄어드는 순서: 템레벨 → 직업 → 닉네임.
+ *
+ * 닉네임은 고르는 기준이라 마지막까지 온전해야 한다. flex는 우선순위를 직접 정할 수
+ * 없어 shrink 배수로 흉내 낸다. 숫자가 큰 쪽이 먼저 줄어든다.
+ */
+.combo-item > .truncate {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
 .combo-meta {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
   font-size: 10px;
   color: var(--text-faint);
 }
 
+/* 직업. 닉네임보다는 먼저, 템레벨보다는 나중에 줄어든다. */
 .combo-meta:first-of-type {
+  flex-shrink: 4;
   margin-left: auto;
+}
+
+/* 템레벨. 가장 먼저 줄어든다. 어차피 앞자리만 봐도 대강 알 수 있다. */
+.combo-meta:last-of-type {
+  flex-shrink: 12;
 }
 
 .combo-item.is-active .combo-meta,
