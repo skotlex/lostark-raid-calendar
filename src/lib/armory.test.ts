@@ -4,6 +4,7 @@ import {
   normalizeSkillSynergies,
   normalizeArkGrid,
   normalizeArkPassive,
+  normalizeArkPassiveSynergies,
   normalizeEngravings,
   parseArkPassiveNode,
   stripTags,
@@ -565,5 +566,105 @@ describe("트라이포드 시너지", () => {
   it("스킬이 없으면 빈 배열", () => {
     expect(normalizeSkillSynergies(null)).toEqual([]);
     expect(normalizeSkillSynergies(undefined)).toEqual([]);
+  });
+});
+
+describe("아크패시브 노드 시너지", () => {
+  /**
+   * 실제 응답에서 줄인 것이다. 노드 툴팁은 코어 툴팁과 형식이 달라
+   * 설명이 `MultiTextBox` 하나에 통째로 들어간다.
+   */
+  const node = (description: string, text: string) => ({
+    Name: description.split(" ")[0]!,
+    Description: description,
+    Icon: null,
+    ToolTip: JSON.stringify({
+      Element_000: { type: "NameTagBox", value: description },
+      Element_001: { type: "CommonSkillTitle", value: { leftText: "아크 패시브 레벨 1" } },
+      Element_002: { type: "MultiTextBox", value: text },
+    }),
+  });
+
+  it("깨달음 노드가 들고 있는 받피증을 읽는다", () => {
+    // 도화가 낙인 강화. 서포터의 시너지는 트라이포드가 아니라 여기에 있다.
+    const raw = {
+      Title: null,
+      IsArkPassive: true,
+      Points: null,
+      Effects: [
+        node(
+          "깨달음 4티어 낙인 강화 Lv.1",
+          "저무는 달, 떠오르는 해, 떠오르는 달 스킬 사용 시 <FONT COLOR='#ffff99'>12m</FONT> 범위 내에 있는 적들에게 '먹물 낙인'을 찍어 <FONT COLOR='#ffff99'>6.0</FONT>초간 적이 받는 피해가 <FONT COLOR='#99ff99'>10.0%</FONT> 증가한다.||<BR>",
+        ),
+      ],
+    };
+    expect(normalizeArkPassiveSynergies(raw)).toEqual([
+      { kind: "받피증", value: "10%", source: "깨달음 · 낙인 강화" },
+    ]);
+  });
+
+  it("파티원이 '주는' 피해로 적은 노드도 같은 시너지다", () => {
+    // 발키리 해방자의 흔적(빛의 흔적).
+    const raw = {
+      Title: null,
+      IsArkPassive: true,
+      Points: null,
+      Effects: [
+        node(
+          "깨달음 4티어 해방자의 흔적 Lv.1",
+          "빛의 해방 스킬 사용 시, 24.0m 범위 내에 있는 적들에게 7.0초간 ‘빛의 흔적’을 남기며,그 적들에게 자신과 파티원이 주는 피해가 10.0% 증가한다.||",
+        ),
+      ],
+    };
+    expect(normalizeArkPassiveSynergies(raw)).toEqual([
+      { kind: "받피증", value: "10%", source: "깨달음 · 해방자의 흔적" },
+    ]);
+  });
+
+  it("자기만 세지는 노드는 시너지가 아니다", () => {
+    // 홀리나이트 심판자. 딜 각인이라 파티에 주는 것이 없다.
+    const raw = {
+      Title: null,
+      IsArkPassive: true,
+      Points: null,
+      Effects: [
+        node(
+          "깨달음 3티어 심판자 Lv.3",
+          "적에게 주는 피해가 18.5% 증가하고, 징벌 스킬의 무력화 피해가 8.0% 증가한다.||",
+        ),
+      ],
+    };
+    expect(normalizeArkPassiveSynergies(raw)).toEqual([]);
+  });
+
+  it("서폿 버프 노드는 시너지 종류로 세지 않는다", () => {
+    // 진화 축복의 여신. 서폿 버프는 클래스 표가 따로 들고 있다(synergy.ts).
+    const raw = {
+      Title: null,
+      IsArkPassive: true,
+      Points: null,
+      Effects: [
+        node(
+          "진화 2티어 축복의 여신 Lv.3",
+          "전투 중 자신 및 주변 파티원에게 '전투 축복 III' 효과를 적용합니다.(20초 지속, 매 초마다 갱신) 전투 축복 III : 공격 및 이동 속도 9.0% 증가||",
+        ),
+      ],
+    };
+    expect(normalizeArkPassiveSynergies(raw)).toEqual([]);
+  });
+
+  it("설명이 없거나 툴팁이 깨져도 빈 배열", () => {
+    expect(normalizeArkPassiveSynergies(null)).toEqual([]);
+    expect(
+      normalizeArkPassiveSynergies({
+        Title: null,
+        IsArkPassive: true,
+        Points: null,
+        Effects: [
+          { Name: "깨달음", Description: "깨달음 1티어 신의 기사 Lv.1", Icon: null },
+          { Name: "도약", Description: "도약 2티어 기적 Lv.3", Icon: null, ToolTip: "{{깨진 JSON" },
+        ],
+      }),
+    ).toEqual([]);
   });
 });

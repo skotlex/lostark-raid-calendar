@@ -9,7 +9,7 @@ import { pickClassEngraving } from "./classEngravings";
 import { LostArkError, fetchArmory, fetchSiblings } from "./lostark";
 import { findOwnerByCharacterName } from "./members";
 import { prisma } from "./prisma";
-import { resolveRole } from "./synergy";
+import { type Role, resolveRole } from "./synergy";
 
 /** 이 시간이 지난 캐릭터만 다시 조회한다. 분당 100회 한도를 아끼기 위한 캐시다. */
 export const SYNC_TTL_MS = 6 * 60 * 60 * 1000;
@@ -199,6 +199,26 @@ function specRole(spec: CharacterSpec) {
   );
 }
 
+/**
+ * 저장할 시너지 목록.
+ *
+ * **서포터만 아크패시브 노드를 함께 읽는다.** 서포터의 시너지는 트라이포드가 아니라
+ * 직업 각인 노드가 통째로 들고 있어(도화가 먹물 낙인, 발키리 빛의 흔적), 트라이포드만
+ * 보면 늘 빈손으로 나온다. 딜러는 트라이포드가 답이라 노드를 섞지 않는다 — 깨달음
+ * 노드에는 자버프 문장이 길게 섞여 있어 잘못 읽을 여지만 늘어난다.
+ *
+ * 같은 종류가 양쪽에 다 있으면 트라이포드가 이긴다. 실제로 찍은 것이기 때문이다.
+ */
+function specSynergies(spec: CharacterSpec, role: Role): SkillSynergy[] {
+  if (role !== "SUPPORT") return spec.skillSynergies;
+
+  const fromTripod = new Set(spec.skillSynergies.map((s) => s.kind));
+  return [
+    ...spec.skillSynergies,
+    ...spec.arkPassiveSynergies.filter((s) => !fromTripod.has(s.kind)),
+  ];
+}
+
 function resolveClassEngraving(spec: CharacterSpec): string | null {
   return (
     spec.classEngraving ??
@@ -269,7 +289,7 @@ export async function registerCharacter(
     engravings: toJson(spec.engravings),
     arkGrid: toJson(spec.arkGrid),
     // 빈 배열도 그대로 넣는다. null과 뜻이 다르다(schema.prisma 참조).
-    skillSynergies: spec.skillSynergies as unknown as Prisma.InputJsonValue,
+    skillSynergies: specSynergies(spec, role) as unknown as Prisma.InputJsonValue,
     syncedAt: new Date(),
     syncError: null,
   };
@@ -347,7 +367,7 @@ export async function syncCharacter(
         arkPassive: toJson(spec.arkPassive),
         engravings: toJson(spec.engravings),
         arkGrid: toJson(spec.arkGrid),
-        skillSynergies: spec.skillSynergies as unknown as Prisma.InputJsonValue,
+        skillSynergies: specSynergies(spec, role) as unknown as Prisma.InputJsonValue,
         syncedAt: new Date(),
         syncError: null,
         // 아크패시브로 판정하므로 동기화가 항상 최신 세팅을 따라간다.

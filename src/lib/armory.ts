@@ -292,6 +292,8 @@ export interface CharacterSpec {
   arkGrid: ArkGridData | null;
   /** 스킬 트라이포드에서 읽은 파티 시너지. 클래스 표보다 정확하다 */
   skillSynergies: SkillSynergy[];
+  /** 아크패시브 노드에서 읽은 파티 시너지. 서포터만 쓴다(`characters.ts`) */
+  arkPassiveSynergies: SkillSynergy[];
 }
 
 /**
@@ -331,6 +333,7 @@ export function toCharacterSpec(armory: ArmoryResponse | null | undefined): Char
     engravings: normalizeEngravings(armory?.ArmoryEngraving),
     arkGrid,
     skillSynergies: normalizeSkillSynergies(armory?.ArmorySkills),
+    arkPassiveSynergies: normalizeArkPassiveSynergies(armory?.ArkPassive),
   };
 }
 
@@ -439,32 +442,96 @@ function formatPercent(raw: string): string {
  * 툴팁 자체는 저장하지 않는다. 스킬까지 받으면 응답이 두 배가 되는데 대부분이 툴팁이고,
  * 이 앱이 쓰는 것은 여기서 뽑은 결과뿐이다.
  */
+/**
+ * 툴팁 문장들을 규칙에 걸어 시너지를 뽑는다.
+ *
+ * 트라이포드와 아크패시브 노드가 같은 말투로 시너지를 적으므로 규칙도 하나로 쓴다.
+ * `entries` 하나가 툴팁 하나다.
+ */
+function collectSynergies(entries: { text: string; source: string }[]): SkillSynergy[] {
+  const found = new Map<string, SkillSynergy>();
+  for (const entry of entries) {
+    if (!entry.text) continue;
+
+    for (const rule of SYNERGY_RULES) {
+      const match = entry.text.match(rule.re);
+      if (!match) continue;
+      // 같은 종류가 여러 곳에 걸리면 하나만 센다. 시너지는 중첩되지 않는다.
+      if (!found.has(rule.kind)) {
+        found.set(rule.kind, {
+          kind: rule.kind,
+          value: formatPercent(match[1]!),
+          source: entry.source,
+        });
+      }
+      // 툴팁 하나는 한 종류만 준다. 좁은 규칙이 먼저 걸렸으면 거기서 끝낸다.
+      break;
+    }
+  }
+  return [...found.values()];
+}
+
 export function normalizeSkillSynergies(
   skills: ArmorySkill[] | null | undefined,
 ): SkillSynergy[] {
   if (!Array.isArray(skills)) return [];
 
-  const found = new Map<string, SkillSynergy>();
+  const entries: { text: string; source: string }[] = [];
   for (const skill of skills) {
     for (const tripod of skill.Tripods ?? []) {
       if (!tripod.IsSelected) continue;
-      const text = stripTags(tripod.Tooltip) ?? "";
-
-      for (const rule of SYNERGY_RULES) {
-        const match = text.match(rule.re);
-        if (!match) continue;
-        // 같은 종류가 여러 스킬에 걸리면 하나만 센다. 시너지는 중첩되지 않는다.
-        if (!found.has(rule.kind)) {
-          found.set(rule.kind, {
-            kind: rule.kind,
-            value: formatPercent(match[1]!),
-            source: `${skill.Name ?? "?"} · ${tripod.Name ?? "?"}`,
-          });
-        }
-        // 한 트라이포드는 한 종류만 준다. 좁은 규칙이 먼저 걸렸으면 거기서 끝낸다.
-        break;
-      }
+      entries.push({
+        text: stripTags(tripod.Tooltip) ?? "",
+        source: `${skill.Name ?? "?"} · ${tripod.Name ?? "?"}`,
+      });
     }
   }
-  return [...found.values()];
+  return collectSynergies(entries);
+}
+
+/**
+ * 아크패시브 노드 툴팁의 설명문.
+ *
+ * 코어 툴팁(`readTooltipParts`)과 형식이 다르다. 노드는 `MultiTextBox` 하나에
+ * 설명을 통째로 담는다. 이름·아이콘만 있고 설명이 없는 노드도 있다.
+ */
+function readNodeText(tooltip: string | undefined): string {
+  if (!tooltip) return "";
+  try {
+    const parsed = JSON.parse(tooltip) as Record<string, unknown>;
+    const texts: string[] = [];
+    for (const element of Object.values(parsed)) {
+      if (!element || typeof element !== "object") continue;
+      const { type, value } = element as { type?: unknown; value?: unknown };
+      if (type === "MultiTextBox" && typeof value === "string") texts.push(value);
+    }
+    return stripTags(texts.join(" ")) ?? "";
+  } catch {
+    // 툴팁 형식이 바뀌면 빈 문자열로 떨어진다. 클래스 표가 받아준다.
+    return "";
+  }
+}
+
+/**
+ * 아크패시브 노드에서 파티 시너지를 뽑는다.
+ *
+ * **서포터의 시너지는 트라이포드에 없다.** 도화가의 먹물 낙인이나 발키리의 빛의 흔적처럼
+ * 직업 각인 노드가 통째로 들고 있어서, 트라이포드만 읽으면 서포터는 늘 빈손으로 나온다.
+ * 딜러는 지금처럼 트라이포드가 답이라 이 값을 쓰지 않는다(`characters.ts`).
+ *
+ * 노드 툴팁은 스킬 툴팁보다 길고 자버프 문장이 섞여 있다. 규칙이 대상을 직접 물고 있어
+ * 걸러지지만, 통째로 거르는 관문은 여기에도 두지 않는다.
+ */
+export function normalizeArkPassiveSynergies(
+  raw: ArkPassive | null | undefined,
+): SkillSynergy[] {
+  return collectSynergies(
+    (raw?.Effects ?? []).map((node) => {
+      const parsed = parseArkPassiveNode(node.Description);
+      return {
+        text: readNodeText(node.ToolTip),
+        source: parsed ? `${parsed.category} · ${parsed.name}` : (stripTags(node.Description) ?? "?"),
+      };
+    }),
+  );
 }
