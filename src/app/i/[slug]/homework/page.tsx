@@ -89,7 +89,12 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
           hint="레이드마다 누가 남았는지 · 다녀온 사람은 흐리게"
         />
 
-        <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        {/*
+          칸 수를 화면 폭으로 정하지 않고 카드가 필요한 폭으로 정한다.
+          두 칸으로 갈리는 구간에서는 카드 하나가 화면의 절반을 차지해 글자 몇 줄만
+          담긴 상자가 휑하게 넓어졌다.
+        */}
+        <ul className="grid gap-2 grid-cols-[repeat(auto-fill,minmax(14rem,1fr))]">
         {homework.raids.map((raid) => (
           <li key={raid.raidName} className="rounded border border-border bg-surface p-3">
             <div className="flex flex-wrap items-center gap-x-2">
@@ -146,7 +151,7 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
       <section className="space-y-2">
         <SectionTitle title="캐릭터별 숙제" hint="캐릭터마다 어느 레이드가 남았는지" />
 
-        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(18rem,1fr))]">
         {homework.characters.map((character) => (
           <li
             key={character.id}
