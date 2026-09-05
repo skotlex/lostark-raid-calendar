@@ -7,6 +7,7 @@ import {
   toCharacterView,
 } from "./characters";
 import { prisma } from "./prisma";
+import { raidLabel } from "./raids";
 import { raidMinLevel } from "./raidRewards";
 import {
   DEFAULT_PARTY_SIZE,
@@ -396,11 +397,22 @@ export async function getBoard(
 async function requireSlot(instanceId: string, slotId: string) {
   const slot = await prisma.raidSlot.findFirst({
     where: { id: slotId, instanceId, archivedAt: null },
-    select: { id: true, raidName: true, partySize: true, keepRoster: true, dayOfWeek: true },
+    select: {
+      id: true,
+      raidName: true,
+      difficulty: true,
+      partySize: true,
+      keepRoster: true,
+      dayOfWeek: true,
+    },
   });
   if (!slot) throw new BoardError("슬롯을 찾을 수 없습니다");
   return {
     ...slot,
+    // 기록에 남길 이름. 난이도까지 붙인다 — 같은 레이드의 노말과 하드가 요일표에
+    // 나란히 서 있어, raidName만 남기면 이력에서 어느 쪽 얘기인지 갈리지 않는다.
+    // 요일표 쪽(slots.ts)은 처음부터 이 이름으로 남기고 있었다.
+    label: raidLabel(slot.raidName, slot.difficulty),
     partySize: (isPartySize(slot.partySize) ? slot.partySize : DEFAULT_PARTY_SIZE) as PartySize,
   };
 }
@@ -493,7 +505,7 @@ export async function assignByName(params: {
       slotId,
       actorLabel: actorLabel ?? null,
       action: "assign",
-      detail: { position: seat, character: character.name, raid: slot.raidName },
+      detail: { position: seat, character: character.name, raid: slot.label },
     },
   });
 
@@ -529,7 +541,7 @@ export async function unassign(params: {
       slotId,
       actorLabel: actorLabel ?? null,
       action: "unassign",
-      detail: { position, character: removed.character.name, raid: slot.raidName },
+      detail: { position, character: removed.character.name, raid: slot.label },
     },
   });
 }
@@ -621,8 +633,8 @@ export async function moveAssignment(params: {
       action: moved.swapped ? "swap" : "move",
       detail: {
         character: moved.name,
-        from: { raid: fromSlot.raidName, position: from.position },
-        to: { raid: toSlot.raidName, position: to.position },
+        from: { raid: fromSlot.label, position: from.position },
+        to: { raid: toSlot.label, position: to.position },
       },
     },
   });
@@ -668,7 +680,7 @@ export async function setPinned(params: {
       slotId,
       actorLabel: actorLabel ?? null,
       action: "pin",
-      detail: { position, pinned, raid: slot.raidName },
+      detail: { position, pinned, raid: slot.label },
     },
   });
 }
@@ -718,7 +730,7 @@ export async function listPinned(
 
   const entries: PinnedEntry[] = [];
   for (const slot of slots) {
-    const label = slot.difficulty ? `${slot.raidName} ${slot.difficulty}` : slot.raidName;
+    const label = raidLabel(slot.raidName, slot.difficulty);
     if (slot.keepRoster) {
       entries.push({
         slotId: slot.id,
