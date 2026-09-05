@@ -10,7 +10,7 @@ import {
   compareWeekDay,
   dayNameFull,
   formatWeekLabel,
-  getWeekStart,
+  getPlanningWeekStart,
   isCurrentWeek,
   parseDayParam,
   parseWeekParam,
@@ -59,7 +59,7 @@ export default async function BoardPage({
     countByDay.set(slot.dayOfWeek, (countByDay.get(slot.dayOfWeek) ?? 0) + 1);
   }
   // 레이드가 있는 요일만 탭으로 낸다. 일곱 개를 늘 세워두면 빈 요일을 짚어 들어갔다가
-  // 되돌아 나오게 된다. 화요일 시작 순서는 주차 경계(화 00시)와 같다.
+  // 되돌아 나오게 된다. 수요일 시작 순서는 주차 경계(수 06시)와 같다.
   const days = [...countByDay.keys()].sort(compareWeekDay);
 
   // 물어본 요일이 비어 있으면 레이드가 있는 첫 요일로 데려간다. 오늘이 빈 요일이라
@@ -142,7 +142,7 @@ export default async function BoardPage({
           </Link>
           {!editable && (
             <Link
-              href={href({ week: toWeekParam(getWeekStart()) })}
+              href={href({ week: toWeekParam(getPlanningWeekStart()) })}
               className="ml-1 rounded bg-accent/15 px-2 py-1 text-xs text-accent"
             >
               이번 주로

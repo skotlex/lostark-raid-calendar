@@ -25,7 +25,8 @@ export default async function SlotsPage({ params }: PageProps<"/i/[slug]/slots">
       <div>
         <h1 className="text-xl font-bold">요일표 편집</h1>
         <p className="mt-1 text-sm text-text-dim">
-          여기서 만든 슬롯은 매주 그대로 유지됩니다. 인원만 화요일 0시에 초기화됩니다.
+          여기서 만든 슬롯은 매주 그대로 유지됩니다. 인원은 화요일 0시에 비워지고,
+          화요일 레이드만 수요일 오전 6시까지 남습니다.
         </p>
       </div>
 

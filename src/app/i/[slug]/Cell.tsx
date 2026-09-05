@@ -222,7 +222,7 @@ export function Cell({
             {cell.pinned && (
               <span
                 className="char-chip char-chip--pinned"
-                title="이 자리는 화요일 리셋에 남습니다"
+                title="이 자리는 초기화 때 남습니다"
               >
                 고정
               </span>

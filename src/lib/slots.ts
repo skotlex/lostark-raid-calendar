@@ -3,6 +3,7 @@ import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
 
 import { logEvent } from "./history";
+import { weekStartForDay } from "./week";
 import { DEFAULT_PARTY_SIZE, type PartySize, isPartySize } from "./positions";
 import { prisma } from "./prisma";
 import { raidLabel, sizeFor } from "./raids";
@@ -220,8 +221,14 @@ export async function setKeepRoster(
   });
   if (result.count === 0) throw new SlotError("슬롯을 찾을 수 없습니다");
 
+  // 화요일 슬롯은 저장되는 주차가 다르다(week.ts).
+  const slot = await prisma.raidSlot.findUnique({
+    where: { id: slotId },
+    select: { dayOfWeek: true },
+  });
+
   await prisma.assignment.updateMany({
-    where: { slotId, weekStart },
+    where: { slotId, weekStart: weekStartForDay(weekStart, slot?.dayOfWeek ?? 0) },
     data: { pinned: keepRoster },
   });
 

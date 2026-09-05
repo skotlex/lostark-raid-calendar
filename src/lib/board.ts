@@ -18,7 +18,13 @@ import {
 } from "./positions";
 import { type SlotView, toSlotView } from "./slots";
 import { type PartySynergy, missingSynergy, partySynergies } from "./synergy";
-import { getWeekStart, previousWeek } from "./week";
+import {
+  TUESDAY,
+  getPlanningWeekStart,
+  previousWeek,
+  tuesdayWeekFor,
+  weekStartForDay,
+} from "./week";
 
 export class BoardError extends Error {
   constructor(message: string) {
@@ -104,14 +110,26 @@ const slotSelect = {
  * 크론이 아니라 조회 시점에 처리하므로 별도 스케줄러가 필요 없고, 여러 요청이
  * 동시에 들어와도 (slotId, weekStart, position) 유니크 제약이 중복을 막는다.
  */
-async function carryOver(instanceId: string, weekStart: Date): Promise<void> {
+async function carryOver(instanceId: string, planningWeek: Date): Promise<void> {
   // 지난 주차를 들여다볼 때는 승계하지 않는다. 과거는 읽기 전용이다.
-  if (weekStart.getTime() !== getWeekStart().getTime()) return;
+  if (planningWeek.getTime() !== getPlanningWeekStart().getTime()) return;
 
+  // 화요일 슬롯은 주기가 달라 따로 돈다(week.ts). carriedWeek에는 그 슬롯이 쓰는
+  // 주차가 들어가므로 두 무리가 서로의 값을 덮지 않는다.
+  await carryOverGroup(instanceId, planningWeek, { not: TUESDAY });
+  await carryOverGroup(instanceId, tuesdayWeekFor(planningWeek), TUESDAY);
+}
+
+async function carryOverGroup(
+  instanceId: string,
+  weekStart: Date,
+  dayOfWeek: number | { not: number },
+): Promise<void> {
   const pending = await prisma.raidSlot.findMany({
     where: {
       instanceId,
       archivedAt: null,
+      dayOfWeek,
       OR: [{ carriedWeek: null }, { carriedWeek: { not: weekStart } }],
     },
     select: { id: true, keepRoster: true },
@@ -158,14 +176,18 @@ export async function getBoard(
 ): Promise<BoardSlotView[]> {
   await carryOver(instanceId, weekStart);
 
+  // 화요일 슬롯은 주차가 다르다. 둘을 한 번에 읽고 슬롯마다 제 것만 고른다.
+  const tuesdayWeek = tuesdayWeekFor(weekStart);
+
   const slots = await prisma.raidSlot.findMany({
     where: { instanceId, archivedAt: null },
     select: {
       ...slotSelect,
       assignments: {
-        where: { weekStart },
+        where: { weekStart: { in: [weekStart, tuesdayWeek] } },
         select: {
           id: true,
+          weekStart: true,
           position: true,
           pinned: true,
           createdByLabel: true,
@@ -185,7 +207,9 @@ export async function getBoard(
   const characterRaidCount = new Map<string, number>();
   for (const slot of slots) {
     const raid = slot.raidName.trim();
+    const mine = slot.dayOfWeek === TUESDAY ? tuesdayWeek : weekStart;
     for (const a of slot.assignments) {
+      if (a.weekStart.getTime() !== mine.getTime()) continue;
       const key = `${a.character.id}::${raid}`;
       characterRaidCount.set(key, (characterRaidCount.get(key) ?? 0) + 1);
     }
@@ -198,7 +222,14 @@ export async function getBoard(
     // 캐릭터 행)이 그대로 딸려 와 클라이언트 컴포넌트로 실려 간다.
     const { assignments, ...slotRow } = slot;
     const view = toSlotView(slotRow);
-    const byPosition = new Map(assignments.map((a) => [a.position, a]));
+
+    // 화요일 슬롯이면 화요일 주차의 배정만 남는다.
+    const mine = slot.dayOfWeek === TUESDAY ? tuesdayWeek : weekStart;
+    const byPosition = new Map(
+      assignments
+        .filter((a) => a.weekStart.getTime() === mine.getTime())
+        .map((a) => [a.position, a]),
+    );
 
     function toCell(position: string): CellView {
       const assignment = byPosition.get(position);
@@ -281,7 +312,7 @@ export async function getBoard(
 async function requireSlot(instanceId: string, slotId: string) {
   const slot = await prisma.raidSlot.findFirst({
     where: { id: slotId, instanceId, archivedAt: null },
-    select: { id: true, raidName: true, partySize: true, keepRoster: true },
+    select: { id: true, raidName: true, partySize: true, keepRoster: true, dayOfWeek: true },
   });
   if (!slot) throw new BoardError("슬롯을 찾을 수 없습니다");
   return {
@@ -291,7 +322,7 @@ async function requireSlot(instanceId: string, slotId: string) {
 }
 
 function requireCurrentWeek(weekStart: Date) {
-  if (weekStart.getTime() !== getWeekStart().getTime()) {
+  if (weekStart.getTime() !== getPlanningWeekStart().getTime()) {
     throw new BoardError("지난 주 편성은 고칠 수 없습니다");
   }
 }
@@ -317,6 +348,9 @@ export async function assignByName(params: {
 
   requireCurrentWeek(weekStart);
   const slot = await requireSlot(instanceId, slotId);
+  // 화요일 슬롯은 저장되는 주차가 다르다(week.ts). 화면이 넘겨준 주차를 그대로 쓰면
+  // 화요일 칸에 넣은 사람이 다음 주 칸에 들어간다.
+  const week = weekStartForDay(weekStart, slot.dayOfWeek);
   // 4인 슬롯에 2파티 자리가 들어오면 화면에 나오지 않는 유령 배정이 된다.
   if (!isValidPosition(position, slot.partySize)) throw new BoardError("잘못된 자리입니다");
 
@@ -349,7 +383,7 @@ export async function assignByName(params: {
     );
     if (supSeat) {
       const taken = await prisma.assignment.findUnique({
-        where: { slotId_weekStart_position: { slotId, weekStart, position: supSeat } },
+        where: { slotId_weekStart_position: { slotId, weekStart: week, position: supSeat } },
         select: { characterId: true },
       });
       if (!taken || taken.characterId === character.id) seat = supSeat;
@@ -357,11 +391,11 @@ export async function assignByName(params: {
   }
 
   await prisma.assignment.upsert({
-    where: { slotId_weekStart_position: { slotId, weekStart, position: seat } },
+    where: { slotId_weekStart_position: { slotId, weekStart: week, position: seat } },
     update: { characterId: character.id, createdByLabel: actorLabel ?? null },
     create: {
       slotId,
-      weekStart,
+      weekStart: week,
       position: seat,
       characterId: character.id,
       createdByLabel: actorLabel ?? null,
@@ -371,7 +405,7 @@ export async function assignByName(params: {
   await prisma.changeLog.create({
     data: {
       instanceId,
-      weekStart,
+      weekStart: week,
       slotId,
       actorLabel: actorLabel ?? null,
       action: "assign",
@@ -392,21 +426,22 @@ export async function unassign(params: {
   const { instanceId, slotId, weekStart, position, actorLabel } = params;
   requireCurrentWeek(weekStart);
   const slot = await requireSlot(instanceId, slotId);
+  const week = weekStartForDay(weekStart, slot.dayOfWeek);
 
   const removed = await prisma.assignment.findUnique({
-    where: { slotId_weekStart_position: { slotId, weekStart, position } },
+    where: { slotId_weekStart_position: { slotId, weekStart: week, position } },
     select: { character: { select: { name: true } } },
   });
   if (!removed) return;
 
   await prisma.assignment.delete({
-    where: { slotId_weekStart_position: { slotId, weekStart, position } },
+    where: { slotId_weekStart_position: { slotId, weekStart: week, position } },
   });
 
   await prisma.changeLog.create({
     data: {
       instanceId,
-      weekStart,
+      weekStart: week,
       slotId,
       actorLabel: actorLabel ?? null,
       action: "unassign",
@@ -445,12 +480,16 @@ export async function moveAssignment(params: {
     throw new BoardError("잘못된 자리입니다");
   }
 
+  // 화요일 슬롯은 주차가 다르므로, 화요일과 다른 요일 사이를 오갈 때는 주차도 함께 바뀐다.
+  const fromWeek = weekStartForDay(weekStart, fromSlot.dayOfWeek);
+  const toWeek = weekStartForDay(weekStart, toSlot.dayOfWeek);
+
   const moved = await prisma.$transaction(async (tx) => {
     const source = await tx.assignment.findUnique({
       where: {
         slotId_weekStart_position: {
           slotId: from.slotId,
-          weekStart,
+          weekStart: fromWeek,
           position: from.position,
         },
       },
@@ -462,7 +501,7 @@ export async function moveAssignment(params: {
       where: {
         slotId_weekStart_position: {
           slotId: to.slotId,
-          weekStart,
+          weekStart: toWeek,
           position: to.position,
         },
       },
@@ -477,13 +516,13 @@ export async function moveAssignment(params: {
       });
       await tx.assignment.update({
         where: { id: target.id },
-        data: { slotId: from.slotId, position: from.position },
+        data: { slotId: from.slotId, weekStart: fromWeek, position: from.position },
       });
     }
 
     await tx.assignment.update({
       where: { id: source.id },
-      data: { slotId: to.slotId, position: to.position },
+      data: { slotId: to.slotId, weekStart: toWeek, position: to.position },
     });
 
     return { name: source.character.name, swapped: Boolean(target) };
@@ -492,7 +531,7 @@ export async function moveAssignment(params: {
   await prisma.changeLog.create({
     data: {
       instanceId,
-      weekStart,
+      weekStart: toWeek,
       slotId: to.slotId,
       actorLabel: actorLabel ?? null,
       action: moved.swapped ? "swap" : "move",
@@ -517,9 +556,10 @@ export async function setPinned(params: {
   const { instanceId, slotId, weekStart, position, pinned, actorLabel } = params;
   requireCurrentWeek(weekStart);
   const slot = await requireSlot(instanceId, slotId);
+  const week = weekStartForDay(weekStart, slot.dayOfWeek);
 
   await prisma.assignment.update({
-    where: { slotId_weekStart_position: { slotId, weekStart, position } },
+    where: { slotId_weekStart_position: { slotId, weekStart: week, position } },
     data: { pinned },
   });
 
@@ -540,7 +580,7 @@ export async function setPinned(params: {
   await prisma.changeLog.create({
     data: {
       instanceId,
-      weekStart,
+      weekStart: week,
       slotId,
       actorLabel: actorLabel ?? null,
       action: "pin",
@@ -564,11 +604,18 @@ export async function listPinned(
   instanceId: string,
   weekStart: Date,
 ): Promise<PinnedEntry[]> {
+  // 화요일 슬롯은 주차가 다르다(week.ts). 둘 다 읽고 슬롯마다 제 것만 센다.
+  const tuesdayWeek = tuesdayWeekFor(weekStart);
+  const weeks = [weekStart, tuesdayWeek];
+
   const slots = await prisma.raidSlot.findMany({
     where: {
       instanceId,
       archivedAt: null,
-      OR: [{ keepRoster: true }, { assignments: { some: { weekStart, pinned: true } } }],
+      OR: [
+        { keepRoster: true },
+        { assignments: { some: { weekStart: { in: weeks }, pinned: true } } },
+      ],
     },
     select: {
       id: true,
@@ -578,8 +625,8 @@ export async function listPinned(
       difficulty: true,
       keepRoster: true,
       assignments: {
-        where: { weekStart, pinned: true },
-        select: { position: true, character: { select: { name: true } } },
+        where: { weekStart: { in: weeks }, pinned: true },
+        select: { weekStart: true, position: true, character: { select: { name: true } } },
       },
     },
     orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
@@ -599,7 +646,9 @@ export async function listPinned(
         characterName: null,
       });
     }
+    const mine = slot.dayOfWeek === TUESDAY ? tuesdayWeek : weekStart;
     for (const a of slot.assignments) {
+      if (a.weekStart.getTime() !== mine.getTime()) continue;
       entries.push({
         slotId: slot.id,
         slotLabel: label,

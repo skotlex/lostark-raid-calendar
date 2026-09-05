@@ -3,7 +3,7 @@ import Link from "next/link";
 import { listPinned } from "@/lib/board";
 import { requireInstance } from "@/lib/instance";
 import { positionLabel } from "@/lib/positions";
-import { dayNameFull, getWeekStart, toWeekParam } from "@/lib/week";
+import { dayNameFull, getPlanningWeekStart, toWeekParam } from "@/lib/week";
 
 import { KeepRosterOffButton, UnpinButton } from "./PinnedControls";
 
@@ -16,13 +16,13 @@ export const dynamic = "force-dynamic";
  * 어디에 몇 개가 걸려 있는지 알 방법이 없다. **핀이 방치되는 것을 막는 유일한 수단이
  * 이 화면이다.**
  *
- * 이번 주 기준이다. 여기 있는 자리가 화요일 00시에 그대로 다음 주로 넘어간다.
+ * 지금 채우는 주차 기준이다. 여기 있는 자리가 다음 주로 그대로 넘어간다.
  */
 export default async function PinnedPage({ params }: PageProps<"/i/[slug]/pinned">) {
   const { slug } = await params;
   const instance = await requireInstance(slug);
 
-  const weekStart = getWeekStart();
+  const weekStart = getPlanningWeekStart();
   const week = toWeekParam(weekStart);
   const entries = await listPinned(instance.id, weekStart);
 
@@ -66,7 +66,7 @@ export default async function PinnedPage({ params }: PageProps<"/i/[slug]/pinned
       <div>
         <h1 className="text-xl font-bold">고정 현황</h1>
         <p className="mt-1 text-sm text-text-dim">
-          화요일 0시에 인원이 비워질 때 <strong>남는 자리</strong>입니다. 걸어둔 것을
+          인원이 비워질 때 <strong>남는 자리</strong>입니다. 걸어둔 것을
           잊으면 다음 주 편성이 그만큼 막히므로 여기서 한 번에 확인하고 풉니다.
         </p>
       </div>
