@@ -8,12 +8,12 @@ export const dynamic = "force-dynamic";
  *
  * ko-KR 기본값은 "오후 07:42"라 24시 표기로 못 박는다. 요일표의 시간이 20:00 형식이라
  * 둘을 나란히 볼 때 머릿속에서 변환하지 않아도 된다.
+ *
+ * 날짜는 넣지 않는다. 줄을 날짜별로 묶어 제목에 이미 적혀 있다.
  */
 const TIME = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "Asia/Seoul",
   hourCycle: "h23",
-  month: "numeric",
-  day: "numeric",
   hour: "2-digit",
   minute: "2-digit",
 });
@@ -62,7 +62,7 @@ export default async function HistoryPage({ params }: PageProps<"/i/[slug]/histo
                     key={entry.id}
                     className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 px-3 py-1.5 text-sm"
                   >
-                    <span className="w-24 shrink-0 text-xs text-text-faint tabular">
+                    <span className="w-10 shrink-0 text-xs text-text-faint tabular">
                       {TIME.format(new Date(entry.createdAt))}
                     </span>
                     <span className="shrink-0 text-xs text-text-dim">
