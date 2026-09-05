@@ -237,19 +237,43 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
             </div>
 
             <ul className="divide-y divide-border">
-              {character.entries.map((entry) => (
+              {character.entries.map((entry, index) => (
                 <li
                   key={entry.slotId}
-                  className={`flex flex-wrap items-baseline gap-x-2 px-3 py-1.5 text-sm ${
+                  className={`flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-1.5 text-sm ${
                     entry.done ? "text-text-faint" : ""
                   }`}
                 >
+                  {/*
+                    이번 주 몇 번째로 가는 레이드인가. 목록이 이미 요일·시각 순이라
+                    (homework.ts) 번호가 곧 순서다. 카드가 여럿 늘어선 화면에서
+                    "이 캐릭터는 셋 중 둘째까지 갔다"를 줄을 세지 않고 짚게 한다.
+                  */}
+                  <span
+                    className={`inline-flex h-4.5 min-w-4.5 shrink-0 items-center justify-center rounded px-1 text-[11px] font-semibold tabular ${
+                      entry.done ? "bg-surface-2/60 text-text-faint" : "bg-accent/15 text-accent"
+                    }`}
+                  >
+                    {index + 1}
+                  </span>
+
                   <span className={entry.done ? "line-through" : "font-medium"}>
                     {entry.label}
                   </span>
-                  <span className="text-xs text-text-faint tabular">
+
+                  {/*
+                    요일·시각도 뱃지로 두른다. 흐린 글자로만 두었더니 레이드 이름의
+                    꼬리처럼 붙어 "벨가르딘 나이트메어 수"까지가 한 이름으로 읽혔다.
+                    난이도가 이름 뒤에 붙는 표기라 더 그렇다.
+                  */}
+                  <span
+                    className={`rounded px-1.5 py-0.5 text-[11px] tabular ${
+                      entry.done ? "bg-surface-2/60 text-text-faint" : "bg-surface-2 text-text-dim"
+                    }`}
+                  >
                     {dayName(entry.dayOfWeek)} {entry.startTime}
                   </span>
+
                   <span className="ml-auto text-xs tabular">
                     {entry.clearGold === null ? "-" : `${gold.format(entry.clearGold)} G`}
                   </span>
