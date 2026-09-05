@@ -67,10 +67,10 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
         <div className="grid gap-3 sm:grid-cols-2">
           <Progress
             label="남은 골드"
-            // 옆의 "남은 숙제"는 개수라 단위가 없다. 단위를 안 붙이면 두 칸의 큰 숫자가
-            // 같은 종류로 읽힌다.
+            // 이 칸의 골드 숫자에는 모두 단위를 붙인다. 옆의 "남은 숙제"는 개수라
+            // 단위가 없어서, 하나라도 빠지면 두 칸의 숫자가 같은 종류로 읽힌다.
             value={`${gold.format(homework.remainingGold)} G`}
-            total={`/ ${gold.format(homework.totalGold)}`}
+            total={`/ ${gold.format(homework.totalGold)} G`}
             /*
               더보기 값을 뺀 합계. 캐릭터 카드의 "더보기 함"과 같은 계산이다.
 
