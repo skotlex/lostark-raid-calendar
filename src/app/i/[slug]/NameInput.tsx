@@ -108,7 +108,7 @@ export function NameInput({
   }
 
   return (
-    <div className="name-input">
+    <div className="combo">
       <input
         ref={inputRef}
         name={name}
@@ -134,7 +134,7 @@ export function NameInput({
       />
 
       {showing && (
-        <ul id={listId} role="listbox" className="name-suggest">
+        <ul id={listId} role="listbox" className="combo-list">
           {items.map((item, i) => (
             <li key={item}>
               <button
@@ -144,7 +144,7 @@ export function NameInput({
                 tabIndex={-1}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => choose(item)}
-                className={`name-suggest-item ${i === active ? "is-active" : ""}`}
+                className={`combo-item ${i === active ? "is-active" : ""}`}
               >
                 {item}
               </button>

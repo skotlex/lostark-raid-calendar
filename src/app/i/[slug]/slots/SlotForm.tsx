@@ -2,11 +2,12 @@
 
 import { useActionState, useState } from "react";
 
-import { RAID_PRESETS } from "@/lib/raids";
+import { RAID_PRESETS, difficultiesFor } from "@/lib/raids";
 import type { SlotView } from "@/lib/slots";
 import { WEEK_DAYS, dayNameFull } from "@/lib/week";
 
 import { type SlotState, createSlotAction, updateSlotAction } from "./actions";
+import { PickInput } from "./PickInput";
 
 const IDLE: SlotState = { status: "idle", message: "" };
 
@@ -17,7 +18,9 @@ const IDLE: SlotState = { status: "idle", message: "" };
  * 높이를 직접 못 박아 맞춘다.
  */
 const CONTROL =
-  "h-9 rounded border border-border bg-bg px-2 text-sm focus:border-accent focus:outline-none";
+  "h-9 w-full rounded border border-border bg-bg px-2 text-sm focus:border-accent focus:outline-none";
+
+const RAID_NAMES = RAID_PRESETS.map((preset) => preset.name);
 
 /** 30분 간격의 시간 후보. 목록에서 고르지 않고 직접 쳐 넣어도 된다. */
 const TIME_PRESETS = Array.from({ length: 48 }, (_, i) => {
@@ -84,7 +87,7 @@ export function SlotForm({
           name="dayOfWeek"
           value={dayOfWeek}
           onChange={(e) => setDayOfWeek(Number(e.target.value))}
-          className={CONTROL}
+          className={`w-24 ${CONTROL}`}
         >
           {WEEK_DAYS.map((d) => (
             <option key={d} value={d}>
@@ -95,41 +98,45 @@ export function SlotForm({
       </Field>
 
       <Field label="시간">
-        <input
+        <PickInput
           name="startTime"
           required
-          list="time-presets"
           inputMode="numeric"
           pattern="([01][0-9]|2[0-3]):[0-5][0-9]"
           title="20:00 형식으로 입력해 주세요"
           maxLength={5}
           value={startTime}
-          onChange={(e) => setStartTime(formatTime(e.target.value))}
+          onChange={setStartTime}
+          format={formatTime}
+          options={TIME_PRESETS}
           placeholder="20:00"
-          className={`w-24 tabular ${CONTROL}`}
+          wrapClassName="w-24"
+          className={`tabular ${CONTROL}`}
         />
       </Field>
 
       <Field label="레이드">
-        <input
+        <PickInput
           name="raidName"
           required
-          list="raid-presets"
           value={raidName}
-          onChange={(e) => setRaidName(e.target.value)}
+          onChange={setRaidName}
+          options={RAID_NAMES}
           placeholder="벨가르딘"
-          className={`w-32 ${CONTROL}`}
+          wrapClassName="w-32"
+          className={CONTROL}
         />
       </Field>
 
       <Field label="난이도">
-        <input
+        <PickInput
           name="difficulty"
-          list="difficulty-presets"
           value={difficulty}
-          onChange={(e) => setDifficulty(e.target.value)}
+          onChange={setDifficulty}
+          options={difficultiesFor(raidName)}
           placeholder="하드"
-          className={`w-24 ${CONTROL}`}
+          wrapClassName="w-24"
+          className={CONTROL}
         />
       </Field>
 
@@ -154,21 +161,6 @@ export function SlotForm({
       {/* 성공은 목록에 바로 나타나므로 알리지 않는다. 실패만 말한다. */}
       {state.status === "error" && <span className="text-xs text-danger">{state.message}</span>}
 
-      <datalist id="time-presets">
-        {TIME_PRESETS.map((t) => (
-          <option key={t} value={t} />
-        ))}
-      </datalist>
-      <datalist id="raid-presets">
-        {RAID_PRESETS.map((preset) => (
-          <option key={preset.name} value={preset.name} />
-        ))}
-      </datalist>
-      <datalist id="difficulty-presets">
-        {[...new Set(RAID_PRESETS.flatMap((p) => p.difficulties))].map((d) => (
-          <option key={d} value={d} />
-        ))}
-      </datalist>
     </form>
   );
 }

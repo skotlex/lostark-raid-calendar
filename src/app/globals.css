@@ -575,16 +575,16 @@ button:disabled,
 }
 
 /*
- * 닉네임 자동완성.
+ * 후보 목록.
  *
- * `<datalist>`는 브라우저가 펼침 화살표를 그려 콤보박스처럼 보이게 하고, 목록 모양을
- * 손댈 수 없다. 이 칸은 고르는 자리가 아니라 치는 자리라 직접 그린다.
+ * `<datalist>`의 목록은 브라우저가 페이지 바깥에 그린다. 확대 배율이 100%가 아니면
+ * 엉뚱한 자리에 뜨고 모양도 손댈 수 없다. 칸 아래에 직접 그린다.
  */
-.name-input {
+.combo {
   position: relative;
 }
 
-.name-suggest {
+.combo-list {
   position: absolute;
   z-index: 20;
   top: calc(100% + 0.25rem);
@@ -598,7 +598,7 @@ button:disabled,
   box-shadow: 0 6px 16px rgb(0 0 0 / 22%);
 }
 
-.name-suggest-item {
+.combo-item {
   display: block;
   width: 100%;
   padding: 0.25rem 0.5rem;
@@ -608,8 +608,8 @@ button:disabled,
   color: var(--text);
 }
 
-.name-suggest-item:hover,
-.name-suggest-item.is-active {
+.combo-item:hover,
+.combo-item.is-active {
   background: var(--accent);
   color: var(--accent-contrast);
 }
