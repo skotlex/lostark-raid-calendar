@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { type DragEvent, startTransition, useActionState, useState } from "react";
 
 import type { BoardSlotView, CellView } from "@/lib/board";
 import { positionLabel } from "@/lib/positions";
@@ -8,7 +8,16 @@ import { raidLabel } from "@/lib/raids";
 import { getSynergies } from "@/lib/synergy";
 
 import { NameInput } from "./NameInput";
-import { type CellState, assignAction, keepRosterAction, unassignAction } from "./actions";
+import {
+  type CellState,
+  assignAction,
+  keepRosterAction,
+  moveAction,
+  pinAction,
+  unassignAction,
+} from "./actions";
+import { DRAG_TYPE, moveForm, readDragSource, writeDragSource } from "./dragCell";
+import { CloseIcon, PinIcon } from "./icons";
 
 const IDLE: CellState = { status: "idle", message: "" };
 
@@ -175,7 +184,8 @@ function Row({
  * 표에서도 칸에 이름을 쳐서 넣는다. 이게 이 앱의 주 입력 경로라 보기를 바꿨다고
  * 카드로 돌아가 넣게 하지 않는다(CLAUDE.md 2-2).
  *
- * 자리 고정과 드래그 이동은 카드 쪽에만 둔다. 표는 짜는 자리가 아니라 훑는 자리다.
+ * 자리 고정과 드래그 이동도 카드와 똑같이 된다. 보기를 바꿨다고 할 수 있는 일이
+ * 줄면, 짜는 동안에는 결국 카드로 돌아가게 된다.
  */
 function NameCell({
   slug,
@@ -192,9 +202,46 @@ function NameCell({
 }) {
   const [assignState, assign, assigning] = useActionState(assignAction, IDLE);
   const [removeState, remove, removing] = useActionState(unassignAction, IDLE);
+  const [pinState, pin, pinning] = useActionState(pinAction, IDLE);
+  const [moveState, move, moving] = useActionState(moveAction, IDLE);
+  const [dropping, setDropping] = useState(false);
 
-  const error = [assignState, removeState].find((s) => s.status === "error");
+  const busy = assigning || removing || pinning || moving;
+  const error = [assignState, removeState, pinState, moveState].find(
+    (s) => s.status === "error",
+  );
   const character = cell.character;
+
+  // 빈 칸도 드롭을 받는다. 받는 칸이 차 있으면 서버에서 맞바꾼다.
+  function onDragOver(e: DragEvent<HTMLElement>) {
+    if (!editable || !e.dataTransfer.types.includes(DRAG_TYPE)) return;
+    // preventDefault를 해야 이 칸이 드롭을 받는다.
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDropping(true);
+  }
+
+  function onDrop(e: DragEvent<HTMLElement>) {
+    setDropping(false);
+    if (!editable) return;
+
+    const from = readDragSource(e);
+    if (!from) return;
+    e.preventDefault();
+    if (from.slotId === slotId && from.position === cell.position) return;
+
+    // drop 핸들러에서 부르는 것이라 전환을 직접 연다(Cell.tsx와 같은 이유).
+    startTransition(() =>
+      move(moveForm({ slug, week, from, to: { slotId, position: cell.position } })),
+    );
+  }
+
+  const dropProps = {
+    onDragOver,
+    onDrop,
+    onDragLeave: () => setDropping(false),
+    "data-dropping": dropping ? "" : undefined,
+  };
 
   const hidden = (
     <>
@@ -207,7 +254,7 @@ function NameCell({
 
   if (!character) {
     return (
-      <td className="board-cell board-cell--name">
+      <td {...dropProps} className="board-cell board-cell--name">
         {editable ? (
           <form action={assign}>
             {hidden}
@@ -226,11 +273,35 @@ function NameCell({
   }
 
   return (
-    <td className="board-cell board-cell--name">
+    <td
+      {...dropProps}
+      draggable={editable}
+      onDragStart={(e) => writeDragSource(e, { slotId, position: cell.position })}
+      className="board-cell board-cell--name"
+    >
       <div className="flex items-center justify-center gap-1">
         <span className="truncate font-semibold" title={character.name}>
           {character.name}
         </span>
+
+        {editable && (
+          <form action={pin}>
+            {hidden}
+            <input type="hidden" name="pinned" value={cell.pinned ? "false" : "true"} />
+            <button
+              type="submit"
+              disabled={busy}
+              title={cell.pinned ? "고정 해제" : "이 자리 고정 (리셋에서 제외)"}
+              aria-label={cell.pinned ? "고정 해제" : "자리 고정"}
+              className={`transition-colors ${
+                cell.pinned ? "text-accent" : "text-text-faint hover:text-text"
+              }`}
+            >
+              <PinIcon pinned={cell.pinned} />
+            </button>
+          </form>
+        )}
+
         {editable && (
           <form
             action={remove}
@@ -248,12 +319,12 @@ function NameCell({
             {hidden}
             <button
               type="submit"
-              disabled={removing}
+              disabled={busy}
               title="자리 비우기"
               aria-label="자리 비우기"
               className="text-text-faint transition-colors hover:text-danger disabled:opacity-50"
             >
-              ✕
+              <CloseIcon />
             </button>
           </form>
         )}

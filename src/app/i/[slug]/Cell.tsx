@@ -5,6 +5,8 @@ import { type DragEvent, startTransition, useActionState, useState } from "react
 import type { CellView } from "@/lib/board";
 import { positionKind, positionLabel } from "@/lib/positions";
 
+import { DRAG_TYPE, moveForm, readDragSource, writeDragSource } from "./dragCell";
+import { CloseIcon, PinIcon } from "./icons";
 import { NameInput } from "./NameInput";
 import { PortraitCard } from "./Portrait";
 import {
@@ -16,14 +18,6 @@ import {
 } from "./actions";
 
 const IDLE: CellState = { status: "idle", message: "" };
-
-/**
- * 끌고 있는 것이 편성 칸이라는 표시.
- *
- * 전용 타입을 쓰면 dragover에서 "이건 받을 수 있는 것"인지 미리 가려낼 수 있다.
- * 브라우저 밖에서 끌어온 파일이나 글자에는 반응하지 않는다.
- */
-const DRAG_TYPE = "application/x-loa-cell";
 
 function format(value: number | null): string {
   return value === null ? "-" : value.toFixed(2);
@@ -117,8 +111,7 @@ export function Cell({
   // 받는 칸이 차 있으면 서버에서 맞바꾼다.
 
   function onDragStart(e: DragEvent<HTMLElement>) {
-    e.dataTransfer.setData(DRAG_TYPE, JSON.stringify({ slotId, position: cell.position }));
-    e.dataTransfer.effectAllowed = "move";
+    writeDragSource(e, { slotId, position: cell.position });
     setDragging(true);
   }
 
@@ -133,28 +126,17 @@ export function Cell({
   function onDrop(e: DragEvent<HTMLElement>) {
     setDropping(false);
     if (!editable) return;
-    const raw = e.dataTransfer.getData(DRAG_TYPE);
-    if (!raw) return;
-    e.preventDefault();
 
-    let from: { slotId: string; position: string };
-    try {
-      from = JSON.parse(raw);
-    } catch {
-      return;
-    }
+    const from = readDragSource(e);
+    if (!from) return;
+    e.preventDefault();
     if (from.slotId === slotId && from.position === cell.position) return;
 
-    const formData = new FormData();
-    formData.set("slug", slug);
-    formData.set("week", week);
-    formData.set("fromSlotId", from.slotId);
-    formData.set("fromPosition", from.position);
-    formData.set("toSlotId", slotId);
-    formData.set("toPosition", cell.position);
     // form의 action이 아니라 drop 핸들러에서 부르는 것이라 전환을 직접 열어야 한다.
     // 그러지 않으면 moving(isPending)이 갱신되지 않아 이동 중에도 버튼이 열려 있다.
-    startTransition(() => move(formData));
+    startTransition(() =>
+      move(moveForm({ slug, week, from, to: { slotId, position: cell.position } })),
+    );
   }
 
   const dropProps = {
@@ -321,50 +303,6 @@ export function Cell({
         </ul>
       )}
     </div>
-  );
-}
-
-/**
- * 아이콘 두 개가 나란히 서므로 같은 상자에 그린다.
- *
- * 압정만 그림으로 바꾸고 ✕는 글자로 두었더니 세로로 어긋났다. 글자는 글꼴의
- * 베이스라인을 따라가고 그림은 상자 가운데에 놓여서, flex로 모아도 1~2px이 남는다.
- */
-const ICON_PROPS = {
-  viewBox: "0 0 24 24",
-  className: "size-3.5",
-  fill: "none",
-  stroke: "currentColor",
-  strokeLinecap: "round",
-  strokeLinejoin: "round",
-  "aria-hidden": true,
-} as const;
-
-function CloseIcon() {
-  return (
-    <svg {...ICON_PROPS} strokeWidth={2}>
-      <path d="M6.5 6.5 17.5 17.5" />
-      <path d="M17.5 6.5 6.5 17.5" />
-    </svg>
-  );
-}
-
-/**
- * 자리 고정 압정.
- *
- * 이모지(📌)는 글꼴에 딸린 그림이라 OS마다 모양도 색도 다르고, 옆의 ✕과 크기·굵기가
- * 맞지 않는다. 직접 그리면 currentColor를 따라가므로 고정된 자리에서 금색으로 물든다.
- *
- * 11px 근처에서 읽혀야 해서 머리·몸통·바늘 세 획으로 줄였다. 꽂힌 상태는 몸통을 채워
- * 색만으로 구분하지 않게 한다. 색약이거나 화면이 밝을 때 색 하나로는 잘 안 보인다.
- */
-function PinIcon({ pinned }: { pinned: boolean }) {
-  return (
-    <svg {...ICON_PROPS} strokeWidth={1.7}>
-      <path d="M9 4h6" />
-      <path d="M10 4v5L7.3 13h9.4L14 9V4z" fill={pinned ? "currentColor" : "none"} />
-      <path d="M12 13v7" />
-    </svg>
   );
 }
 

@@ -1046,3 +1046,15 @@ button:disabled,
   white-space: normal;
   color: var(--danger);
 }
+
+/* 드롭을 받는 칸. 어디에 놓이는지 손이 알아채게 한다(카드의 표식과 같은 역할). */
+.board-cell--name[data-dropping] {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+/* 끌 수 있는 칸이라는 표시. 이름 위에서만 커서가 바뀐다. */
+.board-cell--name[draggable="true"] {
+  cursor: grab;
+}
