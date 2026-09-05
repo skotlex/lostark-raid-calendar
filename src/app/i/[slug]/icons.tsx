@@ -45,3 +45,22 @@ export function PinIcon({ pinned }: { pinned: boolean }) {
     </svg>
   );
 }
+
+/**
+ * 끄는 손잡이.
+ *
+ * 점 여섯 개는 "여기를 잡으면 끌린다"는 오래된 약속이라 설명이 필요 없다.
+ * 화살표를 쓰면 방향키나 이동 버튼처럼 읽혀 누르려고 하게 된다.
+ */
+export function GripIcon() {
+  return (
+    <svg {...ICON_PROPS} strokeWidth={0} fill="currentColor">
+      <circle cx="9" cy="6" r="1.5" />
+      <circle cx="15" cy="6" r="1.5" />
+      <circle cx="9" cy="12" r="1.5" />
+      <circle cx="15" cy="12" r="1.5" />
+      <circle cx="9" cy="18" r="1.5" />
+      <circle cx="15" cy="18" r="1.5" />
+    </svg>
+  );
+}

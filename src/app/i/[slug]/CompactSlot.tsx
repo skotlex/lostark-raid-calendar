@@ -4,20 +4,19 @@ import { type DragEvent, startTransition, useActionState, useState } from "react
 
 import type { BoardSlotView, CellView } from "@/lib/board";
 import { positionLabel } from "@/lib/positions";
-import { raidLabel } from "@/lib/raids";
 import { getSynergies } from "@/lib/synergy";
 
 import { NameInput } from "./NameInput";
+import { SlotHeader } from "./SlotHeader";
 import {
   type CellState,
   assignAction,
-  keepRosterAction,
   moveAction,
   pinAction,
   unassignAction,
 } from "./actions";
 import { DRAG_TYPE, moveForm, readDragSource, writeDragSource } from "./dragCell";
-import { CloseIcon, PinIcon } from "./icons";
+import { CloseIcon, GripIcon, PinIcon } from "./icons";
 
 const IDLE: CellState = { status: "idle", message: "" };
 
@@ -44,44 +43,11 @@ export function CompactSlot({
   slot: BoardSlotView;
   editable: boolean;
 }) {
-  const [keepState, toggleKeep, togglingKeep] = useActionState(keepRosterAction, IDLE);
   const cells = slot.parties.flatMap((party) => party.cells);
 
   return (
     <section className="rounded border border-border bg-surface">
-      <header className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-3 py-2">
-        <h3 className="font-semibold">
-          {raidLabel(slot.raidName, slot.difficulty)}
-          <span className="ml-2 text-text-dim tabular">{slot.startTime}</span>
-        </h3>
-        <span className="text-xs text-text-faint tabular">
-          {slot.filled}/{slot.partySize}
-        </span>
-
-        {editable && (
-          <form action={toggleKeep} className="ml-auto">
-            <input type="hidden" name="slug" value={slug} />
-            <input type="hidden" name="slotId" value={slot.id} />
-            <input type="hidden" name="keepRoster" value={slot.keepRoster ? "false" : "true"} />
-            <button
-              type="submit"
-              disabled={togglingKeep}
-              title={
-                slot.keepRoster
-                  ? "다음 주에 인원이 비워집니다"
-                  : "이 공대 전원을 매주 그대로 유지합니다"
-              }
-              className={`rounded border px-2 py-0.5 text-xs transition-colors ${
-                slot.keepRoster
-                  ? "border-accent/50 bg-accent/15 text-accent"
-                  : "border-border text-text-faint hover:text-text"
-              }`}
-            >
-              {slot.keepRoster ? "전원 고정 켜짐" : "전원 고정"}
-            </button>
-          </form>
-        )}
-      </header>
+      <SlotHeader slug={slug} slot={slot} editable={editable} />
 
       {/* 좁은 화면에서는 표가 가로로 스크롤된다. 칸을 더 줄여 뭉개는 것보다 낫다. */}
       <div className="overflow-x-auto">
@@ -90,13 +56,14 @@ export function CompactSlot({
             <tr>
               <th className="board-head">구분</th>
               {cells.map((cell) => (
-                <th
+                <HeadCell
                   key={cell.position}
-                  className="board-head"
-                  data-sup={cell.position.startsWith("SUP") ? "" : undefined}
-                >
-                  {positionLabel(cell.position)}
-                </th>
+                  slug={slug}
+                  slotId={slot.id}
+                  week={week}
+                  cell={cell}
+                  editable={editable}
+                />
               ))}
             </tr>
           </thead>
@@ -134,9 +101,6 @@ export function CompactSlot({
         </table>
       </div>
 
-      {keepState.status === "error" && (
-        <p className="px-3 pb-2 text-xs text-danger">{keepState.message}</p>
-      )}
     </section>
   );
 }
@@ -179,15 +143,15 @@ function Row({
 }
 
 /**
- * 닉네임 칸.
+ * 머리글 칸 — 자리 이름과 그 자리에 대한 조작.
  *
- * 표에서도 칸에 이름을 쳐서 넣는다. 이게 이 앱의 주 입력 경로라 보기를 바꿨다고
- * 카드로 돌아가 넣게 하지 않는다(CLAUDE.md 2-2).
+ * 옮기기·고정·비우기를 여기 모은다. 닉네임 칸에 두면 이름 옆이 버튼으로 붐벼서
+ * 정작 먼저 읽어야 할 이름이 뒤로 밀린다. 자리에 대한 일이니 자리 이름 옆이 맞다.
  *
- * 자리 고정과 드래그 이동도 카드와 똑같이 된다. 보기를 바꿨다고 할 수 있는 일이
- * 줄면, 짜는 동안에는 결국 카드로 돌아가게 된다.
+ * **끄는 손잡이도 여기다.** 이름을 끌게 하면 이름을 고르려다 끌리고, 빈 자리는
+ * 끌 손잡이가 아예 없다.
  */
-function NameCell({
+function HeadCell({
   slug,
   slotId,
   week,
@@ -200,17 +164,15 @@ function NameCell({
   cell: CellView;
   editable: boolean;
 }) {
-  const [assignState, assign, assigning] = useActionState(assignAction, IDLE);
-  const [removeState, remove, removing] = useActionState(unassignAction, IDLE);
   const [pinState, pin, pinning] = useActionState(pinAction, IDLE);
+  const [removeState, remove, removing] = useActionState(unassignAction, IDLE);
   const [moveState, move, moving] = useActionState(moveAction, IDLE);
   const [dropping, setDropping] = useState(false);
 
-  const busy = assigning || removing || pinning || moving;
-  const error = [assignState, removeState, pinState, moveState].find(
-    (s) => s.status === "error",
-  );
+  const busy = pinning || removing || moving;
+  const error = [pinState, removeState, moveState].find((s) => s.status === "error");
   const character = cell.character;
+  const filled = Boolean(character);
 
   // 빈 칸도 드롭을 받는다. 받는 칸이 차 있으면 서버에서 맞바꾼다.
   function onDragOver(e: DragEvent<HTMLElement>) {
@@ -236,13 +198,6 @@ function NameCell({
     );
   }
 
-  const dropProps = {
-    onDragOver,
-    onDrop,
-    onDragLeave: () => setDropping(false),
-    "data-dropping": dropping ? "" : undefined,
-  };
-
   const hidden = (
     <>
       <input type="hidden" name="slug" value={slug} />
@@ -252,17 +207,117 @@ function NameCell({
     </>
   );
 
+  return (
+    <th
+      className="board-head"
+      data-sup={cell.position.startsWith("SUP") ? "" : undefined}
+      data-dropping={dropping ? "" : undefined}
+      draggable={editable && filled}
+      onDragStart={(e) => writeDragSource(e, { slotId, position: cell.position })}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onDragLeave={() => setDropping(false)}
+      title={error?.message}
+    >
+      <div className="board-head-row">
+        {/* 끌 수 있다는 표시. 사람이 없으면 끌 것도 없어 자리만 지킨다. */}
+        <span className="board-grip" data-on={editable && filled ? "" : undefined} aria-hidden>
+          <GripIcon />
+        </span>
+
+        <span className="truncate">{positionLabel(cell.position)}</span>
+
+        {editable && filled && (
+          <span className="ml-auto flex items-center gap-0.5">
+            <form action={pin}>
+              {hidden}
+              <input type="hidden" name="pinned" value={cell.pinned ? "false" : "true"} />
+              <button
+                type="submit"
+                disabled={busy}
+                title={cell.pinned ? "고정 해제" : "이 자리 고정 (리셋에서 제외)"}
+                aria-label={cell.pinned ? "고정 해제" : "자리 고정"}
+                className={`flex transition-colors ${
+                  cell.pinned ? "text-accent" : "text-text-faint hover:text-text"
+                }`}
+              >
+                <PinIcon pinned={cell.pinned} />
+              </button>
+            </form>
+
+            <form
+              action={remove}
+              onSubmit={(e) => {
+                // 남이 넣은 신청을 지울 때만 한 번 확인한다. 카드 쪽과 같은 규칙이다.
+                if (cell.createdByLabel && !cell.mine && character) {
+                  if (
+                    !confirm(`${cell.createdByLabel}님이 넣은 ${character.name}을(를) 빼시겠습니까?`)
+                  ) {
+                    e.preventDefault();
+                  }
+                }
+              }}
+            >
+              {hidden}
+              <button
+                type="submit"
+                disabled={busy}
+                title="자리 비우기"
+                aria-label="자리 비우기"
+                className="flex text-text-faint transition-colors hover:text-danger disabled:opacity-50"
+              >
+                <CloseIcon />
+              </button>
+            </form>
+          </span>
+        )}
+      </div>
+    </th>
+  );
+}
+
+/**
+ * 닉네임 칸.
+ *
+ * 표에서도 칸에 이름을 쳐서 넣는다. 이게 이 앱의 주 입력 경로라 보기를 바꿨다고
+ * 카드로 돌아가 넣게 하지 않는다(CLAUDE.md 2-2).
+ *
+ * 빈 칸의 입력창은 테두리 없이 둔다. 상자를 그리면 그 줄만 키가 커져 표가 어긋나고,
+ * 여덟 칸이 모두 비어 있을 때는 상자 여덟 개가 늘어서 표가 입력 폼처럼 보인다.
+ */
+function NameCell({
+  slug,
+  slotId,
+  week,
+  cell,
+  editable,
+}: {
+  slug: string;
+  slotId: string;
+  week: string;
+  cell: CellView;
+  editable: boolean;
+}) {
+  const [assignState, assign, assigning] = useActionState(assignAction, IDLE);
+  const error = assignState.status === "error" ? assignState : null;
+  const character = cell.character;
+
   if (!character) {
     return (
-      <td {...dropProps} className="board-cell board-cell--name">
+      <td className="board-cell board-cell--name">
         {editable ? (
           <form action={assign}>
-            {hidden}
+            <input type="hidden" name="slug" value={slug} />
+            <input type="hidden" name="slotId" value={slotId} />
+            <input type="hidden" name="week" value={week} />
+            <input type="hidden" name="position" value={cell.position} />
             <NameInput
               name="characterName"
               pending={assigning}
               resetOn={assignState.status === "ok" ? assignState : null}
               error={error?.message}
+              placeholder="닉네임 입력"
+              className="board-input"
             />
           </form>
         ) : (
@@ -273,61 +328,9 @@ function NameCell({
   }
 
   return (
-    <td
-      {...dropProps}
-      draggable={editable}
-      onDragStart={(e) => writeDragSource(e, { slotId, position: cell.position })}
-      className="board-cell board-cell--name"
-    >
-      <div className="flex items-center justify-center gap-1">
-        <span className="truncate font-semibold" title={character.name}>
-          {character.name}
-        </span>
-
-        {editable && (
-          <form action={pin}>
-            {hidden}
-            <input type="hidden" name="pinned" value={cell.pinned ? "false" : "true"} />
-            <button
-              type="submit"
-              disabled={busy}
-              title={cell.pinned ? "고정 해제" : "이 자리 고정 (리셋에서 제외)"}
-              aria-label={cell.pinned ? "고정 해제" : "자리 고정"}
-              className={`transition-colors ${
-                cell.pinned ? "text-accent" : "text-text-faint hover:text-text"
-              }`}
-            >
-              <PinIcon pinned={cell.pinned} />
-            </button>
-          </form>
-        )}
-
-        {editable && (
-          <form
-            action={remove}
-            onSubmit={(e) => {
-              // 남이 넣은 신청을 지울 때만 한 번 확인한다. 카드 쪽과 같은 규칙이다.
-              if (cell.createdByLabel && !cell.mine) {
-                if (
-                  !confirm(`${cell.createdByLabel}님이 넣은 ${character.name}을(를) 빼시겠습니까?`)
-                ) {
-                  e.preventDefault();
-                }
-              }
-            }}
-          >
-            {hidden}
-            <button
-              type="submit"
-              disabled={busy}
-              title="자리 비우기"
-              aria-label="자리 비우기"
-              className="text-text-faint transition-colors hover:text-danger disabled:opacity-50"
-            >
-              <CloseIcon />
-            </button>
-          </form>
-        )}
+    <td className="board-cell board-cell--name">
+      <div className="truncate font-semibold" title={character.name}>
+        {character.name}
       </div>
 
       {cell.warnings.map((warning) => (
@@ -335,7 +338,6 @@ function NameCell({
           {warning}
         </div>
       ))}
-      {error && <div className="board-warn">{error.message}</div>}
     </td>
   );
 }

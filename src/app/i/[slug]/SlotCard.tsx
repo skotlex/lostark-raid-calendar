@@ -1,15 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
-
 import type { BoardSlotView, PartyView } from "@/lib/board";
-import { raidLabel } from "@/lib/raids";
 import type { SynergyKind } from "@/lib/synergy";
 
 import { Cell } from "./Cell";
-import { type CellState, keepRosterAction } from "./actions";
-
-const IDLE: CellState = { status: "idle", message: "" };
+import { SlotHeader } from "./SlotHeader";
 
 /**
  * 시너지 종류별 색.
@@ -40,44 +35,9 @@ export function SlotCard({
   slot: BoardSlotView;
   editable: boolean;
 }) {
-  const [keepState, toggleKeep, togglingKeep] = useActionState(keepRosterAction, IDLE);
-
   return (
     <section className="rounded border border-border bg-surface">
-      <header className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-3 py-2">
-        <h3 className="font-semibold">
-          {raidLabel(slot.raidName, slot.difficulty)}
-          <span className="ml-2 text-text-dim tabular">{slot.startTime}</span>
-        </h3>
-
-        <span className="text-xs text-text-faint tabular">
-          {slot.filled}/{slot.partySize}
-        </span>
-
-        {editable && (
-          <form action={toggleKeep} className="ml-auto">
-            <input type="hidden" name="slug" value={slug} />
-            <input type="hidden" name="slotId" value={slot.id} />
-            <input type="hidden" name="keepRoster" value={slot.keepRoster ? "false" : "true"} />
-            <button
-              type="submit"
-              disabled={togglingKeep}
-              title={
-                slot.keepRoster
-                  ? "매주 초기화되도록 되돌립니다"
-                  : "이 공대 전원을 매주 그대로 유지합니다"
-              }
-              className={`rounded border px-2 py-0.5 text-xs transition-colors disabled:opacity-50 ${
-                slot.keepRoster
-                  ? "border-accent/50 bg-accent/15 text-accent"
-                  : "border-border text-text-faint hover:text-text"
-              }`}
-            >
-              {slot.keepRoster ? "전원 고정 켜짐" : "전원 고정"}
-            </button>
-          </form>
-        )}
-      </header>
+      <SlotHeader slug={slug} slot={slot} editable={editable} />
 
       <div className="space-y-3 p-3">
         {slot.parties.map((party) => (
@@ -93,9 +53,6 @@ export function SlotCard({
           />
         ))}
 
-        {keepState.status === "error" && (
-          <p className="text-xs text-danger">{keepState.message}</p>
-        )}
       </div>
     </section>
   );

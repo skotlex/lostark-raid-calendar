@@ -59,6 +59,7 @@ export function NameInput({
   resetOn,
   error,
   placeholder,
+  className,
 }: {
   name: string;
   /** 조회 중. 칸 자체가 상태를 말하므로 아래에 줄을 더하지 않는다. */
@@ -68,6 +69,8 @@ export function NameInput({
   /** 실패 사유. 칸 위에 말풍선으로 띄운다. */
   error?: string | null;
   placeholder?: string;
+  /** 표에서는 테두리 없는 칸으로 쓴다. 기본은 카드 안의 입력창이다. */
+  className?: string;
 }) {
   const names = useContext(KnownNamesContext);
   const [value, setValue] = useState("");
@@ -160,7 +163,7 @@ export function NameInput({
         // 후보를 클릭하는 중에도 blur가 먼저 나므로 닫는 것을 조금 미룬다.
         onBlur={() => setTimeout(() => setOpen(false), 120)}
         onFocus={() => setOpen(!pending)}
-        className="char-input"
+        className={className ?? "char-input"}
       />
 
       {/*

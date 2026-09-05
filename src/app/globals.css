@@ -990,6 +990,22 @@ button:disabled,
   vertical-align: middle;
 }
 
+/*
+ * 바깥 테두리는 카드가 이미 그린다. 표까지 그리면 두 줄이 붙어 2px로 보인다.
+ */
+.board-table tr > *:first-child {
+  border-left: none;
+}
+.board-table tr > *:last-child {
+  border-right: none;
+}
+.board-table thead tr:first-child > * {
+  border-top: none;
+}
+.board-table tbody tr:last-child > * {
+  border-bottom: none;
+}
+
 /* 첫 열은 항목 이름이다. 좁게 두고 나머지 여덟을 균등하게 나눈다. */
 .board-table th:first-child,
 .board-table td:first-child {
@@ -998,9 +1014,43 @@ button:disabled,
 
 .board-head {
   background: var(--surface-2);
+  padding: 0.125rem 0.25rem;
   font-size: 11px;
   font-weight: 600;
   color: var(--text-dim);
+}
+
+/*
+ * 자리 이름과 그 자리에 대한 조작이 한 줄에 선다.
+ *
+ * 왼쪽은 끄는 손잡이, 가운데는 이름, 오른쪽은 고정·비우기다. 손잡이와 버튼 자리를
+ * 늘 비워두므로 사람이 들고 나도 이름의 위치가 흔들리지 않는다.
+ */
+.board-head-row {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  min-height: 1.25rem;
+}
+
+.board-head-row > .truncate {
+  min-width: 0;
+}
+
+/* 끌 수 있는 칸에서만 손잡이가 보인다. 자리는 늘 차지해 이름이 흔들리지 않는다. */
+.board-grip {
+  display: flex;
+  opacity: 0;
+  color: var(--text-faint);
+}
+.board-grip[data-on] {
+  opacity: 0.55;
+}
+.board-head[draggable="true"] {
+  cursor: grab;
+}
+.board-head[draggable="true"]:hover .board-grip[data-on] {
+  opacity: 1;
 }
 
 /* 폿 자리는 색으로 갈라둔다. 딜 여섯 사이에서 둘을 세지 않아도 된다. */
@@ -1022,21 +1072,41 @@ button:disabled,
   color: var(--text-dim);
 }
 
-/*
- * 닉네임은 이 표에서 가장 먼저 읽는 값이다. 입력창도 여기 들어간다.
- *
- * 입력창(.char-input)은 카드 안에서 쓰려고 만든 것이라 --c-* 를 본다. 표에는 카드가
- * 없어 그 값들이 비므로 여기서 테마 토큰으로 채워준다.
- */
+/* 닉네임은 이 표에서 가장 먼저 읽는 값이다. 입력창도 여기 들어간다. */
 .board-cell--name {
-  --c-border: var(--border);
-  --c-field: var(--bg);
-  --c-text: var(--text);
-  --c-accent: var(--accent);
-
   overflow: visible;
   padding: 0.25rem;
   color: var(--text);
+}
+
+/*
+ * 빈 자리의 입력창.
+ *
+ * 테두리도 바탕도 없다. 상자를 그리면 그 줄만 키가 커져 다른 항목과 어긋나고,
+ * 여덟 칸이 모두 비었을 때는 상자 여덟 개가 늘어서 표가 입력 폼처럼 보인다.
+ * 눌러서 쓰는 자리라는 것은 placeholder가 말해준다.
+ */
+.board-input {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 0.25rem;
+  background: none;
+  padding: 0 0.25rem;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.25rem;
+  color: var(--text);
+}
+
+.board-input::placeholder {
+  color: var(--text-faint);
+}
+
+/* 쓰는 동안에는 상자를 그린다. 어디에 치고 있는지는 보여야 한다. */
+.board-input:focus {
+  border-color: var(--accent);
+  background: var(--bg);
+  outline: none;
 }
 
 .board-warn {
@@ -1048,13 +1118,17 @@ button:disabled,
 }
 
 /* 드롭을 받는 칸. 어디에 놓이는지 손이 알아채게 한다(카드의 표식과 같은 역할). */
-.board-cell--name[data-dropping] {
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
+.board-head[data-dropping] {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
   outline: 1px solid var(--accent);
   outline-offset: -1px;
 }
 
-/* 끌 수 있는 칸이라는 표시. 이름 위에서만 커서가 바뀐다. */
-.board-cell--name[draggable="true"] {
-  cursor: grab;
+/* 슬롯 머리글의 시간·인원 뱃지. 레이드 이름과 한 덩어리로 읽히지 않게 둘러준다. */
+.slot-badge {
+  border-radius: 0.25rem;
+  background: var(--surface-2);
+  padding: 0.05rem 0.35rem;
+  font-size: 11px;
+  color: var(--text-dim);
 }
