@@ -259,6 +259,7 @@ export async function getBoard(
         synergies: partySynergies(
           cells.map((c) => ({
             className: c.character?.className ?? null,
+            classEngraving: c.character?.classEngraving,
             role: c.character?.role,
             detected: c.character?.skillSynergies,
           })),

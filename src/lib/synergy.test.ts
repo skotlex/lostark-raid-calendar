@@ -102,11 +102,12 @@ describe("partySynergies", () => {
     const result = partySynergies([
       { className: "데빌헌터", role: "DPS" }, // 치적
       { className: "건슬링어", role: "DPS" }, // 치적
-      { className: "건슬링어", role: "DPS" }, // 치적. 같은 직업이라 이름은 하나만 남는다
+      // 같은 직업에 같은 각인(둘 다 없음)이라 이름도 수도 늘지 않는다.
+      { className: "건슬링어", role: "DPS" },
     ]);
     const crit = result.find((s) => s.kind === "치적");
     expect(crit?.sources).toEqual(["데빌헌터", "건슬링어"]);
-    expect(crit?.count).toBe(3);
+    expect(crit?.count).toBe(2);
   });
 
   it("워로드는 두 시너지를 함께 준다", () => {
@@ -185,5 +186,35 @@ describe("겹친 시너지 수치", () => {
       { className: "도화가", role: "SUPPORT" },
     ]);
     expect(result.find((s) => s.kind === "서폿")?.value).toBe("");
+  });
+});
+
+describe("시너지 중첩 규칙", () => {
+  it("같은 직업 + 같은 각인은 중첩되지 않는다", () => {
+    const result = partySynergies([
+      { className: "데빌헌터", classEngraving: "핸드거너", role: "DPS" },
+      { className: "데빌헌터", classEngraving: "핸드거너", role: "DPS" },
+    ]);
+    const crit = result.find((s) => s.kind === "치적");
+    expect(crit?.value).toBe("10%");
+    expect(crit?.count).toBe(1);
+  });
+
+  it("같은 직업이라도 각인이 다르면 중첩된다", () => {
+    const result = partySynergies([
+      { className: "데빌헌터", classEngraving: "핸드거너", role: "DPS" },
+      { className: "데빌헌터", classEngraving: "피스메이커", role: "DPS" },
+    ]);
+    const crit = result.find((s) => s.kind === "치적");
+    expect(crit?.value).toBe("20%");
+    expect(crit?.count).toBe(2);
+  });
+
+  it("직업이 다르면 중첩된다", () => {
+    const result = partySynergies([
+      { className: "데빌헌터", classEngraving: "핸드거너", role: "DPS" },
+      { className: "건슬링어", classEngraving: "피스메이커", role: "DPS" },
+    ]);
+    expect(result.find((s) => s.kind === "치적")?.value).toBe("20%");
   });
 });

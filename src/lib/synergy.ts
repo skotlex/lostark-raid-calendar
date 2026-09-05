@@ -310,28 +310,53 @@ function addValues(a: string, b: string): string {
  * 없는 것을 나열하기보다 있는 것을 보여주는 편이 편성을 확인할 때 읽기 쉽다.
  *
  * 서폿 버프는 종류가 하나뿐이라 따로 세지 않고 같은 목록에 담는다.
+ *
+ * **중첩 규칙**(게임 기준, 사용자 확인)
+ *
+ * | 경우 | 중첩 |
+ * |---|---|
+ * | 같은 직업 + 같은 각인 | 안 된다. 둘이 들어와도 한 번만 센다 |
+ * | 같은 직업 + 다른 각인 | 된다 |
+ * | 다른 직업 + 같은 종류 | 된다 |
+ *
+ * 그래서 중첩을 가르는 열쇠는 사람이 아니라 **직업과 각인의 조합**이다.
  */
 export function partySynergies(
   members: {
     className: string | null | undefined;
+    /** 직업 각인. 같은 직업이라도 각인이 다르면 시너지가 중첩된다 */
+    classEngraving?: string | null;
     role?: Role;
     detected?: DetectedSynergy[] | null;
   }[],
 ): PartySynergy[] {
   const found = new Map<SynergyKind, PartySynergy>();
+  /** 이미 센 (직업+각인). 같은 조합이 둘이면 두 번째는 값을 더하지 않는다. */
+  const counted = new Map<SynergyKind, Set<string>>();
 
   for (const member of members) {
     const from = member.className?.trim() || "?";
+    // 중첩 여부를 가르는 것은 사람이 아니라 **직업과 각인의 조합**이다.
+    const identity = `${from}::${member.classEngraving?.trim() ?? ""}`;
+
     for (const synergy of getSynergies(member.className, member.role, member.detected)) {
+      const seen = counted.get(synergy.kind) ?? new Set<string>();
+      const stacks = !seen.has(identity);
+      seen.add(identity);
+      counted.set(synergy.kind, seen);
+
       const existing = found.get(synergy.kind);
-      if (existing) {
-        existing.count += 1;
-        existing.value = addValues(existing.value, synergy.value);
-        // 같은 직업 둘이 겹치면 이름은 하나만 두고 수는 count가 말한다.
-        if (!existing.sources.includes(from)) existing.sources.push(from);
-      } else {
+      if (!existing) {
         found.set(synergy.kind, { ...synergy, count: 1, sources: [from] });
+        continue;
       }
+
+      if (!existing.sources.includes(from)) existing.sources.push(from);
+      // 같은 직업+각인이 또 들어오면 자리만 차지한다. 수치도 수도 늘지 않는다.
+      if (!stacks) continue;
+
+      existing.count += 1;
+      existing.value = addValues(existing.value, synergy.value);
     }
   }
 
