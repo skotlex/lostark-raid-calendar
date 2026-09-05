@@ -50,6 +50,19 @@ function canPick(
 }
 
 /**
+ * 이미 등록된 캐릭터에 붙는 뱃지의 설명.
+ *
+ * 뱃지는 세 글자짜리라 무엇을 뜻하는지까지는 못 적는다. 아무것도 없는 줄(아직 없는
+ * 캐릭터)이 기본이고 뱃지는 그와 다른 상태를 알리는 것이라, 왜 다른지는 손을 올렸을
+ * 때 나오면 된다.
+ */
+function statusHint(sibling: SiblingsState["siblings"][number]): string {
+  if (sibling.unclaimed) return "등록은 됐지만 주인이 없습니다. 고르면 내 캐릭터가 됩니다";
+  if (sibling.mine) return "이미 내 캐릭터입니다. 다시 고르면 스펙과 원정대가 갱신됩니다";
+  return "다른 분이 등록한 캐릭터입니다";
+}
+
+/**
  * 여기서 등록한 캐릭터는 **등록한 사람 소속이 된다.**
  *
  * 캐릭터 관리는 자기 캐릭터를 챙기는 화면이라 그렇게 본다. 남의 캐릭터를 대신 넣는 일은
@@ -379,18 +392,30 @@ function SiblingsForm({ slug }: { slug: string }) {
                     onChange={() => toggle(sibling.name)}
                     className="accent-[var(--accent)]"
                   />
-                  <span className="min-w-0 flex-1 truncate">{sibling.name}</span>
-                  <span className="shrink-0 text-xs text-text-faint">
+                  <span className="min-w-0 truncate">{sibling.name}</span>
+                  {/*
+                    이름 바로 옆이다. 오른쪽 끝에 두면 직업·템레벨 뒤에 서서 어느
+                    캐릭터의 상태인지 눈이 줄 끝까지 갔다가 돌아와야 한다.
+                  */}
+                  {sibling.registered && (
+                    <span
+                      className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] ${
+                        sibling.mine
+                          ? "bg-accent/15 text-accent"
+                          : "bg-surface-2/60 text-text-faint"
+                      }`}
+                      title={statusHint(sibling)}
+                    >
+                      {sibling.unclaimed ? "소속 없음" : sibling.mine ? "내 캐릭터" : "등록됨"}
+                    </span>
+                  )}
+                  {/* 직업과 템레벨은 줄 오른쪽에 모아 세로로 맞춘다. */}
+                  <span className="ml-auto shrink-0 text-xs text-text-faint">
                     {sibling.className}
                   </span>
                   <span className="shrink-0 text-xs tabular">
                     {sibling.itemLevel?.toFixed(2) ?? "-"}
                   </span>
-                  {sibling.registered && (
-                    <span className="shrink-0 text-xs text-text-faint">
-                      {sibling.unclaimed ? "소속 없음" : sibling.mine ? "내 캐릭터" : "등록됨"}
-                    </span>
-                  )}
                 </label>
               </li>
             ))}
