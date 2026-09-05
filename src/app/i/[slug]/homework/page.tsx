@@ -59,25 +59,37 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
         왼쪽 숫자는 **남은 것**이다. 이미 받은 골드보다 앞으로 받을 골드가 계획을 세울 때
         필요한 값이고, 얼마나 지나왔는지는 막대가 따로 말한다.
       */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Progress
-          value={`${gold.format(homework.remainingGold)}`}
-          total={`/ ${gold.format(homework.totalGold)}`}
-          done={homework.totalGold - homework.remainingGold}
-          all={homework.totalGold}
-          tone="var(--accent)"
-        />
-        <Progress
-          value={`남은 숙제 ${homework.remainingCount}`}
-          total={`/ ${homework.totalCount}`}
-          done={homework.totalCount - homework.remainingCount}
-          all={homework.totalCount}
-          tone="var(--support)"
-        />
-      </div>
+      <section className="space-y-2">
+        <SectionTitle title="이번 주 진행률" hint="왼쪽 숫자가 아직 남은 몫입니다" />
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Progress
+            label="남은 골드"
+            value={gold.format(homework.remainingGold)}
+            total={`/ ${gold.format(homework.totalGold)}`}
+            done={homework.totalGold - homework.remainingGold}
+            all={homework.totalGold}
+            tone="var(--accent)"
+          />
+          <Progress
+            label="남은 숙제"
+            value={`${homework.remainingCount}`}
+            total={`/ ${homework.totalCount}`}
+            done={homework.totalCount - homework.remainingCount}
+            all={homework.totalCount}
+            tone="var(--support)"
+          />
+        </div>
+      </section>
 
       {/* 레이드별 현황 — 무엇이 몇 개 남았는지부터 본다. */}
-      <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="space-y-2">
+        <SectionTitle
+          title="레이드별 현황"
+          hint="레이드마다 누가 남았는지 · 다녀온 사람은 흐리게"
+        />
+
+        <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         {homework.raids.map((raid) => (
           <li key={raid.raidName} className="rounded border border-border bg-surface p-3">
             <div className="flex flex-wrap items-center gap-x-2">
@@ -125,12 +137,16 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
                 </span>
               ))}
             </div>
-          </li>
-        ))}
-      </ul>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       {/* 캐릭터별 숙제 — 위에서 아래로 읽으면 주간 일정이 된다. */}
-      <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <section className="space-y-2">
+        <SectionTitle title="캐릭터별 숙제" hint="캐릭터마다 어느 레이드가 남았는지" />
+
+        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {homework.characters.map((character) => (
           <li
             key={character.id}
@@ -200,9 +216,20 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
                 </span>
               )}
             </div>
-          </li>
-        ))}
-      </ul>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  );
+}
+
+/** 덩어리마다 무엇을 보는 화면인지 한 줄로 알린다. */
+function SectionTitle({ title, hint }: { title: string; hint: string }) {
+  return (
+    <div className="flex flex-wrap items-baseline gap-x-2">
+      <h2 className="text-sm font-semibold">{title}</h2>
+      <span className="text-xs text-text-faint">{hint}</span>
     </div>
   );
 }
@@ -214,12 +241,14 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
  * 퍼센트는 오른쪽 끝에 붙여 숫자와 막대를 잇는다.
  */
 function Progress({
+  label,
   value,
   total,
   done,
   all,
   tone,
 }: {
+  label: string;
   value: string;
   total: string;
   done: number;
@@ -232,6 +261,7 @@ function Progress({
   return (
     <div className="rounded border border-border bg-surface px-3 py-2">
       <div className="flex flex-wrap items-baseline gap-x-2">
+        <span className="text-xs text-text-dim">{label}</span>
         <span className="font-semibold tabular" style={{ color: tone }}>
           {value}
         </span>
