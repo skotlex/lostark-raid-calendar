@@ -23,9 +23,58 @@
  */
 export const MAX_SCORE_CUT = 999_999;
 
-/** 입력 칸에 남길 글자. 숫자만 남긴다. */
-export function scoreCutDigits(value: string): string {
-  return value.replace(/[^0-9]/g, "").slice(0, String(MAX_SCORE_CUT).length);
+/** 세 자리마다 끊는 글자. 지우는 키를 다루는 쪽이 이 글자를 알아야 한다. */
+export const SCORE_CUT_SEPARATOR = ",";
+
+const MAX_DIGITS = String(MAX_SCORE_CUT).length;
+
+/**
+ * 세 자리마다 끊는다.
+ *
+ * `toLocaleString`을 쓰지 않는다. 이 값은 서버가 그린 HTML과 브라우저가 다시 그린
+ * 결과가 같아야 하는데, 로케일 자료는 실행하는 쪽마다 다를 수 있다. 끊는 규칙이
+ * 한 가지뿐이라 직접 넣는 편이 짧기도 하다.
+ */
+function group(digits: string): string {
+  return digits.replace(/\B(?=(\d{3})+$)/g, SCORE_CUT_SEPARATOR);
+}
+
+/** 글자에서 숫자만. */
+function digitsOf(text: string): string {
+  return text.replace(/[^0-9]/g, "");
+}
+
+/**
+ * 입력 칸에 남길 글자. 숫자만 남기고 세 자리마다 끊는다.
+ *
+ * 앞의 0은 버린다. `0`으로 시작하는 컷은 없고, 남겨 두면 `0005,000` 같은 글자가
+ * 칸에 선다. 자릿수 제한은 0을 버린 뒤에 센다.
+ */
+export function formatScoreCutInput(value: string): string {
+  return group(digitsOf(value).replace(/^0+/, "").slice(0, MAX_DIGITS));
+}
+
+/** 캐럿 앞에 숫자가 몇 개인가. */
+export function scoreCutDigitCount(text: string): number {
+  return digitsOf(text).length;
+}
+
+/**
+ * 앞에서부터 숫자 `count`개를 지난 자리.
+ *
+ * 콤마가 붙거나 빠지면 같은 숫자라도 글자 수가 달라진다. 캐럿을 글자 수로 되돌리면
+ * `1000`에 콤마가 붙는 순간 한 칸씩 밀려 `1,00|0`에 선다. 숫자 개수로 되돌린다.
+ */
+export function scoreCutCaret(text: string, count: number): number {
+  if (count <= 0) return 0;
+  let seen = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    if (text[i] >= "0" && text[i] <= "9") {
+      seen += 1;
+      if (seen === count) return i + 1;
+    }
+  }
+  return text.length;
 }
 
 /**
@@ -46,7 +95,12 @@ export function isScoreCut(value: number | null): boolean {
   return Number.isInteger(value) && value > 0 && value <= MAX_SCORE_CUT;
 }
 
+/** 값만. "5,000" */
+export function scoreCutNumber(value: number): string {
+  return group(String(value));
+}
+
 /** 뱃지에 찍는 글. "≥ 5,000" */
 export function formatScoreCut(value: number): string {
-  return `≥ ${value.toLocaleString("ko-KR")}`;
+  return `≥ ${scoreCutNumber(value)}`;
 }

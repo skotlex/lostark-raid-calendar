@@ -6,7 +6,7 @@ import { logEvent } from "./history";
 import { UNDECIDED, isUndecided, weekStartForDay } from "./week";
 import { DEFAULT_PARTY_SIZE, type PartySize, isPartySize } from "./positions";
 import { prisma } from "./prisma";
-import { MAX_SCORE_CUT, isScoreCut } from "./scoreCut";
+import { MAX_SCORE_CUT, isScoreCut, scoreCutNumber } from "./scoreCut";
 import { raidLabel, sizeFor } from "./raids";
 
 /** 고정 요일표의 한 칸. 주차 개념이 없고 영속적이다. */
@@ -151,7 +151,7 @@ function validate(input: SlotInput) {
   // 넘어가면 안내가 없는 것보다 나쁘다.
   for (const cut of [input.dpsScoreCut, input.supScoreCut]) {
     if (cut !== undefined && !isScoreCut(cut)) {
-      throw new SlotError(`점수컷은 1부터 ${MAX_SCORE_CUT.toLocaleString("ko-KR")} 사이의 숫자입니다`);
+      throw new SlotError(`점수컷은 1부터 ${scoreCutNumber(MAX_SCORE_CUT)} 사이의 숫자입니다`);
     }
   }
 }

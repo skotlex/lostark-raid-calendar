@@ -1,9 +1,14 @@
 "use client";
 
-import { startTransition, useActionState, useState } from "react";
+import { startTransition, useActionState, useLayoutEffect, useRef, useState } from "react";
 
 import { RAID_PRESETS, difficultiesFor } from "@/lib/raids";
-import { scoreCutDigits } from "@/lib/scoreCut";
+import {
+  SCORE_CUT_SEPARATOR,
+  formatScoreCutInput,
+  scoreCutCaret,
+  scoreCutDigitCount,
+} from "@/lib/scoreCut";
 import type { SlotView } from "@/lib/slots";
 import { WEEK_DAYS, dayNameFull, isUndecided } from "@/lib/week";
 
@@ -261,7 +266,7 @@ export function SlotForm({
 
 /** 저장된 값을 칸에 넣을 글자로. 컷이 없으면 빈 칸이다. */
 function cutText(value: number | null | undefined): string {
-  return value === null || value === undefined ? "" : String(value);
+  return value === null || value === undefined ? "" : formatScoreCutInput(String(value));
 }
 
 /**
@@ -271,8 +276,13 @@ function cutText(value: number | null | undefined): string {
  * 나란히 서고 라벨도 두 글자 차이뿐이라, 색이 없으면 딜러 칸에 서폿 값을 넣어도
  * 저장하기 전까지 알 수 없다.
  *
- * `type="number"`를 쓰지 않는다. 스피너가 붙어 폭이 흔들리고 휠에 값이 바뀐다.
- * 시간 칸과 같이 글자를 직접 걸러낸다.
+ * **치는 동안 세 자리마다 콤마가 붙고 빠진다.** 컷은 네다섯 자리라 `48000`과
+ * `4800`이 콤마 없이는 자릿수를 세어야 갈린다. 뱃지에는 콤마가 붙어 나가므로
+ * 칸에서도 붙어야 친 값과 걸릴 값이 같은 모양이다.
+ *
+ * `type="number"`를 쓰지 않는다. 콤마가 들어가는 순간 브라우저가 값을 통째로
+ * 버리고, 스피너가 붙어 폭이 흔들리고 휠에 값이 바뀐다. 시간 칸과 같이 글자를
+ * 직접 걸러낸다.
  */
 function ScoreCutInput({
   name,
@@ -285,15 +295,67 @@ function ScoreCutInput({
   onChange: (value: string) => void;
   tone: "dps" | "sup";
 }) {
+  const ref = useRef<HTMLInputElement>(null);
+  /** 다시 그린 뒤에 캐럿을 놓을 자리. null이면 건드리지 않는다. */
+  const caret = useRef<number | null>(null);
+
+  /*
+   * 캐럿을 제자리에 돌려놓는다.
+   *
+   * 값이 바뀌면 React가 input.value를 통째로 갈아 끼우고, 브라우저는 캐럿을 끝으로
+   * 보낸다. 끝에 이어 치는 동안은 티가 안 나지만 가운데를 고치면 커서가 매 글자
+   * 뒤로 튄다. 콤마가 붙고 빠지면서 글자 수까지 바뀌므로 자리는 숫자 개수로 센다.
+   *
+   * 그린 뒤(useEffect)가 아니라 그리는 중(useLayoutEffect)에 옮겨야 커서가 끝에
+   * 한 번 보였다 돌아오지 않는다.
+   */
+  useLayoutEffect(() => {
+    const input = ref.current;
+    if (!input || caret.current === null) return;
+    input.setSelectionRange(caret.current, caret.current);
+    caret.current = null;
+  }, [value]);
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.value;
+    const before = scoreCutDigitCount(raw.slice(0, e.target.selectionStart ?? raw.length));
+    const next = formatScoreCutInput(raw);
+    caret.current = scoreCutCaret(next, before);
+    onChange(next);
+  }
+
+  /*
+   * 콤마 위에서 지우면 그 옆의 숫자를 지운다.
+   *
+   * 콤마만 지워봐야 숫자가 그대로라 다시 붙는다. 아무 일도 일어나지 않으므로 키가
+   * 안 먹은 것처럼 보이고, 한 번 더 눌러도 마찬가지다. 캐럿을 콤마 너머로 미리
+   * 옮겨 두면 브라우저가 숫자를 지우고 나머지는 handleChange가 맡는다.
+   *
+   * 범위를 잡아 둔 상태는 건드리지 않는다. 지울 것이 이미 정해져 있다.
+   */
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    const input = e.currentTarget;
+    const at = input.selectionStart;
+    if (at === null || at !== input.selectionEnd) return;
+
+    if (e.key === "Backspace" && input.value[at - 1] === SCORE_CUT_SEPARATOR) {
+      input.setSelectionRange(at - 1, at - 1);
+    } else if (e.key === "Delete" && input.value[at] === SCORE_CUT_SEPARATOR) {
+      input.setSelectionRange(at + 1, at + 1);
+    }
+  }
+
   return (
     <input
+      ref={ref}
       name={name}
       inputMode="numeric"
       value={value}
-      onChange={(e) => onChange(scoreCutDigits(e.target.value))}
+      onChange={handleChange}
+      onKeyDown={handleKeyDown}
       placeholder="없음"
       data-cut={tone}
-      className={`w-20 tabular ${CONTROL} score-cut-input`}
+      className={`w-24 tabular ${CONTROL} score-cut-input`}
     />
   );
 }

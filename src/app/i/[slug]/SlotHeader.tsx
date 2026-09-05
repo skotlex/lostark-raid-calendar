@@ -4,7 +4,7 @@ import { useActionState } from "react";
 
 import type { BoardSlotView } from "@/lib/board";
 import { raidLabel } from "@/lib/raids";
-import { formatScoreCut } from "@/lib/scoreCut";
+import { formatScoreCut, scoreCutNumber } from "@/lib/scoreCut";
 import { isUndecided } from "@/lib/week";
 
 import { type CellState, keepRosterAction } from "./actions";
@@ -114,7 +114,7 @@ function ScoreCut({ kind, value }: { kind: "dps" | "sup"; value: number | null }
     <span
       className="slot-badge tabular"
       data-cut={kind}
-      title={`${label} 점수컷 ${value.toLocaleString("ko-KR")} 이상 (안내입니다. 배치를 막지 않습니다)`}
+      title={`${label} 점수컷 ${scoreCutNumber(value)} 이상 (안내입니다. 배치를 막지 않습니다)`}
     >
       {label} {formatScoreCut(value)}
     </span>
