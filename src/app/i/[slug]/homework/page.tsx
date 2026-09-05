@@ -72,11 +72,19 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
               {raid.clearGold > 0 ? `${gold.format(raid.clearGold)} G` : "-"}
             </div>
 
-            <div className="mt-2 flex flex-wrap gap-x-2 gap-y-0.5 text-[11px]">
+            {/*
+              이름을 뱃지로 두른다. 글자만 늘어놓으면 여럿일 때 어디까지가 한 이름인지
+              눈으로 끊어야 한다. 다녀온 사람은 흐리게 가라앉힌다.
+            */}
+            <div className="mt-2 flex flex-wrap gap-1">
               {raid.characters.map((character) => (
                 <span
                   key={character.name}
-                  className={character.done ? "text-text-faint line-through" : "text-text-dim"}
+                  className={`rounded px-1.5 py-0.5 text-[11px] ${
+                    character.done
+                      ? "bg-surface-2/60 text-text-faint line-through"
+                      : "bg-surface-2 text-text-dim"
+                  }`}
                 >
                   {character.name}
                 </span>
