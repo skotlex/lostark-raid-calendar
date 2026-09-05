@@ -128,7 +128,7 @@ export async function moveAction(_prev: CellState, formData: FormData): Promise<
   }
 }
 
-/** 자리 단위 고정. 수요일 리셋 때 이 자리만 남는다. */
+/** 자리 단위 고정. 화요일 리셋 때 이 자리만 남는다. */
 export async function pinAction(_prev: CellState, formData: FormData): Promise<CellState> {
   const slug = String(formData.get("slug") ?? "");
 

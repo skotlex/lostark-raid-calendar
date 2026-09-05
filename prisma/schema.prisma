@@ -158,7 +158,7 @@ model RaidSlot {
 model Assignment {
   id             String   @id @default(cuid())
   slotId         String
-  /// 수요일 06:00 KST 기준 주차 시작 시각(UTC 저장)
+  /// 화요일 00:00 KST 기준 주차 시작 시각(UTC 저장)
   weekStart      DateTime
   /// DPS1..DPS3 + SUP1 (1파티), DPS4..DPS6 + SUP2 (2파티)
   position       String

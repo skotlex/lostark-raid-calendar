@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
  * 어디에 몇 개가 걸려 있는지 알 방법이 없다. **핀이 방치되는 것을 막는 유일한 수단이
  * 이 화면이다.**
  *
- * 이번 주 기준이다. 여기 있는 자리가 수요일 06시에 그대로 다음 주로 넘어간다.
+ * 이번 주 기준이다. 여기 있는 자리가 화요일 00시에 그대로 다음 주로 넘어간다.
  */
 export default async function PinnedPage({ params }: PageProps<"/i/[slug]/pinned">) {
   const { slug } = await params;
@@ -66,7 +66,7 @@ export default async function PinnedPage({ params }: PageProps<"/i/[slug]/pinned
       <div>
         <h1 className="text-xl font-bold">고정 현황</h1>
         <p className="mt-1 text-sm text-text-dim">
-          수요일 오전 6시에 인원이 비워질 때 <strong>남는 자리</strong>입니다. 걸어둔 것을
+          화요일 0시에 인원이 비워질 때 <strong>남는 자리</strong>입니다. 걸어둔 것을
           잊으면 다음 주 편성이 그만큼 막히므로 여기서 한 번에 확인하고 풉니다.
         </p>
       </div>
