@@ -160,11 +160,6 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
           </li>
         ))}
       </ul>
-
-      <p className="text-xs text-text-faint">
-        골드는 gcalc.kr의 레이드 보상 표를 옮긴 값입니다. 표에 없는 레이드는 `-`로 둡니다.
-        더보기 비용은 모두 켰을 때를 기준으로 합니다.
-      </p>
     </div>
   );
 }
