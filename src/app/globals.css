@@ -357,6 +357,23 @@ button:disabled,
   max-width: 100%;
 }
 
+/*
+ * 칭호.
+ *
+ * 넓은 칸에서만 보인다. 편성에 쓰이는 값이 아니라 누구인지 알아보는 데 보태는 것이라,
+ * 자리가 빠듯해지면 레벨·전투력보다 먼저 버린다.
+ */
+.char-title {
+  display: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  font-size: 10px;
+  line-height: 1.3;
+  color: var(--c-faint);
+}
+
 /* 템렙·전투력은 왼쪽, 아크그리드는 오른쪽. 한 줄에 담아 높이를 아낀다. */
 .char-stat-line {
   display: flex;
@@ -490,6 +507,10 @@ button:disabled,
     /* 숫자가 인물 위로 넘치지 않게 오른쪽을 비워 둔다. */
     padding-right: 42%;
     padding-bottom: 0.5rem;
+  }
+
+  .char-title {
+    display: block;
   }
 
   .char-stat-line {

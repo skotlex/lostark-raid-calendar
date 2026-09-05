@@ -59,6 +59,8 @@ model Character {
 
   // --- 로아 OpenAPI에서 받아오는 값 ---
   className      String?
+  /// 칭호. "죽음을 부르는 자". 스펙은 아니지만 카드에서 이름 위에 얹는다.
+  title          String?
   itemLevel      Decimal? @db.Decimal(7, 2)
   combatPower    Decimal? @db.Decimal(10, 2)
   serverName     String?

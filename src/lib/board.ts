@@ -63,6 +63,7 @@ const characterSelect = {
   id: true,
   name: true,
   className: true,
+  title: true,
   itemLevel: true,
   combatPower: true,
   serverName: true,

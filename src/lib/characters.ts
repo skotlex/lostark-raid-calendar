@@ -23,6 +23,8 @@ export interface CharacterView {
   id: string;
   name: string;
   className: string | null;
+  /** 칭호. 없는 캐릭터도 있다 */
+  title: string | null;
   itemLevel: number | null;
   combatPower: number | null;
   serverName: string | null;
@@ -53,6 +55,7 @@ type CharacterRow = {
   id: string;
   name: string;
   className: string | null;
+  title: string | null;
   itemLevel: unknown;
   combatPower: unknown;
   serverName: string | null;
@@ -93,6 +96,7 @@ export function toCharacterView(row: CharacterRow, now = Date.now()): CharacterV
     id: row.id,
     name: row.name,
     className: row.className,
+    title: row.title,
     itemLevel: toNumber(row.itemLevel),
     combatPower: toNumber(row.combatPower),
     serverName: row.serverName,
@@ -117,6 +121,7 @@ const characterSelect = {
   id: true,
   name: true,
   className: true,
+  title: true,
   itemLevel: true,
   combatPower: true,
   serverName: true,
@@ -223,6 +228,7 @@ export async function registerCharacter(
 
   const spec_data = {
     className: spec.className,
+    title: spec.title,
     itemLevel: spec.itemLevel,
     combatPower: spec.combatPower,
     serverName: spec.serverName,
@@ -301,6 +307,7 @@ export async function syncCharacter(
       where: { id: characterId },
       data: {
         className: spec.className,
+        title: spec.title,
         itemLevel: spec.itemLevel,
         combatPower: spec.combatPower,
         serverName: spec.serverName,

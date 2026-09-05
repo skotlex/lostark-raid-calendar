@@ -276,6 +276,7 @@ export function Cell({
       <div className="char-gap" />
 
       <div className="char-bottom">
+        {character.title && <div className="char-title">{character.title}</div>}
         <div className="char-name truncate">{character.name}</div>
 
 {/*

@@ -278,6 +278,8 @@ export function normalizeArkGrid(raw: ArkGrid | null | undefined): ArkGridData |
 
 export interface CharacterSpec {
   className: string | null;
+  /** 칭호. 스펙은 아니지만 카드에서 이름 위에 얹는다 */
+  title: string | null;
   itemLevel: number | null;
   combatPower: number | null;
   serverName: string | null;
@@ -307,6 +309,7 @@ export function toCharacterSpec(armory: ArmoryResponse | null | undefined): Char
 
   return {
     className,
+    title: profile.Title?.trim() || null,
     itemLevel: parseNumeric(profile.ItemAvgLevel),
     combatPower: parseNumeric(profile.CombatPower),
     serverName: profile.ServerName ?? null,

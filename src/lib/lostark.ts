@@ -208,6 +208,8 @@ export interface ArmoryProfile {
   CharacterClassName: string;
   ServerName: string;
   CharacterLevel: number;
+  /** 칭호. "죽음을 부르는 자". 없는 캐릭터도 있다 */
+  Title?: string | null;
   /** 템레벨. "1,770.83"처럼 천 단위 쉼표가 붙은 문자열로 온다 */
   ItemAvgLevel: string;
   /** 전투력. "5,043.42" 형태의 문자열. 존재를 실측으로 확인했다 */
