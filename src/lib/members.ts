@@ -172,6 +172,12 @@ export async function claimNames(params: {
  * 아이디(`rosterId`)는 한 명씩 등록에서 사람이 고른 것이다. **내 원정대인지 확인한다** —
  * 서버 액션은 UI를 거치지 않고 불릴 수 있어 화면이 보여준 목록을 그대로 믿으면 안 된다
  * (setGoldEarners와 같은 이유).
+ *
+ * **이름이 겹쳐도 남의 원정대는 건드리지 않는다.** 라벨은 조회할 때 친 대표 캐릭터명이라
+ * 같은 원정대를 두 사람이 부르면 정확히 겹친다. 그때 주인을 갈아치우면 원래 주인의
+ * 캐릭터는 `rosterId`가 그대로라 `listMyRosters`에도 `원정대 미지정`에도 안 잡혀
+ * **골드 지정 화면에서 통째로 사라진다.** 붙이지 않고 미지정으로 남기는 편이 낫다.
+ * 미지정은 최소한 화면에 줄로 보인다.
  */
 async function resolveRoster(
   instanceId: string,
@@ -180,10 +186,14 @@ async function resolveRoster(
 ): Promise<string | null> {
   const label = params.rosterLabel?.trim();
   if (label) {
-    const roster = await prisma.roster.upsert({
+    const existing = await prisma.roster.findUnique({
       where: { instanceId_label: { instanceId, label } },
-      create: { instanceId, memberId, label },
-      update: { memberId },
+      select: { id: true, memberId: true },
+    });
+    if (existing) return existing.memberId === memberId ? existing.id : null;
+
+    const roster = await prisma.roster.create({
+      data: { instanceId, memberId, label },
       select: { id: true },
     });
     return roster.id;
