@@ -28,6 +28,9 @@ export function SlotRow({ slug, slot }: { slug: string; slot: SlotView }) {
       <span className="w-8 shrink-0 text-sm text-text-dim">{dayName(slot.dayOfWeek)}</span>
       <span className="w-14 shrink-0 text-sm tabular">{slot.startTime}</span>
       <span className="font-medium">{raidLabel(slot.raidName, slot.difficulty)}</span>
+      {slot.partySize === 4 && (
+        <span className="rounded bg-surface-2 px-1.5 py-0.5 text-xs text-text-dim">4인</span>
+      )}
       {slot.keepRoster && (
         <span className="rounded bg-accent/15 px-1.5 py-0.5 text-xs text-accent">
           전원 고정

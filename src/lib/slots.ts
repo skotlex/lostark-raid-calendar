@@ -1,5 +1,6 @@
 import "server-only";
 
+import { DEFAULT_PARTY_SIZE, type PartySize, isPartySize } from "./positions";
 import { prisma } from "./prisma";
 
 /** 고정 요일표의 한 칸. 주차 개념이 없고 영속적이다. */
@@ -9,6 +10,8 @@ export interface SlotView {
   startTime: string;
   raidName: string;
   difficulty: string | null;
+  /** 4인이면 1파티만 쓴다. */
+  partySize: PartySize;
   keepRoster: boolean;
   sortOrder: number;
 }
@@ -26,6 +29,7 @@ const slotSelect = {
   startTime: true,
   raidName: true,
   difficulty: true,
+  partySize: true,
   keepRoster: true,
   sortOrder: true,
 } as const;
@@ -36,6 +40,7 @@ type SlotRow = {
   startTime: string;
   raidName: string;
   difficulty: string | null;
+  partySize: number;
   keepRoster: boolean;
   sortOrder: number;
 };
@@ -53,6 +58,8 @@ export function toSlotView(row: SlotRow): SlotView {
     startTime: row.startTime,
     raidName: row.raidName,
     difficulty: row.difficulty,
+    // 옛 행이나 손으로 고친 값이 4도 8도 아닐 수 있다. 화면이 깨지지 않게 8인으로 읽는다.
+    partySize: isPartySize(row.partySize) ? row.partySize : DEFAULT_PARTY_SIZE,
     keepRoster: row.keepRoster,
     sortOrder: row.sortOrder,
   };
@@ -73,6 +80,7 @@ export interface SlotInput {
   startTime: string;
   raidName: string;
   difficulty?: string | null;
+  partySize?: number;
   keepRoster?: boolean;
 }
 
@@ -89,6 +97,9 @@ function validate(input: SlotInput) {
   if (!input.raidName.trim()) {
     throw new SlotError("레이드 이름을 입력해 주세요");
   }
+  if (input.partySize !== undefined && !isPartySize(input.partySize)) {
+    throw new SlotError("인원은 4인 또는 8인입니다");
+  }
 }
 
 function normalize(input: SlotInput) {
@@ -101,6 +112,7 @@ function normalize(input: SlotInput) {
     startTime: input.startTime,
     raidName: input.raidName.trim(),
     difficulty: trim(input.difficulty),
+    partySize: isPartySize(input.partySize) ? input.partySize : DEFAULT_PARTY_SIZE,
     keepRoster: input.keepRoster ?? false,
   };
 }

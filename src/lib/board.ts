@@ -8,9 +8,11 @@ import {
 } from "./characters";
 import { prisma } from "./prisma";
 import {
-  ALL_POSITIONS,
-  PARTIES,
+  DEFAULT_PARTY_SIZE,
+  type PartySize,
+  isPartySize,
   isValidPosition,
+  partiesFor,
   partyIndexOf,
   positionKind,
 } from "./positions";
@@ -53,7 +55,7 @@ export interface PartyView {
 
 export interface BoardSlotView extends SlotView {
   parties: PartyView[];
-  /** 8자리 중 채워진 수 */
+  /** 자리 수(4 또는 8) 중 채워진 수 */
   filled: number;
 }
 
@@ -84,6 +86,7 @@ const slotSelect = {
   startTime: true,
   raidName: true,
   difficulty: true,
+  partySize: true,
   keepRoster: true,
   sortOrder: true,
 } as const;
@@ -245,7 +248,8 @@ export async function getBoard(
     }
 
     // 시너지는 4인 파티 단위로 적용된다. 8인을 한 덩어리로 계산하면 실제와 어긋난다.
-    const parties: PartyView[] = PARTIES.map((positions, index) => {
+    // 4인 레이드는 파티가 하나뿐이다.
+    const parties: PartyView[] = partiesFor(view.partySize).map((positions, index) => {
       const cells = positions.map(toCell);
       return {
         index,
@@ -274,10 +278,13 @@ export async function getBoard(
 async function requireSlot(instanceId: string, slotId: string) {
   const slot = await prisma.raidSlot.findFirst({
     where: { id: slotId, instanceId, archivedAt: null },
-    select: { id: true, raidName: true },
+    select: { id: true, raidName: true, partySize: true },
   });
   if (!slot) throw new BoardError("슬롯을 찾을 수 없습니다");
-  return slot;
+  return {
+    ...slot,
+    partySize: (isPartySize(slot.partySize) ? slot.partySize : DEFAULT_PARTY_SIZE) as PartySize,
+  };
 }
 
 function requireCurrentWeek(weekStart: Date) {
@@ -307,7 +314,8 @@ export async function assignByName(params: {
 
   requireCurrentWeek(weekStart);
   const slot = await requireSlot(instanceId, slotId);
-  if (!isValidPosition(position)) throw new BoardError("잘못된 자리입니다");
+  // 4인 슬롯에 2파티 자리가 들어오면 화면에 나오지 않는 유령 배정이 된다.
+  if (!isValidPosition(position, slot.partySize)) throw new BoardError("잘못된 자리입니다");
 
   // 이미 등록된 캐릭터면 API를 부르지 않는다. 분당 100회 한도를 아낀다.
   const existing = await prisma.character.findFirst({
@@ -333,7 +341,7 @@ export async function assignByName(params: {
   // 없게 하기 위한 것이고, 폿 자리가 이미 차 있으면 친 자리에 그대로 둔다(경고만 뜬다).
   let seat = position;
   if (character.role === "SUPPORT" && positionKind(position) === "DPS") {
-    const supSeat = PARTIES[partyIndexOf(position)].find(
+    const supSeat = partiesFor(slot.partySize)[partyIndexOf(position)]?.find(
       (p) => positionKind(p) === "SUP",
     );
     if (supSeat) {
@@ -422,13 +430,17 @@ export async function moveAssignment(params: {
 }): Promise<void> {
   const { instanceId, weekStart, from, to, actorLabel } = params;
   requireCurrentWeek(weekStart);
-  if (!isValidPosition(from.position) || !isValidPosition(to.position)) {
-    throw new BoardError("잘못된 자리입니다");
-  }
   if (from.slotId === to.slotId && from.position === to.position) return;
 
   const fromSlot = await requireSlot(instanceId, from.slotId);
   const toSlot = await requireSlot(instanceId, to.slotId);
+  // 자리 이름이 유효한지는 슬롯마다 다르다. 8인에서 4인으로 옮길 때 2파티 자리는 없다.
+  if (
+    !isValidPosition(from.position, fromSlot.partySize) ||
+    !isValidPosition(to.position, toSlot.partySize)
+  ) {
+    throw new BoardError("잘못된 자리입니다");
+  }
 
   const moved = await prisma.$transaction(async (tx) => {
     const source = await tx.assignment.findUnique({

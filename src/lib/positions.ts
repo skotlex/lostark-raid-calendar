@@ -6,7 +6,14 @@
  *
  *   1파티: 딜1 딜2 딜3 폿1
  *   2파티: 딜4 딜5 딜6 폿2
+ *
+ * 4인 레이드(세르카, 지평의 성당 …)는 **1파티만** 쓴다. 자리 이름을 따로 두지 않고
+ * 8인의 1파티를 그대로 쓰므로, 8인으로 만들었던 슬롯을 4인으로 바꿔도 앞 넷은 남는다.
  */
+
+export type PartySize = 4 | 8;
+
+export const DEFAULT_PARTY_SIZE: PartySize = 8;
 
 export type PositionKind = "DPS" | "SUP";
 
@@ -17,6 +24,20 @@ export const PARTY_2 = ["DPS4", "DPS5", "DPS6", "SUP2"] as const;
 export const PARTIES: readonly (readonly string[])[] = [PARTY_1, PARTY_2];
 
 export const ALL_POSITIONS: string[] = [...PARTY_1, ...PARTY_2];
+
+export function isPartySize(value: unknown): value is PartySize {
+  return value === 4 || value === 8;
+}
+
+/** 인원에 맞는 파티 목록. 4인은 1파티만. */
+export function partiesFor(size: PartySize): readonly (readonly string[])[] {
+  return size === 4 ? [PARTY_1] : PARTIES;
+}
+
+/** 인원에 맞는 자리 목록. */
+export function positionsFor(size: PartySize): string[] {
+  return partiesFor(size).flat();
+}
 
 export function positionKind(position: string): PositionKind | null {
   if (position.startsWith("DPS")) return "DPS";
@@ -38,7 +59,12 @@ export function partyIndexOf(position: string): number {
   return PARTY_2.includes(position as (typeof PARTY_2)[number]) ? 1 : 0;
 }
 
-/** 유효한 자리 이름인지. API 입력 검증에 쓴다. */
-export function isValidPosition(position: string): boolean {
-  return ALL_POSITIONS.includes(position);
+/**
+ * 유효한 자리 이름인지. API 입력 검증에 쓴다.
+ *
+ * 인원을 넘기면 그 슬롯에 있는 자리인지까지 본다. 4인 슬롯에 2파티 자리가 들어오면
+ * 화면에 나오지 않는 유령 배정이 되므로 여기서 걸러야 한다.
+ */
+export function isValidPosition(position: string, size: PartySize = DEFAULT_PARTY_SIZE): boolean {
+  return positionsFor(size).includes(position);
 }

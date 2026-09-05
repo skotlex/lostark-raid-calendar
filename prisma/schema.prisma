@@ -108,6 +108,8 @@ model RaidSlot {
   startTime   String
   raidName    String
   difficulty  String?
+  /// 8인이면 4인 파티 둘, 4인이면 하나. 프리셋이 채우고 손으로 바꿀 수 있다.
+  partySize   Int       @default(8)
   /// 켜면 이 슬롯 전원이 매주 승계된다(레이드 단위 리셋 제외).
   keepRoster  Boolean   @default(false)
   sortOrder   Int       @default(0)

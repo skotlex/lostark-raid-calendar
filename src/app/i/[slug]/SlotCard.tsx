@@ -50,7 +50,9 @@ export function SlotCard({
           <span className="ml-2 text-text-dim tabular">{slot.startTime}</span>
         </h3>
 
-        <span className="text-xs text-text-faint tabular">{slot.filled}/8</span>
+        <span className="text-xs text-text-faint tabular">
+          {slot.filled}/{slot.partySize}
+        </span>
 
         {editable && (
           <form action={toggleKeep} className="ml-auto">
@@ -85,6 +87,8 @@ export function SlotCard({
             slotId={slot.id}
             week={week}
             party={party}
+            // 파티가 하나뿐인 4인 레이드에 "1파티"는 알려주는 것이 없다.
+            showLabel={slot.parties.length > 1}
             editable={editable}
           />
         ))}
@@ -106,18 +110,22 @@ function Party({
   slotId,
   week,
   party,
+  showLabel,
   editable,
 }: {
   slug: string;
   slotId: string;
   week: string;
   party: PartyView;
+  showLabel: boolean;
   editable: boolean;
 }) {
   return (
     <div>
       <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="text-xs font-medium text-text-dim">{party.index + 1}파티</span>
+        {showLabel && (
+          <span className="text-xs font-medium text-text-dim">{party.index + 1}파티</span>
+        )}
         {party.synergies.length === 0 ? (
           <span className="text-[11px] text-text-faint">시너지 없음</span>
         ) : (

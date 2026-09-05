@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 
+import { type PartySize, isPartySize } from "@/lib/positions";
 import { RAID_PRESETS, difficultiesFor } from "@/lib/raids";
 import type { SlotView } from "@/lib/slots";
 import { WEEK_DAYS, dayNameFull } from "@/lib/week";
@@ -63,6 +64,19 @@ export function SlotForm({
   const [startTime, setStartTime] = useState(slot?.startTime ?? "20:00");
   const [raidName, setRaidName] = useState(slot?.raidName ?? "");
   const [difficulty, setDifficulty] = useState(slot?.difficulty ?? "");
+  const [partySize, setPartySize] = useState<PartySize>(slot?.partySize ?? 8);
+
+  /**
+   * 레이드를 프리셋에서 고르면 인원도 함께 맞춘다.
+   *
+   * 4인인지 8인인지는 레이드가 정하는 것이지 사람이 매번 고를 일이 아니다.
+   * 목록에 없는 이름은 손대지 않고 고른 값을 그대로 둔다.
+   */
+  function pickRaid(name: string) {
+    setRaidName(name);
+    const preset = RAID_PRESETS.find((r) => r.name === name);
+    if (preset) setPartySize(preset.size);
+  }
 
   return (
     <form
@@ -111,7 +125,7 @@ export function SlotForm({
           name="raidName"
           required
           value={raidName}
-          onChange={setRaidName}
+          onChange={pickRaid}
           options={RAID_NAMES}
           placeholder="벨가르딘"
           wrapClassName="w-32"
@@ -129,6 +143,21 @@ export function SlotForm({
           wrapClassName="w-24"
           className={`w-full ${CONTROL}`}
         />
+      </Field>
+
+      <Field label="인원">
+        <select
+          name="partySize"
+          value={partySize}
+          onChange={(e) => {
+            const next = Number(e.target.value);
+            if (isPartySize(next)) setPartySize(next);
+          }}
+          className={`w-20 ${CONTROL}`}
+        >
+          <option value={8}>8인</option>
+          <option value={4}>4인</option>
+        </select>
       </Field>
 
       <button
