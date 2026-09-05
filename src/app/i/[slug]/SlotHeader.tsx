@@ -4,6 +4,7 @@ import { useActionState } from "react";
 
 import type { BoardSlotView } from "@/lib/board";
 import { raidLabel } from "@/lib/raids";
+import { formatScoreCut } from "@/lib/scoreCut";
 import { isUndecided } from "@/lib/week";
 
 import { type CellState, keepRosterAction } from "./actions";
@@ -53,6 +54,14 @@ export function SlotHeader({
           {slot.filled}/{slot.partySize}
         </span>
 
+        {/*
+          점수컷 — 걸어 둔 공대만 내건다.
+          자리 수 바로 뒤에 서는 이유는 "몇 자리 남았나" 다음에 "내가 들어갈 수 있나"가
+          오기 때문이다. 이름·시각과 섞이지 않게 색으로 갈라 둔다.
+        */}
+        <ScoreCut kind="dps" value={slot.dpsScoreCut} />
+        <ScoreCut kind="sup" value={slot.supScoreCut} />
+
         {editable && (
           <form action={toggleKeep} className="ml-auto">
             <input type="hidden" name="slug" value={slug} />
@@ -85,5 +94,29 @@ export function SlotHeader({
         <p className="px-3 pt-2 text-xs text-danger">{state.message}</p>
       )}
     </>
+  );
+}
+
+const CUT_LABEL = { dps: "딜러", sup: "서폿" } as const;
+
+/**
+ * 점수컷 뱃지.
+ *
+ * **안내일 뿐이다.** 캐릭터 스펙과 견주지 않으므로 미달인 사람이 들어와도 이 뱃지는
+ * 그대로다. 막지 않는다는 규칙(CLAUDE.md 3.4)에 맞고, 애초에 이 숫자가 전투력인지
+ * 템레벨인지도 앱은 모른다(scoreCut.ts).
+ */
+function ScoreCut({ kind, value }: { kind: "dps" | "sup"; value: number | null }) {
+  if (value === null) return null;
+
+  const label = CUT_LABEL[kind];
+  return (
+    <span
+      className="slot-badge tabular"
+      data-cut={kind}
+      title={`${label} 점수컷 ${value.toLocaleString("ko-KR")} 이상 (안내입니다. 배치를 막지 않습니다)`}
+    >
+      {label} {formatScoreCut(value)}
+    </span>
   );
 }

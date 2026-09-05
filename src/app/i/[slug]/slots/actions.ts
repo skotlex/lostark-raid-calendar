@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { findInstance } from "@/lib/instance";
+import { parseScoreCut } from "@/lib/scoreCut";
 import { type Session, requireSession } from "@/lib/session";
 import { type SlotInput, SlotError, archiveSlot, createSlot, updateSlot } from "@/lib/slots";
 
@@ -26,6 +27,8 @@ function readInput(formData: FormData): SlotInput {
     startTime: String(formData.get("startTime") ?? "").trim(),
     raidName: String(formData.get("raidName") ?? ""),
     difficulty: String(formData.get("difficulty") ?? ""),
+    dpsScoreCut: parseScoreCut(formData.get("dpsScoreCut")),
+    supScoreCut: parseScoreCut(formData.get("supScoreCut")),
   };
 }
 

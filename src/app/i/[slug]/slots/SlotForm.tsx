@@ -3,6 +3,7 @@
 import { startTransition, useActionState, useState } from "react";
 
 import { RAID_PRESETS, difficultiesFor } from "@/lib/raids";
+import { scoreCutDigits } from "@/lib/scoreCut";
 import type { SlotView } from "@/lib/slots";
 import { WEEK_DAYS, dayNameFull, isUndecided } from "@/lib/week";
 
@@ -84,6 +85,9 @@ export function SlotForm({
   const [startTime, setStartTime] = useState(slot?.startTime ?? "20:00");
   const [raidName, setRaidName] = useState(slot?.raidName ?? "");
   const [difficulty, setDifficulty] = useState(slot?.difficulty ?? "");
+  // 점수컷은 비워 두는 것이 기본이다. 컷을 거는 공대만 채운다.
+  const [dpsScoreCut, setDpsScoreCut] = useState(cutText(slot?.dpsScoreCut));
+  const [supScoreCut, setSupScoreCut] = useState(cutText(slot?.supScoreCut));
 
   const difficulties = difficultiesFor(raidName);
 
@@ -131,6 +135,8 @@ export function SlotForm({
     data.set("startTime", startTime);
     data.set("raidName", raidName);
     data.set("difficulty", difficulty);
+    data.set("dpsScoreCut", dpsScoreCut);
+    data.set("supScoreCut", supScoreCut);
 
     startTransition(() => submit(data));
     // 수정은 저장 후 닫는다. 추가는 연달아 넣는 경우가 많아 열어둔다.
@@ -206,6 +212,28 @@ export function SlotForm({
         />
       </Field>
 
+      {/*
+        점수컷은 숫자만 받는다. 부등호는 편성표가 붙이므로(scoreCut.ts) "5000 이상"처럼
+        치면 오히려 "이상 이상"이 된다. 라벨의 "이상"이 그 약속을 미리 말해 준다.
+      */}
+      <Field label="딜러컷" hint="이상">
+        <ScoreCutInput
+          name="dpsScoreCut"
+          value={dpsScoreCut}
+          onChange={setDpsScoreCut}
+          tone="dps"
+        />
+      </Field>
+
+      <Field label="서폿컷" hint="이상">
+        <ScoreCutInput
+          name="supScoreCut"
+          value={supScoreCut}
+          onChange={setSupScoreCut}
+          tone="sup"
+        />
+      </Field>
+
       <button
         type="submit"
         disabled={pending}
@@ -228,6 +256,45 @@ export function SlotForm({
       {state.status === "error" && <span className="text-xs text-danger">{state.message}</span>}
 
     </form>
+  );
+}
+
+/** 저장된 값을 칸에 넣을 글자로. 컷이 없으면 빈 칸이다. */
+function cutText(value: number | null | undefined): string {
+  return value === null || value === undefined ? "" : String(value);
+}
+
+/**
+ * 점수컷 한 칸.
+ *
+ * 뱃지 색과 같은 테두리를 둘러 어느 칸이 어느 뱃지가 되는지 눈으로 잇는다. 두 칸이
+ * 나란히 서고 라벨도 두 글자 차이뿐이라, 색이 없으면 딜러 칸에 서폿 값을 넣어도
+ * 저장하기 전까지 알 수 없다.
+ *
+ * `type="number"`를 쓰지 않는다. 스피너가 붙어 폭이 흔들리고 휠에 값이 바뀐다.
+ * 시간 칸과 같이 글자를 직접 걸러낸다.
+ */
+function ScoreCutInput({
+  name,
+  value,
+  onChange,
+  tone,
+}: {
+  name: string;
+  value: string;
+  onChange: (value: string) => void;
+  tone: "dps" | "sup";
+}) {
+  return (
+    <input
+      name={name}
+      inputMode="numeric"
+      value={value}
+      onChange={(e) => onChange(scoreCutDigits(e.target.value))}
+      placeholder="없음"
+      data-cut={tone}
+      className={`w-20 tabular ${CONTROL} score-cut-input`}
+    />
   );
 }
 

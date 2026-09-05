@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 
 import { raidLabel } from "@/lib/raids";
+import { formatScoreCut } from "@/lib/scoreCut";
 import type { SlotView } from "@/lib/slots";
 import { dayName, isUndecided } from "@/lib/week";
 
@@ -47,6 +48,17 @@ export function SlotRow({ slug, slot }: { slug: string; slot: SlotView }) {
       {slot.keepRoster && (
         <span className="rounded bg-accent/15 px-1.5 py-0.5 text-xs text-accent">
           전원 고정
+        </span>
+      )}
+      {/* 편성표에 걸리는 뱃지와 같은 모양이다. 저장한 값을 확인하러 편성표로 가지 않는다. */}
+      {slot.dpsScoreCut !== null && (
+        <span className="slot-badge tabular" data-cut="dps">
+          딜러 {formatScoreCut(slot.dpsScoreCut)}
+        </span>
+      )}
+      {slot.supScoreCut !== null && (
+        <span className="slot-badge tabular" data-cut="sup">
+          서폿 {formatScoreCut(slot.supScoreCut)}
         </span>
       )}
 

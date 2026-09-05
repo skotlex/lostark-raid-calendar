@@ -6,6 +6,7 @@ import { logEvent } from "./history";
 import { UNDECIDED, isUndecided, weekStartForDay } from "./week";
 import { DEFAULT_PARTY_SIZE, type PartySize, isPartySize } from "./positions";
 import { prisma } from "./prisma";
+import { MAX_SCORE_CUT, isScoreCut } from "./scoreCut";
 import { raidLabel, sizeFor } from "./raids";
 
 /** 고정 요일표의 한 칸. 주차 개념이 없고 영속적이다. */
@@ -18,6 +19,10 @@ export interface SlotView {
   /** 4인이면 1파티만 쓴다. */
   partySize: PartySize;
   keepRoster: boolean;
+  /** 딜러 점수컷. 안내일 뿐 배치를 막지 않는다(scoreCut.ts). */
+  dpsScoreCut: number | null;
+  /** 서폿 점수컷. */
+  supScoreCut: number | null;
   sortOrder: number;
 }
 
@@ -52,6 +57,8 @@ const slotSelect = {
   difficulty: true,
   partySize: true,
   keepRoster: true,
+  dpsScoreCut: true,
+  supScoreCut: true,
   sortOrder: true,
 } as const;
 
@@ -63,6 +70,8 @@ type SlotRow = {
   difficulty: string | null;
   partySize: number;
   keepRoster: boolean;
+  dpsScoreCut: number | null;
+  supScoreCut: number | null;
   sortOrder: number;
 };
 
@@ -82,6 +91,8 @@ export function toSlotView(row: SlotRow): SlotView {
     // 옛 행이나 손으로 고친 값이 4도 8도 아닐 수 있다. 화면이 깨지지 않게 8인으로 읽는다.
     partySize: isPartySize(row.partySize) ? row.partySize : DEFAULT_PARTY_SIZE,
     keepRoster: row.keepRoster,
+    dpsScoreCut: row.dpsScoreCut,
+    supScoreCut: row.supScoreCut,
     sortOrder: row.sortOrder,
   };
 }
@@ -105,6 +116,9 @@ export interface SlotInput {
   /** 보통은 비워 둔다. 레이드 이름에서 끌어낸다. */
   partySize?: number;
   keepRoster?: boolean;
+  /** 숫자만 온다. 부등호는 화면이 붙인다(scoreCut.ts). null이면 컷 없음. */
+  dpsScoreCut?: number | null;
+  supScoreCut?: number | null;
 }
 
 /** "20:00" 형식만 받는다. 자유 입력을 두면 정렬이 무너진다. */
@@ -133,6 +147,13 @@ function validate(input: SlotInput) {
   if (input.partySize !== undefined && !isPartySize(input.partySize)) {
     throw new SlotError("인원은 4인 또는 8인입니다");
   }
+  // 잘못 친 값을 조용히 0이나 null로 떨어뜨리지 않는다. 컷을 걸어 둔 줄 알고
+  // 넘어가면 안내가 없는 것보다 나쁘다.
+  for (const cut of [input.dpsScoreCut, input.supScoreCut]) {
+    if (cut !== undefined && !isScoreCut(cut)) {
+      throw new SlotError(`점수컷은 1부터 ${MAX_SCORE_CUT.toLocaleString("ko-KR")} 사이의 숫자입니다`);
+    }
+  }
 }
 
 function normalize(input: SlotInput) {
@@ -149,6 +170,8 @@ function normalize(input: SlotInput) {
     // 프리셋에 없는 이름은 8인으로 둔다(sizeFor).
     partySize: isPartySize(input.partySize) ? input.partySize : sizeFor(input.raidName),
     keepRoster: input.keepRoster ?? false,
+    dpsScoreCut: input.dpsScoreCut ?? null,
+    supScoreCut: input.supScoreCut ?? null,
   };
 }
 

@@ -136,6 +136,8 @@ const slotSelect = {
   difficulty: true,
   partySize: true,
   keepRoster: true,
+  dpsScoreCut: true,
+  supScoreCut: true,
   sortOrder: true,
 } as const;
 

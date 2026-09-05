@@ -1562,6 +1562,41 @@ button:disabled,
 }
 
 /*
+ * 점수컷 뱃지 — 딜러는 빨강, 서폿은 초록.
+ *
+ * 자리 색(--dps 주황 / --support 파랑)을 쓰지 않는다. 그 둘은 칸 안에서 "이 사람이
+ * 딜인가 폿인가"를 말하는 색이고, 이건 머리글에서 "여기 들어오려면"을 말하는 값이다.
+ * 같은 색으로 두면 머리글의 뱃지가 아래 칸들의 요약처럼 읽힌다.
+ *
+ * 딜러컷이 자리 참(data-full)과 같은 빨강이지만 뜻이 겹치지 않는다. 하나는 숫자 둘을
+ * 빗금으로 나눈 모양이고 이쪽은 "딜러"라는 글자를 달고 있다.
+ */
+.slot-badge[data-cut="dps"] {
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  color: var(--danger);
+}
+
+.slot-badge[data-cut="sup"] {
+  background: color-mix(in srgb, var(--ok) 14%, transparent);
+  color: var(--ok);
+}
+
+/*
+ * 요일표 편집의 점수컷 칸.
+ *
+ * 뱃지와 같은 색을 테두리에 둘러 어느 칸이 어느 뱃지가 되는지 잇는다. 값이 없을 때는
+ * 옆 칸들과 같은 회색으로 가라앉는다. 안 쓰는 칸이 색으로 먼저 눈에 들어오면
+ * 요일·시각·레이드보다 중요한 칸처럼 보인다.
+ */
+.score-cut-input:not(:placeholder-shown)[data-cut="dps"] {
+  border-color: color-mix(in srgb, var(--danger) 55%, transparent);
+}
+
+.score-cut-input:not(:placeholder-shown)[data-cut="sup"] {
+  border-color: color-mix(in srgb, var(--ok) 55%, transparent);
+}
+
+/*
  * 확인 창.
  *
  * 브라우저 기본 confirm()은 OS가 그려서 앱 이름이 제목으로 뜨고 글꼴도 화면과 따로 논다.
