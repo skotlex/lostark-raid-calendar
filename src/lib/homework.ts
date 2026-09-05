@@ -144,7 +144,19 @@ export async function getHomework(
         },
       },
     },
-    orderBy: { itemLevel: "desc" },
+    /*
+     * 템레벨이 먼저, 같으면 전투력.
+     *
+     * 템레벨은 소수 둘째 자리까지라 같은 값이 흔하다(같은 재련 단계면 같다).
+     * 거기서 갈리는 것이 전투력이라 둘을 이어 붙여야 순서가 매번 같게 나온다.
+     *
+     * 아직 조회되지 않은 캐릭터는 뒤로 보낸다. desc는 Postgres 기본이 NULL을 앞에
+     * 두는데, 스펙을 모르는 캐릭터가 만렙 위에 서면 목록을 잘못 읽게 된다.
+     */
+    orderBy: [
+      { itemLevel: { sort: "desc", nulls: "last" } },
+      { combatPower: { sort: "desc", nulls: "last" } },
+    ],
   });
 
   const raids = new Map<string, RaidSummary>();
