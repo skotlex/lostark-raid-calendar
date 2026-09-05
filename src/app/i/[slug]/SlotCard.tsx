@@ -84,7 +84,8 @@ function Party({
           <span className="text-xs font-medium text-text-dim">{party.index + 1}파티</span>
         )}
         {party.synergies.length === 0 ? (
-          <span className="text-[11px] text-text-faint">시너지 없음</span>
+          // 칩과 같은 모양이라야 첫 사람이 들어올 때 줄 높이가 그대로다.
+          <span className="syn syn-none">시너지 없음</span>
         ) : (
           party.synergies.map((synergy) => (
             <span

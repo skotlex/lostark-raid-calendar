@@ -943,6 +943,11 @@ button:disabled,
   opacity: 0.6;
 }
 
+/* 아직 아무 시너지도 없는 파티. 자리는 지키되 눈에 띄지 않게 둔다. */
+.syn-none {
+  color: var(--text-faint);
+}
+
 .syn-atk {
   color: var(--syn-atk);
 }
