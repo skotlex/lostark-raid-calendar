@@ -1,17 +1,30 @@
 "use client";
 
-import { startTransition, useActionState, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
 import { RAID_GOLD_LIMIT } from "@/lib/goldEarners";
 import type { HomeworkEntry } from "@/lib/homework";
 import { goldAt, isGoldCapped } from "@/lib/homeworkOrder";
 import { dayName, isUndecided } from "@/lib/week";
 
+import { GripIcon } from "../icons";
 import { type HomeworkState, reorderHomeworkAction } from "./actions";
 
 const IDLE: HomeworkState = { status: "idle", message: "" };
 
 const gold = new Intl.NumberFormat("ko-KR");
+
+/**
+ * 손가락으로 끌기 시작하기까지 눌러야 하는 시간.
+ *
+ * 마우스는 누른 즉시 시작한다. 손가락은 그럴 수 없다. 이 목록은 세로로 긴 화면
+ * 한가운데 있어서, 바로 잡히게 두면 카드 위를 훑어 내릴 때마다 순서가 흐트러진다.
+ * 잠깐 멈춰 있으면 "옮기려는 것", 곧바로 움직이면 "내리려는 것"으로 가른다.
+ */
+const HOLD_MS = 250;
+
+/** 그 사이에 손가락이 이만큼(px) 넘게 움직이면 훑어 내리는 것으로 본다. */
+const HOLD_SLOP = 8;
 
 /**
  * 줄 앞뒤에 서는 두 뱃지(순번·요일)의 색.
@@ -80,6 +93,53 @@ export function EntryList({
   const rows = order.map((id) => byId.get(id)).filter((e) => e !== undefined);
   const movable = rows.length > 1;
 
+  /* 손가락을 누르고 있는 동안의 상태. 끌기가 시작되면 비운다. */
+  const holdTimer = useRef<number | null>(null);
+  const holdFrom = useRef<{ x: number; y: number } | null>(null);
+
+  /*
+   * 끄는 동안 화면이 따라 내려가지 않게 막는다.
+   *
+   * 줄에 `touch-action: none`을 박으면 간단하지만, 그러면 카드 위를 훑어 내릴 수
+   * 없게 된다. 이 목록이 화면의 대부분이라 훑기를 못 쓰면 화면 자체를 못 쓴다.
+   * 그래서 **끌기가 실제로 시작된 뒤에만** touchmove를 막는다. React가 붙이는
+   * 핸들러는 passive라 preventDefault가 듣지 않으므로 직접 붙인다.
+   */
+  const scrollLock = useRef<((e: TouchEvent) => void) | null>(null);
+
+  function lockScroll() {
+    if (scrollLock.current) return;
+    const block = (e: TouchEvent) => e.preventDefault();
+    document.addEventListener("touchmove", block, { passive: false });
+    scrollLock.current = block;
+  }
+
+  function unlockScroll() {
+    if (!scrollLock.current) return;
+    document.removeEventListener("touchmove", scrollLock.current);
+    scrollLock.current = null;
+  }
+
+  function cancelHold() {
+    if (holdTimer.current !== null) window.clearTimeout(holdTimer.current);
+    holdTimer.current = null;
+    holdFrom.current = null;
+  }
+
+  /*
+   * 끌던 도중에 이 카드가 사라지면 막아둔 스크롤이 그대로 남는다. 화면 전체가
+   * 굳어버리므로 반드시 푼다. ref만 건드리니 다시 그릴 일이 없어 의존성이 없다.
+   */
+  useEffect(() => {
+    return () => {
+      if (holdTimer.current !== null) window.clearTimeout(holdTimer.current);
+      if (scrollLock.current) {
+        document.removeEventListener("touchmove", scrollLock.current);
+        scrollLock.current = null;
+      }
+    };
+  }, []);
+
   /** 지금 포인터가 몇 번째 줄 위에 있나. 줄 높이가 제각각이라 매번 잰다. */
   function rowAt(clientY: number): number | null {
     const kids = listRef.current?.querySelectorAll("[data-row]");
@@ -90,15 +150,53 @@ export function EntryList({
     return kids.length - 1;
   }
 
+  /**
+   * 끌기 시작. **줄 어디를 잡아도 된다.**
+   *
+   * 마우스는 누른 즉시다. 손가락은 잠깐 눌러야 한다(HOLD_MS). 그 사이에 손가락이
+   * 움직이면 훑어 내리려는 것이라 접는다.
+   */
   function onPointerDown(index: number, e: React.PointerEvent<HTMLElement>) {
     if (!movable) return;
-    // 포인터를 손잡이에 묶는다. 이게 없으면 빠르게 끌 때 줄 밖으로 새어 멈춘다.
-    e.currentTarget.setPointerCapture(e.pointerId);
-    setDragIndex(index);
+
+    if (e.pointerType === "mouse") {
+      // 포인터를 줄에 묶는다. 이게 없으면 빠르게 끌 때 줄 밖으로 새어 멈춘다.
+      e.currentTarget.setPointerCapture(e.pointerId);
+      setDragIndex(index);
+      return;
+    }
+
+    const el = e.currentTarget;
+    const pointerId = e.pointerId;
+    holdFrom.current = { x: e.clientX, y: e.clientY };
+    holdTimer.current = window.setTimeout(() => {
+      holdTimer.current = null;
+      // 그새 손을 뗐거나 줄이 사라졌으면 붙잡을 것이 없다.
+      if (!el.isConnected) return;
+      try {
+        el.setPointerCapture(pointerId);
+      } catch {
+        return;
+      }
+      lockScroll();
+      setDragIndex(index);
+    }, HOLD_MS);
   }
 
   function onPointerMove(e: React.PointerEvent) {
-    if (dragIndex === null) return;
+    if (dragIndex === null) {
+      // 아직 누르고 있는 중이다. 움직였으면 훑어 내리려는 것이다.
+      const from = holdFrom.current;
+      if (
+        holdTimer.current !== null &&
+        from &&
+        Math.hypot(e.clientX - from.x, e.clientY - from.y) > HOLD_SLOP
+      ) {
+        cancelHold();
+      }
+      return;
+    }
+
     const to = rowAt(e.clientY);
     if (to === null || to === dragIndex) return;
     // 지나가는 자리마다 바로 자리를 바꾼다. 놓을 곳을 따로 그리지 않아도 결과가 보인다.
@@ -107,18 +205,41 @@ export function EntryList({
   }
 
   function onPointerUp() {
+    cancelHold();
+    unlockScroll();
     if (dragIndex === null) return;
     setDragIndex(null);
+    commit(order);
+  }
 
-    const next = order.join(",");
-    // 집었다가 제자리에 놓았으면 아무 일도 없었던 것이다.
-    if (next === serverOrder) return;
+  /** 바뀐 순서를 서버에 굳힌다. 제자리로 돌아왔으면 아무 일도 없었던 것이다. */
+  function commit(next: readonly string[]) {
+    const joined = next.join(",");
+    if (joined === serverOrder) return;
 
     const data = new FormData();
     data.set("slug", slug);
     data.set("characterId", characterId);
-    data.set("slotIds", next);
+    data.set("slotIds", joined);
     startTransition(() => save(data));
+  }
+
+  /**
+   * 위·아래 화살표로도 옮긴다.
+   *
+   * 끌기는 마우스나 손가락이 있어야 한다. 손잡이가 버튼이라 탭으로 닿을 수 있으니
+   * 거기서 끝내지 않는다. 줄을 slotId로 키를 잡아 두어 자리가 바뀌어도 같은 버튼이
+   * 그대로 남고, 초점이 따라가 연달아 누를 수 있다.
+   */
+  function onKeyDown(index: number, e: React.KeyboardEvent) {
+    if (!movable) return;
+    const to = e.key === "ArrowUp" ? index - 1 : e.key === "ArrowDown" ? index + 1 : null;
+    if (to === null || to < 0 || to >= rows.length) return;
+    e.preventDefault();
+
+    const next = move(order, index, to);
+    setOrder(next);
+    commit(next);
   }
 
   let earned = 0;
@@ -140,33 +261,47 @@ export function EntryList({
             <li
               key={entry.slotId}
               data-row
-              className={`flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-1.5 text-sm ${
+              onPointerDown={(e) => onPointerDown(index, e)}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+              onPointerCancel={onPointerUp}
+              className={`group flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-1.5 text-sm ${
                 entry.done ? "text-text-faint" : ""
-              } ${index === dragIndex ? "bg-accent/10" : ""} ${capped ? "opacity-70" : ""}`}
+              } ${index === dragIndex ? "bg-accent/10" : ""} ${capped ? "opacity-70" : ""} ${
+                movable ? "cursor-grab select-none active:cursor-grabbing" : ""
+              }`}
             >
               {/*
-                이번 주 몇 번째로 가는 레이드인가. **그리고 끌어 옮기는 손잡이다.**
+                끌 수 있다는 표시. 점 여섯 개는 "여기를 잡으면 끌린다"는 오래된 약속이라
+                설명이 필요 없다. 편성표 간략 보기가 쓰는 것과 같은 그림이다(icons.tsx).
 
-                번호 자체가 끌면 바뀌는 값이라 손잡이로 삼기에 맞다. 줄 전체를
-                손잡이로 두면 폰에서 카드 위를 훑어 내릴 때마다 순서가 흐트러진다.
+                **잡는 곳은 줄 전체다.** 이 그림은 알려주는 역할이지 유일한 손잡이가
+                아니다. 처음에는 번호 뱃지만 잡히게 두었는데, 끌 수 있다는 것을 아무도
+                알아채지 못했고 알아챈 뒤에도 좁은 뱃지를 정확히 짚어야 했다.
+
+                버튼으로 두는 것은 키보드 때문이다. 탭으로 닿아 화살표로 옮긴다.
+                옮길 줄이 하나뿐이면 그리지 않는다. 잡아도 갈 곳이 없다.
               */}
-              <button
-                type="button"
-                onPointerDown={(e) => onPointerDown(index, e)}
-                onPointerMove={onPointerMove}
-                onPointerUp={onPointerUp}
-                onPointerCancel={onPointerUp}
-                title={
-                  movable
-                    ? "끌어서 순서를 바꿉니다. 앞의 세 개만 골드를 받습니다"
-                    : undefined
-                }
-                className={`inline-flex h-4.5 min-w-4.5 shrink-0 touch-none select-none items-center justify-center rounded px-1 text-[11px] font-semibold tabular ${badgeTone(
+              {movable && (
+                <button
+                  type="button"
+                  onKeyDown={(e) => onKeyDown(index, e)}
+                  title={`끌어서 순서를 바꿉니다. 앞의 ${RAID_GOLD_LIMIT}개만 골드를 받습니다`}
+                  aria-label={`${entry.label} 순서 바꾸기. 위아래 화살표로 옮깁니다`}
+                  className="flex shrink-0 cursor-grab text-text-faint transition-colors group-hover:text-text-dim active:cursor-grabbing"
+                >
+                  <GripIcon />
+                </button>
+              )}
+
+              {/* 이번 주 몇 번째로 가는 레이드인가. 앞의 셋만 골드를 받는다. */}
+              <span
+                className={`inline-flex h-4.5 min-w-4.5 shrink-0 items-center justify-center rounded px-1 text-[11px] font-semibold tabular ${badgeTone(
                   entry.done,
-                )} ${movable ? "cursor-grab active:cursor-grabbing" : "cursor-default"}`}
+                )}`}
               >
                 {index + 1}
-              </button>
+              </span>
 
               <span className={entry.done ? "line-through" : "font-medium"}>
                 {entry.label}
@@ -217,7 +352,7 @@ export function EntryList({
           {rows.length > RAID_GOLD_LIMIT && (
             <span
               className="ml-auto text-text-faint"
-              title={`골드는 앞의 ${RAID_GOLD_LIMIT}개에서만 들어옵니다. 번호를 끌어 바꿀 수 있습니다`}
+              title={`골드는 앞의 ${RAID_GOLD_LIMIT}개에서만 들어옵니다. 줄을 끌어 바꿀 수 있습니다`}
             >
               골드 {RAID_GOLD_LIMIT}개까지
             </span>

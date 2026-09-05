@@ -180,7 +180,7 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
       <section className="space-y-2">
         <SectionTitle
           title="캐릭터별 숙제"
-          hint="번호를 끌어 옮기면 골드를 받을 세 개가 바뀝니다"
+          hint="줄을 끌어 옮기면 골드를 받을 세 개가 바뀝니다"
         />
 
         <ul className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(18rem,1fr))]">
