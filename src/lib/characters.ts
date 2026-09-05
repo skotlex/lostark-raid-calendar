@@ -410,10 +410,30 @@ export interface SiblingPreview {
   unclaimed: boolean;
 }
 
+/**
+ * 불러오기 한 번의 결과.
+ *
+ * 캐릭터 목록과 **이 원정대의 주인**이 함께 온다. 주인은 캐릭터 하나하나가 아니라
+ * 목록 전체에 걸리는 값이라 따로 둔다.
+ */
+export interface SiblingsPreview {
+  siblings: SiblingPreview[];
+  /**
+   * 이 원정대를 이미 클레임한 **다른 사람**의 이름. 내 것이거나 임자가 없으면 null이다.
+   *
+   * 로아 `siblings`는 **같은 계정의 캐릭터만** 준다. 그래서 목록에 남의 소속이 하나라도
+   * 있으면 아직 등록 안 된 나머지도 전부 그 사람 것이다. 캐릭터 단위로만 잠그면 그 사람이
+   * 등록하지 않은 부캐를 남이 가져갈 수 있고, 그러면 실제로는 한 계정인데 원정대가 둘로
+   * 갈려 골드 6명이 양쪽에서 따로 계산된다(goldEarners.ts).
+   */
+  owner: string | null;
+}
+
 export async function previewSiblings(
   instanceId: string,
   rawName: string,
-): Promise<SiblingPreview[]> {
+  myMemberId: string | null,
+): Promise<SiblingsPreview> {
   const name = rawName.trim();
   if (!name) throw new CharacterError("캐릭터 닉네임을 입력해 주세요");
 
@@ -433,19 +453,25 @@ export async function previewSiblings(
 
   const existing = await prisma.character.findMany({
     where: { instanceId, name: { in: siblings.map((s) => s.CharacterName) } },
-    select: { name: true, memberId: true },
+    select: { name: true, memberId: true, member: { select: { label: true } } },
   });
   const registered = new Map(existing.map((c) => [c.name, c.memberId]));
 
-  return siblings
-    .map((s) => ({
-      name: s.CharacterName,
-      className: s.CharacterClassName,
-      itemLevel: Number(s.ItemAvgLevel.replace(/,/g, "")) || null,
-      registered: registered.has(s.CharacterName),
-      unclaimed: registered.get(s.CharacterName) === null,
-    }))
-    .sort((a, b) => (b.itemLevel ?? 0) - (a.itemLevel ?? 0));
+  // 소속이 있는 캐릭터 하나면 충분하다. 같은 계정이라 나머지도 같은 주인이다.
+  const other = existing.find((c) => c.memberId && c.memberId !== myMemberId);
+
+  return {
+    owner: other?.member?.label ?? null,
+    siblings: siblings
+      .map((s) => ({
+        name: s.CharacterName,
+        className: s.CharacterClassName,
+        itemLevel: Number(s.ItemAvgLevel.replace(/,/g, "")) || null,
+        registered: registered.has(s.CharacterName),
+        unclaimed: registered.get(s.CharacterName) === null,
+      }))
+      .sort((a, b) => (b.itemLevel ?? 0) - (a.itemLevel ?? 0)),
+  };
 }
 
 export interface BulkResult {

@@ -17,6 +17,7 @@ const SIBLINGS_IDLE: SiblingsState = {
   message: "",
   searched: "",
   siblings: [],
+  owner: null,
 };
 const IMPORT_IDLE: ImportState = { status: "idle", message: "", result: null };
 
@@ -31,10 +32,18 @@ const DEFAULT_MIN_LEVEL = 1730;
  * 이미 소속이 붙은 캐릭터는 잠근다. 여기서 소속을 갈아치우면 먼저 클레임한 사람의
  * 원정대에서 캐릭터가 조용히 빠져나간다.
  *
+ * **원정대에 주인이 있으면 목록 전체를 잠근다.** 로아 siblings는 같은 계정만 주므로
+ * 아직 등록 안 된 캐릭터도 그 사람 것이다. 그것만 열어 두면 한 계정이 원정대 둘로
+ * 갈려 골드 6명이 양쪽에서 따로 계산된다(lib/characters.ts의 SiblingsPreview).
+ *
  * 타입은 서버 모듈(lib/characters)이 아니라 액션 결과에서 꺼낸다. `server-only`가
  * 붙어 있어 클라이언트 파일이 이름을 직접 들고 오면 안 된다.
  */
-function canPick(sibling: SiblingsState["siblings"][number]): boolean {
+function canPick(
+  sibling: SiblingsState["siblings"][number],
+  owner: string | null,
+): boolean {
+  if (owner) return false;
   return !sibling.registered || sibling.unclaimed;
 }
 
@@ -200,7 +209,7 @@ function SiblingsForm({ slug }: { slug: string }) {
     setSelected(
       new Set(
         search.siblings
-          .filter((s) => canPick(s) && (s.itemLevel ?? 0) >= DEFAULT_MIN_LEVEL)
+          .filter((s) => canPick(s, search.owner) && (s.itemLevel ?? 0) >= DEFAULT_MIN_LEVEL)
           .map((s) => s.name),
       ),
     );
@@ -215,7 +224,7 @@ function SiblingsForm({ slug }: { slug: string }) {
     });
   }
 
-  const selectable = search.siblings.filter(canPick);
+  const selectable = search.siblings.filter((s) => canPick(s, search.owner));
 
   return (
     <div className="space-y-3">
@@ -249,7 +258,24 @@ function SiblingsForm({ slug }: { slug: string }) {
           */}
           <input type="hidden" name="roster" value={search.searched} />
 
-          <div className="flex flex-wrap items-end gap-2">
+          {/*
+            남의 원정대다. 왜 못 고르는지와 잘못됐을 때 푸는 방법을 함께 적는다.
+            첫 클레임은 선착순 자기 신고라 틀릴 수 있고(CLAUDE.md 4장), 푸는 길은
+            그 사람 묶음을 통째로 지우는 것뿐이다(Member 행까지 지워져 클레임이 풀린다).
+          */}
+          {search.owner && (
+            <p className="rounded border border-border bg-bg px-3 py-2 text-xs text-text-dim">
+              이 원정대는 <strong className="text-text">{search.owner}</strong>님이 등록했습니다.
+              같은 계정의 캐릭터라 여기서는 등록할 수 없습니다.
+              <br />
+              <span className="text-text-faint">
+                잘못 등록된 것이라면 아래 목록에서 {search.owner}님 묶음을 삭제한 뒤 다시 불러
+                주세요.
+              </span>
+            </p>
+          )}
+
+          {!search.owner && (
             <div className="flex gap-1 text-xs">
               <button
                 type="button"
@@ -266,14 +292,14 @@ function SiblingsForm({ slug }: { slug: string }) {
                 전체 해제
               </button>
             </div>
-          </div>
+          )}
 
           <ul className="grid max-h-72 gap-1 overflow-y-auto rounded border border-border bg-bg p-2 sm:grid-cols-2 xl:grid-cols-3">
             {search.siblings.map((sibling) => (
               <li key={sibling.name}>
                 <label
                   className={`flex items-center gap-2 rounded px-2 py-1 text-sm ${
-                    canPick(sibling)
+                    canPick(sibling, search.owner)
                       ? "cursor-pointer hover:bg-surface-2"
                       : "text-text-faint"
                   }`}
@@ -283,7 +309,7 @@ function SiblingsForm({ slug }: { slug: string }) {
                     name="names"
                     value={sibling.name}
                     checked={selected.has(sibling.name)}
-                    disabled={!canPick(sibling)}
+                    disabled={!canPick(sibling, search.owner)}
                     onChange={() => toggle(sibling.name)}
                     className="accent-[var(--accent)]"
                   />
@@ -304,19 +330,21 @@ function SiblingsForm({ slug }: { slug: string }) {
             ))}
           </ul>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="submit"
-              disabled={importing || selected.size === 0}
-              className="btn-inline rounded bg-accent px-3 py-1.5 text-sm font-medium text-bg transition-opacity hover:opacity-90 disabled:opacity-50"
-            >
-              {importing ? "등록 중…" : `${selected.size}개 등록`}
-            </button>
-            <span className="text-xs text-text-faint">
-              캐릭터마다 API를 한 번씩 부릅니다. 많이 고르면 시간이 걸립니다.
-            </span>
-            <Feedback status={imported.status} message={imported.message} />
-          </div>
+          {!search.owner && (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="submit"
+                disabled={importing || selected.size === 0}
+                className="btn-inline rounded bg-accent px-3 py-1.5 text-sm font-medium text-bg transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {importing ? "등록 중…" : `${selected.size}개 등록`}
+              </button>
+              <span className="text-xs text-text-faint">
+                캐릭터마다 API를 한 번씩 부릅니다. 많이 고르면 시간이 걸립니다.
+              </span>
+              <Feedback status={imported.status} message={imported.message} />
+            </div>
+          )}
 
           {imported.result && imported.result.failed.length > 0 && (
             <ul className="space-y-0.5 text-xs text-danger">

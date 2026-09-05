@@ -102,6 +102,8 @@ export interface SiblingsState {
   /** 조회한 원정대 대표 닉네임. 사람 이름 기본값으로 쓴다 */
   searched: string;
   siblings: SiblingPreview[];
+  /** 이 원정대를 이미 클레임한 다른 사람. 있으면 화면이 목록을 통째로 잠근다 */
+  owner: string | null;
 }
 
 export async function previewSiblingsAction(
@@ -112,16 +114,29 @@ export async function previewSiblingsAction(
   const name = String(formData.get("name") ?? "");
 
   try {
-    const { instanceId } = await authorize(slug);
-    const siblings = await previewSiblings(instanceId, name);
+    const { instanceId, session } = await authorize(slug);
+    // 내 원정대를 다시 부르는 것과 남의 것을 부르는 것을 가르려면 내가 누구인지 알아야 한다.
+    const mine = await findMyMember(instanceId, session.discordUserId);
+    const { siblings, owner } = await previewSiblings(instanceId, name, mine?.id ?? null);
     return {
       status: "ok",
-      message: `${siblings.length}개 캐릭터를 찾았습니다. 등록할 캐릭터를 골라 주세요`,
+      // 주인이 있으면 "골라 주세요"라고 하지 않는다. 고를 수 있는 것이 없다.
+      // 왜 못 고르는지는 목록 위 안내가 말한다(RegisterPanel).
+      message: owner
+        ? `${siblings.length}개 캐릭터를 찾았습니다`
+        : `${siblings.length}개 캐릭터를 찾았습니다. 등록할 캐릭터를 골라 주세요`,
       searched: name.trim(),
       siblings,
+      owner,
     };
   } catch (error) {
-    return { status: "error", message: toMessage(error), searched: "", siblings: [] };
+    return {
+      status: "error",
+      message: toMessage(error),
+      searched: "",
+      siblings: [],
+      owner: null,
+    };
   }
 }
 
