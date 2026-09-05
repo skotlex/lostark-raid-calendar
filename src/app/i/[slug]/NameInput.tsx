@@ -21,6 +21,9 @@ export interface KnownCharacter {
   name: string;
   /** 보고 있는 사람의 캐릭터인가. 내 것만 아무것도 안 쳤을 때 먼저 보여준다 */
   mine: boolean;
+  /** 후보 줄에 이름과 함께 적는다. 동명이 아니어도 누구인지 알아보는 데 쓴다 */
+  className: string | null;
+  itemLevel: number | null;
 }
 
 const KnownNamesContext = createContext<readonly KnownCharacter[]>([]);
@@ -49,19 +52,19 @@ function suggest(
   characters: readonly KnownCharacter[],
   query: string,
   taken: ReadonlySet<string>,
-): string[] {
+): KnownCharacter[] {
   const q = query.trim().toLowerCase();
   const pool = characters.filter((c) => !taken.has(c.name));
 
-  if (!q) return pool.filter((c) => c.mine).map((c) => c.name).slice(0, 8);
+  if (!q) return pool.filter((c) => c.mine).slice(0, 8);
 
-  const starts: string[] = [];
-  const contains: string[] = [];
+  const starts: KnownCharacter[] = [];
+  const contains: KnownCharacter[] = [];
   for (const character of pool) {
     const lower = character.name.toLowerCase();
     if (lower === q) continue; // 이미 다 친 이름을 다시 권하지 않는다
-    if (lower.startsWith(q)) starts.push(character.name);
-    else if (lower.includes(q)) contains.push(character.name);
+    if (lower.startsWith(q)) starts.push(character);
+    else if (lower.includes(q)) contains.push(character);
     if (starts.length >= 8) break;
   }
   return [...starts, ...contains].slice(0, 8);
@@ -180,7 +183,7 @@ export function NameInput({
     } else if (e.key === "Enter" && active >= 0) {
       // 후보를 짚어둔 상태의 엔터는 그 후보를 고르는 것이다.
       e.preventDefault();
-      choose(items[active]!);
+      choose(items[active]!.name);
     }
   }
 
@@ -233,17 +236,22 @@ export function NameInput({
       {showing && (
         <ul id={listId} role="listbox" className="combo-list">
           {items.map((item, i) => (
-            <li key={item}>
+            <li key={item.name}>
               <button
                 type="button"
                 role="option"
                 aria-selected={i === active}
                 tabIndex={-1}
                 onMouseDown={(e) => e.preventDefault()}
-                onClick={() => choose(item)}
+                onClick={() => choose(item.name)}
                 className={`combo-item ${i === active ? "is-active" : ""}`}
               >
-                {item}
+                <span className="truncate">{item.name}</span>
+                {/* 직업과 레벨은 누구인지 가려내는 단서일 뿐이라 이름보다 흐리게 둔다. */}
+                {item.className && <span className="combo-meta">{item.className}</span>}
+                {item.itemLevel !== null && (
+                  <span className="combo-meta tabular">{item.itemLevel.toFixed(2)}</span>
+                )}
               </button>
             </li>
           ))}

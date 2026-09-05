@@ -73,13 +73,16 @@ export default async function BoardPage({
   const myMember = await findMyMember(instance.id, session.discordUserId);
   const known = await prisma.character.findMany({
     where: { instanceId: instance.id },
-    select: { name: true, memberId: true },
+    select: { name: true, memberId: true, className: true, itemLevel: true },
     orderBy: { itemLevel: "desc" },
   });
   // 아무것도 안 쳤을 때는 내 캐릭터만 보여준다(NameInput). 그래서 소속을 함께 싣는다.
+  // Prisma의 Decimal은 클라이언트 컴포넌트로 넘길 수 없어 숫자로 바꾼다.
   const knownCharacters = known.map((c) => ({
     name: c.name,
     mine: Boolean(myMember && c.memberId === myMember.id),
+    className: c.className,
+    itemLevel: c.itemLevel === null ? null : Number(c.itemLevel),
   }));
 
   // 편성에 들어와 있는 캐릭터 중 스펙이 오래된 것. 있으면 화면이 열린 뒤 알아서 갱신된다.

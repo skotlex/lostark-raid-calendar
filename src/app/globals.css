@@ -1270,3 +1270,31 @@ button:disabled,
   background: var(--danger);
   color: var(--bg);
 }
+
+/*
+ * 후보 줄의 곁다리 정보(직업·레벨).
+ *
+ * 이름이 먼저 읽혀야 한다. 같은 굵기로 늘어놓으면 셋이 한 덩어리로 보여 이름을 골라내는
+ * 데 시간이 걸린다. 오른쪽으로 밀고 흐리게 둔다.
+ */
+.combo-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.375rem;
+}
+
+.combo-meta {
+  flex: 0 0 auto;
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+.combo-meta:first-of-type {
+  margin-left: auto;
+}
+
+.combo-item.is-active .combo-meta,
+.combo-item:hover .combo-meta {
+  color: inherit;
+  opacity: 0.75;
+}
