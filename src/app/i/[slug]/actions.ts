@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { BoardError, assignByName, moveAssignment, setPinned, unassign } from "@/lib/board";
+import { syncStaleCharacters } from "@/lib/characters";
 import { findInstance } from "@/lib/instance";
 import { type Session, requireSession } from "@/lib/session";
 import { SlotError, setKeepRoster } from "@/lib/slots";
@@ -29,6 +30,21 @@ async function authorize(slug: unknown): Promise<{ instanceId: string; session: 
 function toMessage(error: unknown): string {
   if (error instanceof BoardError || error instanceof SlotError) return error.message;
   throw error;
+}
+
+/**
+ * 오래된 스펙을 자동으로 갱신한다. 화면이 열릴 때 AutoSync가 한 번 부른다.
+ *
+ * 조회가 몇 초 걸릴 수 있어 렌더를 막지 않고 뒤에서 돌린다. 끝나면 화면을 다시 그린다.
+ */
+export async function syncStaleAction(slug: string): Promise<number> {
+  const { instanceId } = await authorize(slug);
+  const synced = await syncStaleCharacters(instanceId);
+  if (synced > 0) {
+    revalidatePath(`/i/${slug}`);
+    revalidatePath(`/i/${slug}/characters`);
+  }
+  return synced;
 }
 
 export interface CellState {

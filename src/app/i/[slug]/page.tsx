@@ -16,6 +16,7 @@ import {
   toWeekParam,
 } from "@/lib/week";
 
+import { AutoSync } from "./AutoSync";
 import { KnownNamesProvider } from "./NameInput";
 import { RememberDay } from "./lastDay";
 import { SlotCard } from "./SlotCard";
@@ -52,6 +53,16 @@ export default async function BoardPage({
   });
   const knownNames = known.map((c) => c.name);
 
+  // 편성에 들어와 있는 캐릭터 중 스펙이 오래된 것. 있으면 화면이 열린 뒤 알아서 갱신된다.
+  const stale = new Set<string>();
+  for (const slot of board) {
+    for (const party of slot.parties) {
+      for (const cell of party.cells) {
+        if (cell.character?.stale && !cell.character.syncError) stale.add(cell.character.id);
+      }
+    }
+  }
+
   const countByDay = new Map<number, number>();
   for (const slot of board) {
     countByDay.set(slot.dayOfWeek, (countByDay.get(slot.dayOfWeek) ?? 0) + 1);
@@ -67,6 +78,7 @@ export default async function BoardPage({
     <div className="space-y-4">
       {/* 다른 화면에 갔다 돌아왔을 때 보던 요일로 열리게 한다. */}
       <RememberDay day={day} />
+      <AutoSync slug={slug} staleCount={stale.size} />
 
       {/* 밑줄이 놓일 레일. 이게 없으면 켜진 탭의 밑줄만 허공에 떠 보인다. */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border">

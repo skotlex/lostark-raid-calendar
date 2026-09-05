@@ -45,7 +45,7 @@ export interface CharacterView {
   memberLabel: string | null;
   syncedAt: string | null;
   syncError: string | null;
-  /** 다시 조회할 때가 됐는지. 화면에서 "갱신 필요" 표시에 쓴다 */
+  /** 다시 조회할 때가 됐는지. 화면이 열릴 때 자동 갱신 대상을 세는 데 쓴다 */
   stale: boolean;
 }
 
@@ -432,6 +432,47 @@ export async function syncAllCharacters(instanceId: string): Promise<BulkResult>
     else result.added.push(character.name);
   }
   return result;
+}
+
+/**
+ * 같은 인스턴스에서 자동 갱신이 겹쳐 도는 것을 막는다.
+ *
+ * 길드원 여럿이 동시에 화면을 열면 같은 캐릭터를 두 번 조회하게 된다.
+ * 프로세스 안에서만 도는 자물쇠라 완벽하지는 않지만, 흔한 겹침은 이걸로 걷힌다.
+ */
+const syncingInstances = new Set<string>();
+
+/**
+ * 오래된 캐릭터를 조용히 다시 조회한다. 화면이 열릴 때 자동으로 돈다.
+ *
+ * 사람이 `갱신`을 눌러야 최신이 되는 구조는 시트의 `#REF!`와 같은 문제를 만든다.
+ * 아무도 누르지 않으면 낡은 숫자가 그대로 편성 근거가 된다.
+ *
+ * 한 번에 `limit`개까지만 본다. 분당 100회 한도가 있고, 남은 것은 다음 조회에서
+ * 이어 처리하면 된다. 오래 묵은 것부터 간다.
+ */
+export async function syncStaleCharacters(instanceId: string, limit = 20): Promise<number> {
+  if (syncingInstances.has(instanceId)) return 0;
+  syncingInstances.add(instanceId);
+  try {
+    const cutoff = new Date(Date.now() - SYNC_TTL_MS);
+    const rows = await prisma.character.findMany({
+      where: { instanceId, OR: [{ syncedAt: null }, { syncedAt: { lt: cutoff } }] },
+      select: { id: true },
+      orderBy: { syncedAt: { sort: "asc", nulls: "first" } },
+      take: limit,
+    });
+
+    let synced = 0;
+    for (const row of rows) {
+      // force를 주지 않는다. 그새 누가 갱신했으면 조회 없이 넘어간다.
+      await syncCharacter(instanceId, row.id);
+      synced += 1;
+    }
+    return synced;
+  } finally {
+    syncingInstances.delete(instanceId);
+  }
 }
 
 export async function deleteCharacter(instanceId: string, characterId: string): Promise<void> {

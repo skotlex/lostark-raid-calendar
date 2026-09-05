@@ -85,10 +85,6 @@ export function CharacterCard({
           <p className="char-notice char-notice--danger mt-2">{character.syncError}</p>
         )}
 
-        {!character.syncError && character.stale && (
-          <p className="char-notice mt-2">정보가 오래됐습니다. 갱신을 눌러 최신 스펙을 가져옵니다.</p>
-        )}
-
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
           <form action={sync}>
             <input type="hidden" name="slug" value={slug} />

@@ -1,6 +1,7 @@
 import { listCharacters } from "@/lib/characters";
 import { requireInstance } from "@/lib/instance";
 
+import { AutoSync } from "../AutoSync";
 import { CharacterCard } from "./CharacterCard";
 import { RegisterPanel } from "./RegisterPanel";
 import { SyncAllButton } from "./SyncAllButton";
@@ -27,6 +28,9 @@ export default async function CharactersPage({ params }: PageProps<"/i/[slug]/ch
     return a[0].localeCompare(b[0], "ko");
   });
 
+  // 조회 실패한 캐릭터는 빼고 센다. 실패도 syncedAt을 남기므로 6시간 동안은 다시 가지 않는다.
+  const staleCount = characters.filter((c) => c.stale && !c.syncError).length;
+
   const supports = characters.filter((c) => c.role === "SUPPORT").length;
   const failed = characters.filter((c) => c.syncError).length;
 
@@ -39,6 +43,8 @@ export default async function CharactersPage({ params }: PageProps<"/i/[slug]/ch
           여기서는 잘못 들어간 캐릭터 삭제, 딜/서폿 교정, 스펙 갱신, 부캐 묶기를 합니다.
         </p>
       </div>
+
+      <AutoSync slug={slug} staleCount={staleCount} />
 
       <RegisterPanel slug={slug} />
 
