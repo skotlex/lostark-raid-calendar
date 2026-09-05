@@ -178,8 +178,12 @@ export function Cell({
         ) : (
           <form action={assign}>
             {hidden}
-            <NameInput name="characterName" disabled={assigning} />
-            {assigning && <div className="char-faint mt-1 text-[11px]">조회 중…</div>}
+            <NameInput
+              name="characterName"
+              pending={assigning}
+              // 성공했을 때만 비운다. 실패한 이름은 남겨 고쳐 칠 수 있게 한다.
+              resetOn={assignState.status === "ok" ? assignState : null}
+            />
           </form>
         )}
 

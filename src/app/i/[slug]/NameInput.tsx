@@ -55,11 +55,15 @@ function suggest(names: readonly string[], query: string): string[] {
  */
 export function NameInput({
   name,
-  disabled,
+  pending,
+  resetOn,
   placeholder,
 }: {
   name: string;
-  disabled?: boolean;
+  /** 조회 중. 칸 자체가 상태를 말하므로 아래에 줄을 더하지 않는다. */
+  pending?: boolean;
+  /** 이 값이 바뀌면 입력을 비운다. 배치가 끝났다는 신호로 쓴다. */
+  resetOn?: unknown;
   placeholder?: string;
 }) {
   const names = useContext(KnownNamesContext);
@@ -69,8 +73,24 @@ export function NameInput({
   const inputRef = useRef<HTMLInputElement>(null);
   const listId = useId();
 
+  /*
+   * 배치가 끝나면 친 이름을 지운다.
+   *
+   * 보통은 칸이 캐릭터 카드로 바뀌면서 이 입력창이 사라지지만, 딜 칸에 폿을 치면
+   * 폿 자리로 옮겨 앉아 이 칸은 빈 채로 남는다. 그때 방금 친 이름이 그대로 있으면
+   * 넣긴 넣었는데 실패한 것처럼 보인다.
+   *
+   * effect가 아니라 렌더 중에 맞춘다. React가 권하는 "prop이 바뀌면 state를 맞추는"
+   * 방식이고, effect로 하면 화면을 한 번 그린 뒤 또 그리게 된다.
+   */
+  const [lastReset, setLastReset] = useState(resetOn);
+  if (resetOn !== lastReset) {
+    setLastReset(resetOn);
+    if (resetOn && value !== "") setValue("");
+  }
+
   const items = useMemo(() => suggest(names, value), [names, value]);
-  const showing = open && items.length > 0;
+  const showing = open && !pending && items.length > 0;
 
   /** 후보를 고르면 그대로 넣고 폼을 보낸다. 한 번 더 엔터를 치게 하지 않는다. */
   function choose(picked: string) {
@@ -82,6 +102,11 @@ export function NameInput({
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    // 조회 중에는 아무것도 받지 않는다. 엔터를 또 치면 "조회 중…"이 그대로 넘어간다.
+    if (pending) {
+      e.preventDefault();
+      return;
+    }
     if (e.key === "Escape") {
       if (showing) {
         e.preventDefault();
@@ -112,9 +137,10 @@ export function NameInput({
       <input
         ref={inputRef}
         name={name}
-        value={value}
+        // 조회하는 동안 칸이 곧 상태 표시다. 값을 잠깐 바꿔 끼우고 손대지 못하게 둔다.
+        value={pending ? "조회 중…" : value}
+        readOnly={pending}
         required
-        disabled={disabled}
         autoComplete="off"
         placeholder={placeholder ?? "닉네임"}
         role="combobox"
@@ -122,6 +148,7 @@ export function NameInput({
         aria-controls={listId}
         aria-autocomplete="list"
         onChange={(e) => {
+          if (pending) return;
           setValue(e.target.value);
           setOpen(true);
           setActive(-1);
@@ -129,7 +156,7 @@ export function NameInput({
         onKeyDown={onKeyDown}
         // 후보를 클릭하는 중에도 blur가 먼저 나므로 닫는 것을 조금 미룬다.
         onBlur={() => setTimeout(() => setOpen(false), 120)}
-        onFocus={() => setOpen(true)}
+        onFocus={() => setOpen(!pending)}
         className="char-input"
       />
 

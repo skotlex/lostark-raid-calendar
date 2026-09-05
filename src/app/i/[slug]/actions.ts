@@ -52,7 +52,15 @@ export interface CellState {
   message: string;
 }
 
-const OK: CellState = { status: "ok", message: "" };
+/**
+ * 성공 상태.
+ *
+ * 매번 새 객체다. 상수 하나를 돌려쓰면 화면이 "또 성공했다"를 알아채지 못한다
+ * (NameInput이 이 값이 바뀌는 것을 보고 입력을 비운다).
+ */
+function ok(message = ""): CellState {
+  return { status: "ok", message };
+}
 
 /**
  * 칸에 닉네임을 넣어 배치한다.
@@ -77,7 +85,7 @@ export async function assignAction(
       actorLabel: session.label,
     });
     revalidatePath(`/i/${slug}`);
-    return created ? { status: "ok", message: "새 캐릭터를 조회해 등록했습니다" } : OK;
+    return created ? ok("새 캐릭터를 조회해 등록했습니다") : ok();
   } catch (error) {
     return { status: "error", message: toMessage(error) };
   }
@@ -99,7 +107,7 @@ export async function unassignAction(
       actorLabel: session.label,
     });
     revalidatePath(`/i/${slug}`);
-    return OK;
+    return ok();
   } catch (error) {
     return { status: "error", message: toMessage(error) };
   }
@@ -130,7 +138,7 @@ export async function moveAction(_prev: CellState, formData: FormData): Promise<
       actorLabel: session.label,
     });
     revalidatePath(`/i/${slug}`);
-    return OK;
+    return ok();
   } catch (error) {
     return { status: "error", message: toMessage(error) };
   }
@@ -150,7 +158,7 @@ export async function pinAction(_prev: CellState, formData: FormData): Promise<C
       pinned: formData.get("pinned") === "true",
     });
     revalidatePath(`/i/${slug}`);
-    return OK;
+    return ok();
   } catch (error) {
     return { status: "error", message: toMessage(error) };
   }
@@ -172,7 +180,7 @@ export async function keepRosterAction(
     );
     revalidatePath(`/i/${slug}`);
     revalidatePath(`/i/${slug}/pinned`);
-    return OK;
+    return ok();
   } catch (error) {
     return { status: "error", message: toMessage(error) };
   }
