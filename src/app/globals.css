@@ -1383,7 +1383,7 @@ button:disabled,
  * 1200px이 필요하고, 모자라면 머리글이 두 줄로 접혀 화면 위쪽을 두 배로 먹는다.
  * 글자 폭은 글꼴과 이름 길이에 따라 달라지므로 여유를 두고 잡았다.
  */
-@media (max-width: 78rem) {
+@media (max-width: 50rem) {
   .tab-label {
     overflow: hidden;
     max-width: 0;
