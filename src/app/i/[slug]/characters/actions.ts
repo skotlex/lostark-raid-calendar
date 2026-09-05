@@ -73,7 +73,7 @@ export async function registerAction(
     const character = await registerCharacter(instanceId, name);
 
     /*
-     * **이미 주인이 있으면 스펙만 갱신하고 클레임하지 않는다.**
+     * **이미 주인이 있으면 클레임하지 않는다.**
      *
      * 캐릭터의 소속은 registerCharacter가 이미 지켜준다(클레임한 사람이 먼저다).
      * 여기서 막는 것은 `claimedNames`에 남의 이름이 쌓이는 것이다. 쌓이면 한 이름을
@@ -81,24 +81,22 @@ export async function registerAction(
      * 붙을지가 흔들린다(findOwnerByCharacterName).
      *
      * 등록 자체를 실패로 돌리지는 않는다. 이름을 치기 전에는 남의 것인지 알 수 없고
-     * API 호출은 이미 나간 뒤다. 스펙 갱신은 누구에게도 해가 없다.
+     * API 호출은 이미 나간 뒤다. 스펙이 최신이 되는 것은 누구에게도 해가 없다.
      */
     const mine = await findMyMember(instanceId, session.discordUserId);
-    if (character.memberId && character.memberId !== mine?.id) {
-      refresh(slug);
-      return {
-        status: "ok",
-        message: `${character.name}은(는) ${character.memberLabel ?? "다른 분"}님의 캐릭터입니다. 스펙만 갱신했습니다`,
-      };
+    const others = character.memberId !== null && character.memberId !== mine?.id;
+
+    if (!others) {
+      await claimNames({
+        instanceId,
+        discordUserId: session.discordUserId,
+        label: session.label,
+        names: [character.name],
+        rosterId,
+      });
     }
 
-    await claimNames({
-      instanceId,
-      discordUserId: session.discordUserId,
-      label: session.label,
-      names: [character.name],
-      rosterId,
-    });
+    // 남의 캐릭터라도 이력은 남긴다. 그 이름이 여기서 처음 만들어졌을 수 있다.
     await logEvent({
       instanceId,
       action: "character_add",
@@ -108,7 +106,9 @@ export async function registerAction(
     refresh(slug);
     return {
       status: "ok",
-      message: `${character.name} (${character.className ?? "?"}) 등록됨`,
+      message: others
+        ? `${character.name}은(는) ${character.memberLabel ?? "다른 분"}님의 캐릭터입니다. 내 캐릭터로 묶지 않았습니다`
+        : `${character.name} (${character.className ?? "?"}) 등록됨`,
     };
   } catch (error) {
     return { status: "error", message: toMessage(error) };
