@@ -269,7 +269,7 @@ export function Cell({
                 aria-label="자리 비우기"
                 className="char-icon-btn hover:text-[color:var(--c-danger)]"
               >
-                ✕
+                <CloseIcon />
               </button>
             </form>
           </div>
@@ -311,6 +311,31 @@ export function Cell({
 }
 
 /**
+ * 아이콘 두 개가 나란히 서므로 같은 상자에 그린다.
+ *
+ * 압정만 그림으로 바꾸고 ✕는 글자로 두었더니 세로로 어긋났다. 글자는 글꼴의
+ * 베이스라인을 따라가고 그림은 상자 가운데에 놓여서, flex로 모아도 1~2px이 남는다.
+ */
+const ICON_PROPS = {
+  viewBox: "0 0 24 24",
+  className: "size-3.5",
+  fill: "none",
+  stroke: "currentColor",
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  "aria-hidden": true,
+} as const;
+
+function CloseIcon() {
+  return (
+    <svg {...ICON_PROPS} strokeWidth={2}>
+      <path d="M6.5 6.5 17.5 17.5" />
+      <path d="M17.5 6.5 6.5 17.5" />
+    </svg>
+  );
+}
+
+/**
  * 자리 고정 압정.
  *
  * 이모지(📌)는 글꼴에 딸린 그림이라 OS마다 모양도 색도 다르고, 옆의 ✕과 크기·굵기가
@@ -321,19 +346,10 @@ export function Cell({
  */
 function PinIcon({ pinned }: { pinned: boolean }) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      className="size-3.5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.7}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M9 3.5h6" />
-      <path d="M10 3.5v5L7.3 12.5h9.4L14 8.5v-5z" fill={pinned ? "currentColor" : "none"} />
-      <path d="M12 12.5v8" />
+    <svg {...ICON_PROPS} strokeWidth={1.7}>
+      <path d="M9 4h6" />
+      <path d="M10 4v5L7.3 13h9.4L14 9V4z" fill={pinned ? "currentColor" : "none"} />
+      <path d="M12 13v7" />
     </svg>
   );
 }
