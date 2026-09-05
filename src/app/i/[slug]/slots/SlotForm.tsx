@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 
-import { RAID_PRESETS, difficultiesFor, sizeFor } from "@/lib/raids";
+import { RAID_PRESETS, difficultiesFor } from "@/lib/raids";
 import type { SlotView } from "@/lib/slots";
 import { WEEK_DAYS, dayNameFull } from "@/lib/week";
 
@@ -76,9 +76,6 @@ export function SlotForm({
   const [startTime, setStartTime] = useState(slot?.startTime ?? "20:00");
   const [raidName, setRaidName] = useState(slot?.raidName ?? "");
   const [difficulty, setDifficulty] = useState(slot?.difficulty ?? "");
-  // 4인인지 8인인지는 레이드가 정하는 값이라 고르게 하지 않는다. 이름에서 끌어내
-  // 보여주기만 하고, 저장할 때 서버가 같은 규칙으로 다시 정한다(slots.ts).
-  const partySize = sizeFor(raidName);
 
   return (
     <form
@@ -155,10 +152,6 @@ export function SlotForm({
           wrapClassName="w-24"
           className={`w-full ${CONTROL}`}
         />
-      </Field>
-
-      <Field label="인원">
-        <span className="flex h-9 w-12 items-center text-sm text-text-dim tabular">{partySize}인</span>
       </Field>
 
       <button
