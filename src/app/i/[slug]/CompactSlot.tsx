@@ -365,13 +365,22 @@ function NameCell({
     );
   }
 
+  const warned = cell.warnings.length > 0;
+
   return (
     <td className="board-cell board-cell--name">
+      {/*
+        경고 표시는 이름 양옆에 같은 것이 하나씩 선다. 한쪽에만 두면 그 칸의 이름만
+        반대쪽으로 밀려, 여덟 칸의 이름이 저마다 다른 자리에서 시작한다. 표는 같은
+        항목이 한 줄에 늘어서는 것으로 읽는 보기라 그 어긋남이 그대로 눈에 걸린다.
+        어느 쪽을 눌러도 같은 말풍선이 뜬다.
+      */}
       <div className="board-name">
+        {warned && <WarnBadge warnings={cell.warnings} />}
         <span className="truncate" title={character.name}>
           {character.name}
         </span>
-        {cell.warnings.length > 0 && <WarnBadge warnings={cell.warnings} />}
+        {warned && <WarnBadge warnings={cell.warnings} />}
       </div>
     </td>
   );
