@@ -761,6 +761,11 @@ button:disabled,
 .char-name {
   font-size: 0.9375rem;
   font-weight: 600;
+  /*
+   * 기본 줄 높이(1.5)는 글자 위아래에 여백을 크게 남긴다. 이름 아래에 숫자가 바로
+   * 붙는 자리라, 그 여백이 이름과 숫자를 따로 떨어진 두 덩어리로 보이게 했다.
+   */
+  line-height: 1.2;
   letter-spacing: -0.01em;
 }
 
