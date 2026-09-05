@@ -439,13 +439,16 @@ export interface SiblingsPreview {
    */
   owner: string | null;
   /**
-   * 이 계정 캐릭터가 이미 붙어 있는 **내 원정대 이름.** 없으면 null이다.
+   * 이 계정 캐릭터가 이미 붙어 있는 **내 원정대.** 없으면 null이다.
    *
    * 있으면 이번 불러오기가 그 원정대로 들어간다. 없을 때만 조회에 친 이름으로 새
    * 원정대를 만든다. 같은 계정을 다른 캐릭터명으로 다시 부르는 일이 흔한데, 그때마다
    * 새 원정대가 생기면 한 계정이 둘로 갈려 골드 6명이 양쪽에서 따로 계산된다.
+   *
+   * **이름이 아니라 행을 가리킨다.** 이름으로 찾으면 그 이름이 옛 표기일 때
+   * (`kafkafelicia`) 그대로 굳어, 다시 불러도 정식 표기로 고쳐지지 않는다.
    */
-  roster: string | null;
+  roster: { id: string; label: string } | null;
   /**
    * 조회에 쓴 캐릭터의 **로아 정식 표기.**
    *
@@ -486,7 +489,7 @@ export async function previewSiblings(
       name: true,
       memberId: true,
       member: { select: { label: true } },
-      roster: { select: { label: true } },
+      roster: { select: { id: true, label: true } },
     },
   });
   const registered = new Map(existing.map((c) => [c.name, c.memberId]));
@@ -496,7 +499,7 @@ export async function previewSiblings(
 
   // 원정대도 하나면 충분하다. 같은 계정의 캐릭터가 둘로 갈려 있으면 앞의 것으로 모은다.
   const kept = myMemberId
-    ? existing.find((c) => c.memberId === myMemberId && c.roster)?.roster?.label
+    ? existing.find((c) => c.memberId === myMemberId && c.roster)?.roster
     : null;
 
   // 목록 안에 조회한 캐릭터가 들어 있다. 그 표기를 그대로 쓴다.

@@ -315,11 +315,14 @@ function SiblingsForm({ slug }: { slug: string }) {
           <input type="hidden" name="slug" value={slug} />
           {/*
             이 한 번이 원정대 하나가 되고 그 이름이 캐릭터 관리의 탭이 된다
-            (members.ts의 claimNames). 이 계정에 이미 붙어 있는 원정대가 있으면
-            그 이름을 그대로 쓴다. 같은 계정을 다른 캐릭터명으로 다시 불렀을 때
-            원정대가 둘로 갈리지 않게 하려는 것이다.
+            (members.ts의 claimNames).
+
+            이름은 언제나 로아 정식 표기고, 이 계정에 이미 붙어 있는 원정대가 있으면
+            **그 행**을 함께 넘긴다. 그래야 같은 계정을 다른 캐릭터명으로 다시 불러도
+            원정대가 둘로 갈리지 않고, 옛 표기로 굳은 이름도 이때 고쳐진다.
           */}
-          <input type="hidden" name="roster" value={search.roster ?? search.searched} />
+          <input type="hidden" name="roster" value={search.searched} />
+          <input type="hidden" name="rosterId" value={search.roster?.id ?? ""} />
 
           {/*
             남의 원정대다. 왜 못 고르는지와 잘못됐을 때 푸는 방법을 함께 적는다.

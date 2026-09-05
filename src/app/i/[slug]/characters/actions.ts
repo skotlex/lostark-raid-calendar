@@ -126,8 +126,8 @@ export interface SiblingsState {
   siblings: SiblingPreview[];
   /** 이 원정대를 이미 클레임한 다른 사람. 있으면 화면이 목록을 통째로 잠근다 */
   owner: string | null;
-  /** 이 계정이 이미 붙어 있는 내 원정대 이름. 있으면 그리로 넣는다(lib/characters.ts) */
-  roster: string | null;
+  /** 이 계정이 이미 붙어 있는 내 원정대. 있으면 그 행으로 넣는다(lib/characters.ts) */
+  roster: { id: string; label: string } | null;
 }
 
 export async function previewSiblingsAction(
@@ -185,8 +185,10 @@ export async function importSiblingsAction(
 ): Promise<ImportState> {
   const slug = String(formData.get("slug") ?? "");
   const names = formData.getAll("names").map(String).filter(Boolean);
-  // 조회할 때 친 대표 캐릭터명. 이 한 번이 원정대 하나가 된다(members.ts).
+  // 조회한 대표 캐릭터의 정식 표기. 이 한 번이 원정대 하나가 된다(members.ts).
   const rosterLabel = String(formData.get("roster") ?? "");
+  // 이 계정이 이미 쓰던 원정대. 있으면 그 행으로 들어가고 이름만 위 표기로 맞춘다.
+  const rosterId = String(formData.get("rosterId") ?? "");
 
   if (names.length === 0) {
     return { status: "error", message: "등록할 캐릭터를 하나 이상 골라 주세요", result: null };
@@ -203,6 +205,7 @@ export async function importSiblingsAction(
         label: session.label,
         names: result.added,
         rosterLabel,
+        rosterId,
       });
     }
     if (result.added.length > 0) {

@@ -105,15 +105,21 @@ export async function claimNames(params: {
    *
    * **불러오기 한 번이 원정대 하나다.** 골드 6명 제한이 원정대 단위라 경계가 필요한데,
    * 로아 API에 계정을 잇는 값이 없어서 사람이 계정마다 한 번씩 부르는 것이 곧 경계가
-   * 된다(goldEarners.ts). 한 명씩 등록하는 경로는 이름을 모르므로 `rosterId`를 쓴다.
+   * 된다(goldEarners.ts). 한 명씩 등록하는 경로는 이름을 모르므로 `rosterId`만 쓴다.
+   *
+   * 조회한 캐릭터의 **로아 정식 표기**다. `rosterId`가 가리키는 원정대의 이름이 이와
+   * 다르면 고쳐 넣는다(resolveRoster).
    */
   rosterLabel?: string;
   /**
-   * 이미 있는 내 원정대. 한 명씩 등록에서 고른 값이다.
+   * 이미 있는 내 원정대.
    *
-   * 그 경로는 캐릭터 하나만 받아 어느 계정인지 알 수 없다. 그래서 사람이 직접 고르고,
-   * 여기서는 **원정대를 만들지 않는다** — 만들 수 있게 하면 오타 하나가 유령 원정대가
-   * 되고 골드 6명 계산이 그만큼 갈라진다. 만드는 곳은 불러오기 한 곳뿐이다.
+   * 한 명씩 등록에서는 사람이 고른 값이다. 그 경로는 캐릭터 하나만 받아 어느 계정인지
+   * 알 수 없고, 여기서는 **원정대를 만들지 않는다** — 만들 수 있게 하면 오타 하나가
+   * 유령 원정대가 되고 골드 6명 계산이 그만큼 갈라진다. 만드는 곳은 불러오기뿐이다.
+   *
+   * 불러오기에서는 이 계정 캐릭터가 이미 붙어 있던 원정대다. 이름이 아니라 행을 넘겨야
+   * 옛 표기로 굳은 이름을 고칠 수 있다(characters.ts의 SiblingsPreview).
    */
   rosterId?: string;
 }): Promise<ClaimResult> {
@@ -168,10 +174,18 @@ export async function claimNames(params: {
 /**
  * 이번 클레임이 어느 원정대로 가는지 정한다. 없으면 null이고 캐릭터는 원정대 없이 남는다.
  *
- * 이름(`rosterLabel`)은 불러오기가 준다. 그 한 번이 원정대 하나라 없으면 만든다.
- * 아이디(`rosterId`)는 한 명씩 등록에서 사람이 고른 것이다. **내 원정대인지 확인한다** —
- * 서버 액션은 UI를 거치지 않고 불릴 수 있어 화면이 보여준 목록을 그대로 믿으면 안 된다
- * (setGoldEarners와 같은 이유).
+ * 아이디(`rosterId`)가 먼저다. 불러오기는 이 계정이 이미 쓰던 원정대 행을 알고 있고
+ * (characters.ts의 SiblingsPreview), 한 명씩 등록은 사람이 직접 고른다.
+ * **내 원정대인지 확인한다** — 서버 액션은 UI를 거치지 않고 불릴 수 있어 화면이 보여준
+ * 목록을 그대로 믿으면 안 된다(setGoldEarners와 같은 이유).
+ *
+ * 이름(`rosterLabel`)은 불러오기만 준다. 조회한 캐릭터의 로아 정식 표기라, 가리키는
+ * 원정대의 이름이 그와 다르면 **고쳐 넣는다.** 대소문자를 가리지 않고 찾아주던 때에
+ * 친 그대로 굳은 이름(`kafkafelicia`)이 다시 불러도 그대로 남기 때문이다.
+ *
+ * 아이디가 없으면 이름으로 찾고, 그것도 없으면 만든다. 찾을 때는 **대소문자를 가리지
+ * 않는다.** 라벨 유니크는 가리므로, 가려서 찾으면 옛 표기의 원정대를 못 보고 같은
+ * 계정에 원정대를 하나 더 만든다.
  *
  * **이름이 겹쳐도 남의 원정대는 건드리지 않는다.** 라벨은 조회할 때 친 대표 캐릭터명이라
  * 같은 원정대를 두 사람이 부르면 정확히 겹친다. 그때 주인을 갈아치우면 원래 주인의
@@ -185,28 +199,59 @@ async function resolveRoster(
   params: { rosterLabel?: string; rosterId?: string },
 ): Promise<string | null> {
   const label = params.rosterLabel?.trim();
-  if (label) {
-    const existing = await prisma.roster.findUnique({
-      where: { instanceId_label: { instanceId, label } },
-      select: { id: true, memberId: true },
-    });
-    if (existing) return existing.memberId === memberId ? existing.id : null;
+  const id = params.rosterId?.trim();
 
-    const roster = await prisma.roster.create({
-      data: { instanceId, memberId, label },
-      select: { id: true },
+  if (id) {
+    const roster = await prisma.roster.findFirst({
+      where: { id, instanceId, memberId },
+      select: { id: true, label: true },
     });
+    if (!roster) return null;
+    if (label) await renameRoster(instanceId, roster, label);
     return roster.id;
   }
 
-  const id = params.rosterId?.trim();
-  if (!id) return null;
+  if (!label) return null;
 
-  const roster = await prisma.roster.findFirst({
-    where: { id, instanceId, memberId },
+  const existing = await prisma.roster.findFirst({
+    where: { instanceId, label: { equals: label, mode: "insensitive" } },
+    select: { id: true, label: true, memberId: true },
+    orderBy: { createdAt: "asc" },
+  });
+  if (existing) {
+    if (existing.memberId !== memberId) return null;
+    await renameRoster(instanceId, existing, label);
+    return existing.id;
+  }
+
+  const roster = await prisma.roster.create({
+    data: { instanceId, memberId, label },
     select: { id: true },
   });
-  return roster?.id ?? null;
+  return roster.id;
+}
+
+/**
+ * 원정대 이름을 정식 표기로 맞춘다. 이미 같으면 아무것도 하지 않는다.
+ *
+ * 그 이름을 쓰는 다른 원정대가 있으면 **그대로 둔다.** 라벨이 유니크라 밀어 넣으면
+ * 등록 전체가 실패하는데, 이름을 못 고치는 것은 화면에서 표기 하나가 옛날 것으로
+ * 남는 일이고 등록이 통째로 실패하는 것보다 훨씬 가볍다.
+ */
+async function renameRoster(
+  instanceId: string,
+  roster: { id: string; label: string },
+  label: string,
+): Promise<void> {
+  if (roster.label === label) return;
+
+  const taken = await prisma.roster.findUnique({
+    where: { instanceId_label: { instanceId, label } },
+    select: { id: true },
+  });
+  if (taken) return;
+
+  await prisma.roster.update({ where: { id: roster.id }, data: { label } });
 }
 
 /**
