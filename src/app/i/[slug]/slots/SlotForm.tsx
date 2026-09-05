@@ -11,6 +11,15 @@ import { type SlotState, createSlotAction, updateSlotAction } from "./actions";
 const IDLE: SlotState = { status: "idle", message: "" };
 
 /**
+ * 한 줄에 늘어서는 입력 칸들.
+ *
+ * select와 input은 같은 padding을 줘도 브라우저 기본 높이가 달라 아래끝이 어긋난다.
+ * 높이를 직접 못 박아 맞춘다.
+ */
+const CONTROL =
+  "h-9 rounded border border-border bg-bg px-2 text-sm focus:border-accent focus:outline-none";
+
+/**
  * 슬롯 추가·수정 폼.
  *
  * `slot`이 있으면 수정, 없으면 추가다. 필드 구성이 같아 하나로 쓴다.
@@ -56,7 +65,7 @@ export function SlotForm({
           name="dayOfWeek"
           value={dayOfWeek}
           onChange={(e) => setDayOfWeek(Number(e.target.value))}
-          className="rounded border border-border bg-bg px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
+          className={CONTROL}
         >
           {WEEK_DAYS.map((d) => (
             <option key={d} value={d}>
@@ -73,7 +82,7 @@ export function SlotForm({
           required
           value={startTime}
           onChange={(e) => setStartTime(e.target.value)}
-          className="rounded border border-border bg-bg px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
+          className={CONTROL}
         />
       </Field>
 
@@ -85,7 +94,7 @@ export function SlotForm({
           value={raidName}
           onChange={(e) => setRaidName(e.target.value)}
           placeholder="벨가르딘"
-          className="w-32 rounded border border-border bg-bg px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
+          className={`w-32 ${CONTROL}`}
         />
       </Field>
 
@@ -96,14 +105,14 @@ export function SlotForm({
           value={difficulty}
           onChange={(e) => setDifficulty(e.target.value)}
           placeholder="하드"
-          className="w-24 rounded border border-border bg-bg px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
+          className={`w-24 ${CONTROL}`}
         />
       </Field>
 
       <button
         type="submit"
         disabled={pending}
-        className="btn-inline rounded bg-accent px-3 py-1.5 text-sm font-medium text-accent-contrast transition-opacity hover:opacity-90 disabled:opacity-50"
+        className="btn-inline h-9 rounded bg-accent px-3 text-sm font-medium text-accent-contrast transition-opacity hover:opacity-90 disabled:opacity-50"
       >
         {pending ? "저장 중…" : editing ? "저장" : "추가"}
       </button>
@@ -112,7 +121,7 @@ export function SlotForm({
         <button
           type="button"
           onClick={onDone}
-          className="rounded border border-border px-3 py-1.5 text-sm text-text-dim hover:text-text"
+          className="h-9 rounded border border-border px-3 text-sm text-text-dim hover:text-text"
         >
           취소
         </button>
