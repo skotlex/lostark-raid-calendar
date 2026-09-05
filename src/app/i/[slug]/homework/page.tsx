@@ -53,30 +53,65 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
     <div className="space-y-6">
       <Header />
 
+      {/*
+        이번 주 진행률.
+
+        왼쪽 숫자는 **남은 것**이다. 이미 받은 골드보다 앞으로 받을 골드가 계획을 세울 때
+        필요한 값이고, 얼마나 지나왔는지는 막대가 따로 말한다.
+      */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Progress
+          value={`${gold.format(homework.remainingGold)}`}
+          total={`/ ${gold.format(homework.totalGold)}`}
+          done={homework.totalGold - homework.remainingGold}
+          all={homework.totalGold}
+          tone="var(--accent)"
+        />
+        <Progress
+          value={`남은 숙제 ${homework.remainingCount}`}
+          total={`/ ${homework.totalCount}`}
+          done={homework.totalCount - homework.remainingCount}
+          all={homework.totalCount}
+          tone="var(--support)"
+        />
+      </div>
+
       {/* 레이드별 현황 — 무엇이 몇 개 남았는지부터 본다. */}
       <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         {homework.raids.map((raid) => (
           <li key={raid.raidName} className="rounded border border-border bg-surface p-3">
-            <div className="flex flex-wrap items-baseline gap-x-2">
-              <h2 className="font-semibold">{raid.raidName}</h2>
+            <div className="flex flex-wrap items-center gap-x-2">
+              <h2 className={`font-semibold ${raid.remaining > 0 ? "text-accent" : ""}`}>
+                {raid.raidName}
+              </h2>
               <span
-                className={`ml-auto text-xs tabular ${
-                  raid.remaining > 0 ? "text-accent" : "text-text-faint"
+                className={`ml-auto rounded px-1.5 py-0.5 text-[11px] tabular ${
+                  raid.remaining > 0
+                    ? "bg-accent/15 text-accent"
+                    : "text-text-faint"
                 }`}
               >
-                {raid.remaining > 0 ? `남은 숙제 ${raid.remaining}개` : "모두 완료"}
+                남은 숙제 {raid.remaining}개
               </span>
             </div>
 
-            <div className="mt-1 text-sm tabular text-text-dim">
-              {raid.clearGold > 0 ? `${gold.format(raid.clearGold)} G` : "-"}
+            {/* 이 레이드가 이번 주에 주는 골드. 다녀온 것까지 합친 값이다. */}
+            <div className="mt-1 flex items-baseline gap-x-2 text-sm">
+              <span className="text-xs text-text-faint">골드</span>
+              <span
+                className={`ml-auto tabular ${
+                  raid.remaining > 0 ? "text-accent" : "text-text-dim"
+                }`}
+              >
+                {raid.totalGold > 0 ? gold.format(raid.totalGold) : "-"}
+              </span>
             </div>
 
             {/*
               이름을 뱃지로 두른다. 글자만 늘어놓으면 여럿일 때 어디까지가 한 이름인지
               눈으로 끊어야 한다. 다녀온 사람은 흐리게 가라앉힌다.
             */}
-            <div className="mt-2 flex flex-wrap gap-1">
+            <div className="mt-2 flex flex-wrap gap-1 border-t border-dashed border-border pt-2">
               {raid.characters.map((character) => (
                 <span
                   key={character.name}
@@ -168,6 +203,48 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+/**
+ * 진행 막대.
+ *
+ * 숫자만으로는 "많이 남았다"가 잘 안 읽힌다. 막대가 있으면 눈으로 한 번에 가늠된다.
+ * 퍼센트는 오른쪽 끝에 붙여 숫자와 막대를 잇는다.
+ */
+function Progress({
+  value,
+  total,
+  done,
+  all,
+  tone,
+}: {
+  value: string;
+  total: string;
+  done: number;
+  all: number;
+  /** 막대 색. 골드와 숙제를 다른 색으로 둔다 */
+  tone: string;
+}) {
+  const percent = all > 0 ? Math.round((done / all) * 100) : 0;
+
+  return (
+    <div className="rounded border border-border bg-surface px-3 py-2">
+      <div className="flex flex-wrap items-baseline gap-x-2">
+        <span className="font-semibold tabular" style={{ color: tone }}>
+          {value}
+        </span>
+        <span className="text-xs text-text-faint tabular">{total}</span>
+        <span className="ml-auto text-xs tabular text-text-dim">{percent}%</span>
+      </div>
+
+      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-2">
+        <div
+          className="h-full rounded-full transition-[width] duration-300"
+          style={{ width: `${percent}%`, backgroundColor: tone }}
+        />
+      </div>
     </div>
   );
 }

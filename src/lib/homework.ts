@@ -56,7 +56,9 @@ export interface RaidSummary {
   characters: { name: string; done: boolean }[];
   remaining: number;
   /** 남은 숙제에서 들어올 골드 */
-  clearGold: number;
+  remainingGold: number;
+  /** 다녀온 것까지 합쳐 이 레이드가 이번 주에 주는 골드 */
+  totalGold: number;
 }
 
 export interface Homework {
@@ -66,6 +68,10 @@ export interface Homework {
   remainingGold: number;
   /** 이번 주 편성 전체의 클리어 골드 합계 */
   totalGold: number;
+  /** 이번 주에 잡아 둔 숙제 수 */
+  totalCount: number;
+  /** 그중 아직 안 한 것 */
+  remainingCount: number;
 }
 
 /**
@@ -100,7 +106,14 @@ export async function getHomework(
   memberId: string | null,
 ): Promise<Homework> {
   if (!memberId) {
-    return { characters: [], raids: [], remainingGold: 0, totalGold: 0 };
+    return {
+      characters: [],
+      raids: [],
+      remainingGold: 0,
+      totalGold: 0,
+      totalCount: 0,
+      remainingCount: 0,
+    };
   }
 
   const planningWeek = getPlanningWeekStart();
@@ -176,12 +189,14 @@ export async function getHomework(
         raidName: entry.raidName,
         characters: [],
         remaining: 0,
-        clearGold: 0,
+        remainingGold: 0,
+        totalGold: 0,
       };
       summary.characters.push({ name: character.name, done: entry.done });
+      summary.totalGold += entry.clearGold ?? 0;
       if (!entry.done) {
         summary.remaining += 1;
-        summary.clearGold += entry.clearGold ?? 0;
+        summary.remainingGold += entry.clearGold ?? 0;
       }
       raids.set(entry.raidName, summary);
     }
@@ -204,7 +219,9 @@ export async function getHomework(
   return {
     characters: withWork,
     raids: [...raids.values()],
-    remainingGold: [...raids.values()].reduce((sum, r) => sum + r.clearGold, 0),
+    remainingGold: [...raids.values()].reduce((sum, r) => sum + r.remainingGold, 0),
     totalGold: withWork.reduce((sum, c) => sum + c.clearGold, 0),
+    totalCount: withWork.reduce((sum, c) => sum + c.entries.length, 0),
+    remainingCount: withWork.reduce((sum, c) => sum + c.remaining, 0),
   };
 }
