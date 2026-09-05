@@ -25,12 +25,26 @@ import { dayNameFull } from "@/lib/week";
  *   1. 남이 저장하면 내 화면이 알아서 다시 그려진다 (편성표 버전 비교)
  *   2. 남이 어느 칸을 만지는 중인지 그 칸에 표식이 선다
  *
- * 왕복은 10초에 한 번뿐이다. 칸을 열고 닫는 순간에는 기다리지 않고 바로 한 번 더
- * 보낸다 — 표식이 늦게 뜨면 "지금 누가 만지는 중"이라는 말이 이미 거짓이 된다.
+ * 칸을 열고 닫는 순간에는 다음 차례를 기다리지 않고 바로 한 번 더 보낸다 — 표식이
+ * 늦게 뜨면 "지금 누가 만지는 중"이라는 말이 이미 거짓이 된다.
  */
 
-/** 하트비트 간격. 편성표는 초를 다투는 화면이 아니라 이 정도면 충분하다. */
-const POLL_MS = 10_000;
+/*
+ * 간격은 **혼자냐 아니냐로 갈린다.**
+ *
+ * 편성표는 주 초 몇 분만 북적이고 나머지 시간에는 대개 혼자다. 한 값으로 고정하면
+ * 둘 중 하나를 버려야 한다 — 빠르게 두면 아무도 없는 시간에 요청만 나가고, 느리게
+ * 두면 정작 같이 짜는 순간이 굼뜨다.
+ *
+ * 응답에 접속자가 이미 들어 있어 따로 물어볼 필요가 없다. 붐빌 때만 빨라지므로
+ * 요청 총량은 한 값으로 고정할 때보다 오히려 준다.
+ */
+
+/** 나 혼자일 때. 발자국을 남기는 것 말고는 할 일이 없다. */
+const IDLE_MS = 15_000;
+
+/** 남이 같이 보고 있을 때. 시트에 가까운 체감이 여기서 나온다. */
+const BUSY_MS = 3_000;
 
 /** 표식 얼굴을 이만큼만 세우고 나머지는 숫자로 접는다. */
 const FACE_LIMIT = 5;
@@ -147,6 +161,8 @@ export function PresenceProvider({
    * 전체가 다시 그려진다. 내용이 같으면 손대지 않는다.
    */
   const seenRef = useRef("");
+  /** 다음 차례까지의 간격. 응답을 받을 때마다 다시 정한다. */
+  const delayRef = useRef(IDLE_MS);
 
   const send = useCallback(async () => {
     // 다른 탭을 보고 있으면 발자국도 필요 없고 화면을 다시 그릴 이유도 없다.
@@ -176,6 +192,10 @@ export function PresenceProvider({
     if (!aliveRef.current || typeof data.version !== "string") return;
 
     const next = Array.isArray(data.viewers) ? (data.viewers as Viewer[]) : [];
+    // 같은 값이라 화면을 손대지 않을 때도 간격은 갱신한다. 마지막 사람이 나간
+    // 순간에도 발자국은 그대로라, 여기서 안 줄이면 혼자 남아 계속 빠르게 돈다.
+    delayRef.current = next.length > 0 ? BUSY_MS : IDLE_MS;
+
     const signature = next
       .map((v) => `${v.id}:${v.week}:${v.day}:${v.slotId}:${v.position}`)
       .join("|");
@@ -202,16 +222,39 @@ export function PresenceProvider({
   }, [slug, week, day, router]);
 
   useEffect(() => {
+    /*
+     * setInterval이 아니라 한 번 끝날 때마다 다음을 잡는다.
+     *
+     * 간격이 도중에 바뀌므로 고정 주기로는 다음 차례를 옮길 수 없다. 응답이 늦을 때
+     * 요청이 겹쳐 쌓이지 않는 것도 이쪽의 이득이다.
+     */
+    let alive = true;
     aliveRef.current = true;
-    void send();
+    let timer: ReturnType<typeof setTimeout> | undefined;
 
-    const timer = setInterval(() => void send(), POLL_MS);
-    const onVisible = () => void send();
+    const loop = async () => {
+      await send();
+      if (!alive) return;
+      timer = setTimeout(() => void loop(), delayRef.current);
+    };
+    void loop();
+
+    /*
+     * 탭이 뒤로 가면 브라우저가 타이머를 1분 단위까지 늦춘다. 돌아오는 순간
+     * **잡혀 있던 차례를 버리고 다시 시작한다.** 한 번 부르기만 하면 그다음 차례가
+     * 최대 1분 뒤라, 돌아와서 한 번 반짝하고 다시 굼떠진다.
+     */
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      clearTimeout(timer);
+      void loop();
+    };
     document.addEventListener("visibilitychange", onVisible);
 
     return () => {
+      alive = false;
       aliveRef.current = false;
-      clearInterval(timer);
+      clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [send]);
