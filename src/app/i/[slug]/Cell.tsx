@@ -312,14 +312,16 @@ export function Cell({
             />
           )}
 
-          {/*
-            긴 닉네임은 칸 폭에 걸려 잘린다. 잘린 글자를 되살릴 자리가 카드에 없으므로
-            제목으로 붙여 올려둔다. 칭호까지 함께 묶는다 — 둘 다 한 줄로 잘리는 글이라
-            어느 쪽에 얹어도 사람은 "이 이름 부분"을 가리킨다.
-          */}
-          <div className="char-id-text" title={`${character.title ?? ""} ${character.name}`.trim()}>
+          <div className="char-id-text">
             {character.title && <div className="char-title">{character.title}</div>}
-            <div className="char-name truncate">{character.name}</div>
+            {/*
+              긴 닉네임은 칸 폭에 걸려 잘린다. 잘린 글자를 되살릴 자리가 카드에 없으므로
+              제목으로 붙여 올려둔다. 이름 줄에만 건다. 묶음에 걸면 칭호에 올려도 뜨는데,
+              그때 나오는 글이 가리키고 있는 글자와 달라 무엇을 읽은 것인지 흐려진다.
+            */}
+            <div className="char-name truncate" title={character.name}>
+              {character.name}
+            </div>
           </div>
         </div>
 
