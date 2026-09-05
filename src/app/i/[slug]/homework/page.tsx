@@ -6,7 +6,7 @@ import { findMyMember } from "@/lib/members";
 import { requireSession } from "@/lib/session";
 import { classColor } from "@/lib/classColors";
 import { classEmblem } from "@/lib/classEmblems";
-import { dayName } from "@/lib/week";
+import { dayName, isUndecided } from "@/lib/week";
 
 import { CombatPowerIcon, GoldIcon, ItemLevelIcon } from "../icons";
 
@@ -283,7 +283,8 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
                   <span
                     className={`rounded px-1.5 py-0.5 text-[11px] tabular ${badgeTone(entry.done)}`}
                   >
-                    {dayName(entry.dayOfWeek)} {entry.startTime}
+                    {dayName(entry.dayOfWeek)}
+                    {!isUndecided(entry.dayOfWeek) && ` ${entry.startTime}`}
                   </span>
 
                   <span className="ml-auto text-xs tabular">

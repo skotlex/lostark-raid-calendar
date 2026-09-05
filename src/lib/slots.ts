@@ -3,7 +3,7 @@ import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
 
 import { logEvent } from "./history";
-import { weekStartForDay } from "./week";
+import { UNDECIDED, isUndecided, weekStartForDay } from "./week";
 import { DEFAULT_PARTY_SIZE, type PartySize, isPartySize } from "./positions";
 import { prisma } from "./prisma";
 import { raidLabel, sizeFor } from "./raids";
@@ -97,6 +97,7 @@ export async function listSlots(instanceId: string): Promise<SlotView[]> {
 }
 
 export interface SlotInput {
+  /** 0=일 … 6=토, 7=미정(week.ts의 UNDECIDED) */
   dayOfWeek: number;
   startTime: string;
   raidName: string;
@@ -109,11 +110,21 @@ export interface SlotInput {
 /** "20:00" 형식만 받는다. 자유 입력을 두면 정렬이 무너진다. */
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
+/**
+ * 미정 슬롯이 갖는 시각.
+ *
+ * 요일을 못 정한 칸에 시각이 있을 수 없다. 그래도 컬럼이 필수라 한 값으로 몰아둔다.
+ * 화면은 미정이면 이 값을 그리지 않고 "-"를 찍으므로(isUndecided) 눈에 띄지 않고,
+ * 미정 칸끼리의 정렬만 한 자리에 모인다.
+ */
+const UNDECIDED_TIME = "00:00";
+
 function validate(input: SlotInput) {
-  if (!Number.isInteger(input.dayOfWeek) || input.dayOfWeek < 0 || input.dayOfWeek > 6) {
+  if (!Number.isInteger(input.dayOfWeek) || input.dayOfWeek < 0 || input.dayOfWeek > UNDECIDED) {
     throw new SlotError("요일을 골라 주세요");
   }
-  if (!TIME_PATTERN.test(input.startTime)) {
+  // 미정 칸은 시각을 묻지 않는다. 폼도 그 칸을 잠가 둔다.
+  if (!isUndecided(input.dayOfWeek) && !TIME_PATTERN.test(input.startTime)) {
     throw new SlotError("시간은 20:00 형식으로 입력해 주세요");
   }
   if (!input.raidName.trim()) {
@@ -131,7 +142,7 @@ function normalize(input: SlotInput) {
   };
   return {
     dayOfWeek: input.dayOfWeek,
-    startTime: input.startTime,
+    startTime: isUndecided(input.dayOfWeek) ? UNDECIDED_TIME : input.startTime,
     raidName: input.raidName.trim(),
     difficulty: trim(input.difficulty),
     // 4인인지 8인인지는 레이드가 정하는 값이라 사람에게 묻지 않는다.

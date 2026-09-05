@@ -4,6 +4,7 @@ import { useActionState } from "react";
 
 import type { BoardSlotView } from "@/lib/board";
 import { raidLabel } from "@/lib/raids";
+import { isUndecided } from "@/lib/week";
 
 import { type CellState, keepRosterAction } from "./actions";
 import { PinIcon } from "./icons";
@@ -35,7 +36,10 @@ export function SlotHeader({
       <header className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-border px-3 py-2">
         <h3 className="font-semibold">{raidLabel(slot.raidName, slot.difficulty)}</h3>
 
-        <span className="slot-badge tabular">{slot.startTime}</span>
+        {/* 미정 칸에는 시각이 없다. 채워 넣은 값을 보여주면 약속처럼 읽힌다. */}
+        {!isUndecided(slot.dayOfWeek) && (
+          <span className="slot-badge tabular">{slot.startTime}</span>
+        )}
         {/* 자리가 다 차면 색이 바뀐다. 더 넣을 곳이 없다는 뜻이라 훑을 때 걸려야 한다. */}
         <span
           className="slot-badge tabular"

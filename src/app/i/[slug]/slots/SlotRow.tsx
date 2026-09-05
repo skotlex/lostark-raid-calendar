@@ -4,13 +4,16 @@ import { useActionState, useState } from "react";
 
 import { raidLabel } from "@/lib/raids";
 import type { SlotView } from "@/lib/slots";
-import { dayName } from "@/lib/week";
+import { dayName, isUndecided } from "@/lib/week";
 
 import { type SlotState, archiveSlotAction } from "./actions";
 import { ConfirmButton } from "../ConfirmButton";
 import { SlotForm } from "./SlotForm";
 
 const IDLE: SlotState = { status: "idle", message: "" };
+
+/** 정해진 것이 없는 칸. 폼의 잠긴 시간 칸과 같은 표시다. */
+const NO_VALUE = "-";
 
 export function SlotRow({ slug, slot }: { slug: string; slot: SlotView }) {
   const [editing, setEditing] = useState(false);
@@ -26,8 +29,17 @@ export function SlotRow({ slug, slot }: { slug: string; slot: SlotView }) {
 
   return (
     <li className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded border border-border bg-surface px-3 py-2">
-      <span className="w-8 shrink-0 text-sm text-text-dim">{dayName(slot.dayOfWeek)}</span>
-      <span className="w-14 shrink-0 text-sm tabular">{slot.startTime}</span>
+      {/*
+        미정 줄은 두 칸 모두 "-"다. 요일도 시각도 정해진 것이 없고, 어느 무리인지는
+        바로 위의 "미정" 제목이 이미 말한다. 칸을 없애지는 않는다. 없애면 그 줄만
+        레이드 이름이 왼쪽으로 밀려 목록이 어긋나 보인다.
+      */}
+      <span className="w-8 shrink-0 text-sm text-text-dim">
+        {isUndecided(slot.dayOfWeek) ? NO_VALUE : dayName(slot.dayOfWeek)}
+      </span>
+      <span className="w-14 shrink-0 text-sm tabular">
+        {isUndecided(slot.dayOfWeek) ? NO_VALUE : slot.startTime}
+      </span>
       <span className="font-medium">{raidLabel(slot.raidName, slot.difficulty)}</span>
       {slot.partySize === 4 && (
         <span className="rounded bg-surface-2 px-1.5 py-0.5 text-xs text-text-dim">4인</span>

@@ -4,7 +4,7 @@ import { startTransition, useActionState, useState } from "react";
 
 import { RAID_PRESETS, difficultiesFor } from "@/lib/raids";
 import type { SlotView } from "@/lib/slots";
-import { WEEK_DAYS, dayNameFull } from "@/lib/week";
+import { WEEK_DAYS, dayNameFull, isUndecided } from "@/lib/week";
 
 import { type SlotState, createSlotAction, updateSlotAction } from "./actions";
 import { PickInput } from "./PickInput";
@@ -21,6 +21,14 @@ const CONTROL =
   "h-9 rounded border border-border bg-bg px-2 text-sm focus:border-accent focus:outline-none";
 
 const RAID_NAMES = RAID_PRESETS.map((preset) => preset.name);
+
+/**
+ * 시각이 없는 칸에 적는 표시.
+ *
+ * 잠긴 칸을 비워 두면 아직 안 친 것처럼 보인다. 자리표시자로 "20:00"이 흐리게 떠서
+ * 더 그랬다. 한 글자를 박아 두면 "여기는 값이 없는 칸"이라고 읽힌다.
+ */
+const NO_TIME = "-";
 
 /**
  * 브라우저 기본 문구를 우리 문구로 갈아 끼운다.
@@ -78,6 +86,15 @@ export function SlotForm({
   const [difficulty, setDifficulty] = useState(slot?.difficulty ?? "");
 
   const difficulties = difficultiesFor(raidName);
+
+  /*
+   * 미정 칸은 시각을 받지 않는다.
+   *
+   * 요일을 못 정한 칸에 시각만 정해 둘 수는 없다. 칸을 숨기지 않고 잠그는 것은,
+   * 사라지면 옆 칸들이 밀려 폼이 요일마다 다른 모양이 되기 때문이다. 잠긴 칸은
+   * 제출에서도 빠지므로(disabled) 브라우저의 형식 검사에 걸리지도 않는다.
+   */
+  const noTime = isUndecided(dayOfWeek);
 
   /**
    * 레이드를 바꾸면 난이도를 손본다.
@@ -142,10 +159,11 @@ export function SlotForm({
         <input
           name="startTime"
           required
+          disabled={noTime}
           inputMode="numeric"
           pattern="([01][0-9]|2[0-3]):[0-5][0-9]"
           maxLength={5}
-          value={startTime}
+          value={noTime ? NO_TIME : startTime}
           onInvalid={(e) =>
             invalidMessage(
               e.currentTarget,
@@ -158,7 +176,7 @@ export function SlotForm({
             setStartTime(formatTime(e.target.value));
           }}
           placeholder="20:00"
-          className={`w-24 tabular ${CONTROL}`}
+          className={`w-24 tabular ${CONTROL} disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-text-faint`}
         />
       </Field>
 

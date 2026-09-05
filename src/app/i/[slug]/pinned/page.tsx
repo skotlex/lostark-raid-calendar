@@ -3,7 +3,7 @@ import Link from "next/link";
 import { listPinned } from "@/lib/board";
 import { requireInstance } from "@/lib/instance";
 import { positionLabel } from "@/lib/positions";
-import { dayNameFull, getPlanningWeekStart, toWeekParam } from "@/lib/week";
+import { dayNameFull, getPlanningWeekStart, isUndecided, toWeekParam } from "@/lib/week";
 
 import { KeepRosterOffButton, UnpinButton } from "./PinnedControls";
 
@@ -95,7 +95,10 @@ export default async function PinnedPage({ params }: PageProps<"/i/[slug]/pinned
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-border px-3 py-2">
                 <h2 className="font-semibold">{slot.slotLabel}</h2>
                 <span className="slot-badge">{dayNameFull(slot.dayOfWeek)}</span>
-                <span className="slot-badge tabular">{slot.startTime}</span>
+                {/* 미정 칸에는 시각이 없다. 채워 넣은 값을 보여주면 약속처럼 읽힌다. */}
+                {!isUndecided(slot.dayOfWeek) && (
+                  <span className="slot-badge tabular">{slot.startTime}</span>
+                )}
 
                 {slot.keepRoster && (
                   <span className="ml-auto">

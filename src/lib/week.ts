@@ -7,7 +7,7 @@
  *
  * | 슬롯 요일 | 비워지는 때 |
  * |---|---|
- * | 수 · 목 · 금 · 토 · 일 · 월 | **화요일 00시** (주차 경계보다 30시간 이르다) |
+ * | 수 · 목 · 금 · 토 · 일 · 월 · 미정 | **화요일 00시** (주차 경계보다 30시간 이르다) |
  * | 화 | 수요일 06시 (주차 경계 그대로) |
  * 
  * 화요일 밤 레이드는 주차가 갈리기 직전에 열린다. 수~월과 함께 화요일 00시에 비우면
@@ -30,6 +30,23 @@ const RESET_HOUR = 6;
 
 /** 화요일 슬롯. 혼자 다른 시각에 비워진다. */
 export const TUESDAY = 2;
+
+/**
+ * 요일이 정해지지 않은 슬롯. **요일 번호가 아니라 요일 자리에 놓는 표식이다.**
+ *
+ * 같이 갈 사람을 모으지 않고 혼자 도는 레이드를 위한 칸이다. 시각을 잡을 이유가 없어
+ * 요일도 못 정하는데, 편성표에 넣지 않으면 숙제 화면에도 뜨지 않는다(숙제는 편성표에서
+ * 나온다 — homework.ts). 그래서 요일 자리에 미정을 하나 더 둔다.
+ *
+ * 0~6 다음인 7이라 DB의 `dayOfWeek`(Int)에 그대로 들어가고, 화요일이 아니므로
+ * `weekStartForDay`가 수~월과 같은 주차를 준다. 화요일 00시에 함께 비워진다.
+ */
+export const UNDECIDED = 7;
+
+/** 요일이 정해지지 않은 슬롯인가. 시각 표시와 지난 판정을 건너뛰는 기준이다. */
+export function isUndecided(dayOfWeek: number): boolean {
+  return dayOfWeek === UNDECIDED;
+}
 
 /**
  * 수~월 슬롯이 먼저 비워지는 만큼. 수요일 06시에서 30시간을 당기면 화요일 00시다.
@@ -83,7 +100,7 @@ export function tuesdayWeekFor(planningWeek: Date, now: Date = new Date()): Date
   return addWeeks(getWeekStart(now), shift);
 }
 
-/** 슬롯 요일에 맞는 배정 주차. 화요일만 따로 간다. */
+/** 슬롯 요일에 맞는 배정 주차. 화요일만 따로 간다. 미정은 수~월과 함께 간다. */
 export function weekStartForDay(
   planningWeek: Date,
   dayOfWeek: number,
@@ -120,13 +137,28 @@ export function formatWeekLabel(weekStart: Date): string {
 
 const DAY_NAMES = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
+/** 미정 칸의 이름. 짧은 표기와 긴 표기가 같다. */
+const UNDECIDED_LABEL = "미정";
+
 /**
- * 요일을 늘어놓는 순서. 수요일이 앞이다.
+ * 요일을 늘어놓는 순서. 수요일이 앞이고 미정이 맨 뒤다.
  *
  * 주차가 수요일 06시에 갈리므로 일요일부터 세면 한 주가 화면에서 두 동강 난다.
  * 리셋 직후가 왼쪽 끝, 리셋 직전이 오른쪽 끝이어야 남은 요일이 눈에 보인다.
+ *
+ * 미정은 한 주의 어디에도 놓이지 않으므로 요일이 다 끝난 뒤에 붙인다.
  */
-export const WEEK_DAYS: readonly number[] = [3, 4, 5, 6, 0, 1, 2];
+export const WEEK_DAYS: readonly number[] = [3, 4, 5, 6, 0, 1, 2, UNDECIDED];
+
+/**
+ * 주차 시작(수요일)에서 그 요일까지의 날짜 수. 미정이면 -1이다.
+ *
+ * 요일에 시각을 붙여 실제 레이드 시각을 만들 때 쓴다(homework.ts). 미정은 놓일
+ * 자리가 없어 시각을 만들 수 없고, -1을 받은 쪽이 계산을 접는다.
+ */
+export function dayOffsetInWeek(dayOfWeek: number): number {
+  return isUndecided(dayOfWeek) ? -1 : WEEK_DAYS.indexOf(dayOfWeek);
+}
 
 /** 지금 KST 기준 요일(0=일 … 6=토). 편성표를 열면 오늘 탭이 먼저 보이게 한다. */
 export function currentKstDay(now: Date = new Date()): number {
@@ -137,16 +169,23 @@ export function currentKstDay(now: Date = new Date()): number {
 export function parseDayParam(value: string | undefined | null): number {
   if (value === null || value === undefined || value === "") return currentKstDay();
   const n = Number(value);
-  return Number.isInteger(n) && n >= 0 && n <= 6 ? n : currentKstDay();
+  // 미정(7)까지 받는다. 편성표가 요일 탭 옆에 미정 탭을 세우므로 주소로도 돌아올 수 있어야 한다.
+  return Number.isInteger(n) && n >= 0 && n <= UNDECIDED ? n : currentKstDay();
 }
 
-/** 요일 한 글자. 주차 라벨의 `(수)`처럼 좁은 자리에 쓴다. */
+/**
+ * 요일 한 글자. 주차 라벨의 `(수)`처럼 좁은 자리에 쓴다.
+ *
+ * 미정만 두 글자다. 줄일 만한 한 글자가 없고, 억지로 줄이면 무슨 뜻인지 읽히지 않는다.
+ */
 export function dayName(dayOfWeek: number): string {
+  if (isUndecided(dayOfWeek)) return UNDECIDED_LABEL;
   return DAY_NAMES[dayOfWeek] ?? "?";
 }
 
 /** 요일 전체 이름. 요일 탭·제목처럼 읽는 자리에 쓴다. */
 export function dayNameFull(dayOfWeek: number): string {
+  if (isUndecided(dayOfWeek)) return UNDECIDED_LABEL;
   const name = DAY_NAMES[dayOfWeek];
   return name ? `${name}요일` : "?";
 }

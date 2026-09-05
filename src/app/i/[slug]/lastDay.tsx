@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 
+import { UNDECIDED } from "@/lib/week";
+
 /**
  * 마지막으로 보던 요일.
  *
@@ -22,7 +24,8 @@ function readLastDay(): number | null {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (raw === null) return null;
     const day = Number(raw);
-    return Number.isInteger(day) && day >= 0 && day <= 6 ? day : null;
+    // 미정(7)도 편성표의 탭 하나다. 여기서 자르면 미정을 보다 나갔을 때만 오늘로 끌려간다.
+    return Number.isInteger(day) && day >= 0 && day <= UNDECIDED ? day : null;
   } catch {
     return null;
   }

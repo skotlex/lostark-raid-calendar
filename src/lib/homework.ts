@@ -6,6 +6,8 @@ import { raidReward } from "./raidRewards";
 import { raidLabel } from "./raids";
 import {
   TUESDAY,
+  compareWeekDay,
+  dayOffsetInWeek,
   getPlanningWeekStart,
   tuesdayWeekFor,
   weekStartForDay,
@@ -29,7 +31,12 @@ export interface HomeworkEntry {
   label: string;
   dayOfWeek: number;
   startTime: string;
-  /** 레이드 시각이 지났는가. 지나면 다녀온 것으로 본다 */
+  /**
+   * 레이드 시각이 지났는가. 지나면 다녀온 것으로 본다.
+   *
+   * **미정 슬롯은 끝까지 false다.** 지났는지를 잴 시각이 없다. 주차가 넘어가면서
+   * 편성이 비워질 때 함께 사라진다.
+   */
   done: boolean;
   /** 표에 없으면 null */
   clearGold: number | null;
@@ -95,12 +102,14 @@ export interface Homework {
  * KST 기준으로 그 슬롯의 레이드 시각이 이미 지났는지.
  *
  * 주차 시작(수요일 06시)에서 해당 요일까지의 거리를 재고 시작 시각을 더한다.
- * 요일 순서는 `WEEK_DAYS`(수 → 화)와 같아야 한다. 일요일부터 세면 주말 레이드가
- * 지난 주 것으로 계산된다.
+ * 요일 순서는 `WEEK_DAYS`(수 → 화)와 같아야 하므로 거리는 week.ts에서 받는다.
+ * 일요일부터 세면 주말 레이드가 지난 주 것으로 계산된다.
+ *
+ * 미정 슬롯은 거리가 -1로 와서 여기서 끊긴다. 언제 갈지 모르는 칸이라 지났다고
+ * 말할 근거가 없고, 그래서 그 주 내내 남은 숙제로 서 있는다.
  */
 function raidPassed(weekStart: Date, dayOfWeek: number, startTime: string): boolean {
-  const WEEK_ORDER = [3, 4, 5, 6, 0, 1, 2];
-  const offset = WEEK_ORDER.indexOf(dayOfWeek);
+  const offset = dayOffsetInWeek(dayOfWeek);
   if (offset < 0) return false;
 
   const [hour, minute] = startTime.split(":").map(Number);
@@ -251,9 +260,9 @@ export async function getHomework(
     }
 
     // 요일 순서대로 세운다. 화면을 위에서 아래로 읽으면 주간 일정이 된다.
-    const WEEK_ORDER = [3, 4, 5, 6, 0, 1, 2];
+    // 미정은 일정에 자리가 없으므로 맨 뒤다(WEEK_DAYS).
     entries.sort((a, b) => {
-      const day = WEEK_ORDER.indexOf(a.dayOfWeek) - WEEK_ORDER.indexOf(b.dayOfWeek);
+      const day = compareWeekDay(a.dayOfWeek, b.dayOfWeek);
       return day !== 0 ? day : a.startTime.localeCompare(b.startTime);
     });
 

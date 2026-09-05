@@ -2,11 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import {
   TUESDAY,
+  UNDECIDED,
   WEEK_DAYS,
   addWeeks,
   compareWeekDay,
   currentKstDay,
+  dayName,
   dayNameFull,
+  dayOffsetInWeek,
+  isUndecided,
   formatWeekLabel,
   getPlanningWeekStart,
   getWeekStart,
@@ -164,18 +168,49 @@ describe("요일 파라미터", () => {
 });
 
 describe("요일 순서", () => {
-  it("수요일에서 시작해 화요일로 끝난다", () => {
+  it("수요일에서 시작해 화요일로 끝나고 미정이 뒤에 붙는다", () => {
     // 주차가 수요일 06시에 갈리므로 화면의 요일 순서도 같은 경계를 따라야 한다.
-    expect([...WEEK_DAYS]).toEqual([3, 4, 5, 6, 0, 1, 2]);
+    // 미정은 한 주의 어디에도 놓이지 않아 요일이 끝난 뒤다.
+    expect([...WEEK_DAYS]).toEqual([3, 4, 5, 6, 0, 1, 2, UNDECIDED]);
   });
 
-  it("정렬하면 수요일이 앞, 화요일이 뒤로 간다", () => {
+  it("정렬하면 수요일이 앞, 미정이 맨 뒤로 간다", () => {
     expect([0, 2, 3, 6].sort(compareWeekDay)).toEqual([3, 6, 0, 2]);
+    expect([UNDECIDED, 2, 3].sort(compareWeekDay)).toEqual([3, 2, UNDECIDED]);
   });
 
   it("전체 이름을 돌려준다", () => {
     expect(dayNameFull(3)).toBe("수요일");
     expect(dayNameFull(0)).toBe("일요일");
     expect(dayNameFull(9)).toBe("?");
+  });
+});
+
+describe("미정 요일", () => {
+  it("요일 이름은 짧게도 길게도 미정이다", () => {
+    expect(dayName(UNDECIDED)).toBe("미정");
+    expect(dayNameFull(UNDECIDED)).toBe("미정");
+    expect(isUndecided(UNDECIDED)).toBe(true);
+    expect(isUndecided(TUESDAY)).toBe(false);
+  });
+
+  it("주차는 수~월과 같이 간다", () => {
+    // 화요일 00시부터 수요일 06시 사이. 화요일 슬롯만 지난 주차에 남는 구간이다.
+    const now = new Date("2026-09-01T15:30:00.000Z");
+    const planning = getPlanningWeekStart(now);
+
+    expect(weekStartForDay(planning, UNDECIDED, now).getTime()).toBe(planning.getTime());
+    expect(weekStartForDay(planning, TUESDAY, now).getTime()).not.toBe(planning.getTime());
+  });
+
+  it("주 안에 놓일 자리가 없어 거리가 -1이다", () => {
+    // 이 값이 음수라 숙제가 "지났다"고 판정하지 않는다(homework.ts).
+    expect(dayOffsetInWeek(UNDECIDED)).toBe(-1);
+    expect(dayOffsetInWeek(3)).toBe(0);
+    expect(dayOffsetInWeek(TUESDAY)).toBe(6);
+  });
+
+  it("주소의 day로도 돌아올 수 있다", () => {
+    expect(parseDayParam(String(UNDECIDED))).toBe(UNDECIDED);
   });
 });

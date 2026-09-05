@@ -28,6 +28,10 @@ export default async function SlotsPage({ params }: PageProps<"/i/[slug]/slots">
           여기서 만든 슬롯은 매주 그대로 유지됩니다. 인원은 화요일 0시에 비워지고,
           화요일 레이드만 수요일 오전 6시까지 남습니다.
         </p>
+        <p className="mt-1 text-sm text-text-dim">
+          요일을 <b className="font-medium text-text">미정</b>으로 두면 시간을 잡지 않고
+          숙제 관리에만 올릴 수 있습니다. 약속 없이 혼자 도는 레이드에 쓰세요.
+        </p>
       </div>
 
       <section className="rounded border border-border bg-surface p-4">
