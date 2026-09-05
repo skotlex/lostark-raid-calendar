@@ -454,7 +454,7 @@ button:disabled,
   bottom: 0;
   left: 0;
   padding: 0.125rem 0.375rem 0.25rem;
-  background: rgb(6 9 14 / 88%);
+  background: rgb(6 9 14 / 68%);
 }
 
 /* 칩 줄. 넘치면 잘라내고, 먼저 읽어야 하는 직업 각인을 앞에 둔다. */
