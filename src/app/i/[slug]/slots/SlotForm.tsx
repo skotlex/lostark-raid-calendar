@@ -19,6 +19,25 @@ const IDLE: SlotState = { status: "idle", message: "" };
 const CONTROL =
   "h-9 rounded border border-border bg-bg px-2 text-sm focus:border-accent focus:outline-none";
 
+/** 30분 간격의 시간 후보. 목록에서 고르지 않고 직접 쳐 넣어도 된다. */
+const TIME_PRESETS = Array.from({ length: 48 }, (_, i) => {
+  const h = String(Math.floor(i / 2)).padStart(2, "0");
+  return `${h}:${i % 2 ? "30" : "00"}`;
+});
+
+/**
+ * 24시간 표기로 고정한다.
+ *
+ * `type="time"`은 형식을 브라우저 로케일이 정해서 "08:00 PM"으로 나온다.
+ * 페이지가 `lang="ko"`여도 바뀌지 않아 직접 받는다. 숫자만 남겨 콜론을 끼워 넣으므로
+ * "2000"을 치면 "20:00"이 된다.
+ */
+function formatTime(value: string): string {
+  const digits = value.replace(/[^0-9]/g, "").slice(0, 4);
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+}
+
 /**
  * 슬롯 추가·수정 폼.
  *
@@ -78,11 +97,16 @@ export function SlotForm({
       <Field label="시간">
         <input
           name="startTime"
-          type="time"
           required
+          list="time-presets"
+          inputMode="numeric"
+          pattern="([01][0-9]|2[0-3]):[0-5][0-9]"
+          title="20:00 형식으로 입력해 주세요"
+          maxLength={5}
           value={startTime}
-          onChange={(e) => setStartTime(e.target.value)}
-          className={CONTROL}
+          onChange={(e) => setStartTime(formatTime(e.target.value))}
+          placeholder="20:00"
+          className={`w-24 tabular ${CONTROL}`}
         />
       </Field>
 
@@ -130,6 +154,11 @@ export function SlotForm({
       {/* 성공은 목록에 바로 나타나므로 알리지 않는다. 실패만 말한다. */}
       {state.status === "error" && <span className="text-xs text-danger">{state.message}</span>}
 
+      <datalist id="time-presets">
+        {TIME_PRESETS.map((t) => (
+          <option key={t} value={t} />
+        ))}
+      </datalist>
       <datalist id="raid-presets">
         {RAID_PRESETS.map((preset) => (
           <option key={preset.name} value={preset.name} />
