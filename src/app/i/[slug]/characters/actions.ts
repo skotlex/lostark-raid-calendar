@@ -10,7 +10,8 @@ import {
   previewSiblings,
   registerCharacter,
   registerCharacters,
-  syncAllCharacters,
+  type BulkProgress,
+  syncAllBatch,
   syncCharacter,
 } from "@/lib/characters";
 import { findInstance } from "@/lib/instance";
@@ -171,23 +172,21 @@ export async function deleteAction(_prev: RowState, formData: FormData): Promise
 }
 
 /**
- * 등록된 캐릭터를 전부 다시 조회한다.
+ * 전체 갱신 한 회차.
  * 정규화 형식이 바뀌었을 때(예: 아크그리드 단계 추가) 옛 데이터를 되살리는 수단이다.
+ *
+ * 캐릭터가 많으면 한 번에 다 돌지 못한다(분당 한도, 서버리스 실행 시간). 화면이
+ * `remaining`이 0이 될 때까지 이어 부른다. `startedAt`은 첫 회차에 정해 계속 넘긴다.
  */
 export async function syncAllAction(
-  _prev: ImportState,
-  formData: FormData,
-): Promise<ImportState> {
-  const slug = String(formData.get("slug") ?? "");
-  try {
-    const { instanceId } = await authorize(slug);
-    const result = await syncAllCharacters(instanceId);
-    refresh(slug);
+  slug: string,
+  startedAt: string,
+): Promise<BulkProgress> {
+  const { instanceId } = await authorize(slug);
+  const started = new Date(startedAt);
+  if (Number.isNaN(started.getTime())) throw new CharacterError("잘못된 요청입니다");
 
-    const parts = [`${result.added.length}개 갱신됨`];
-    if (result.failed.length > 0) parts.push(`${result.failed.length}개 실패`);
-    return { status: "ok", message: parts.join(" / "), result };
-  } catch (error) {
-    return { status: "error", message: toMessage(error), result: null };
-  }
+  const progress = await syncAllBatch(instanceId, started);
+  refresh(slug);
+  return progress;
 }

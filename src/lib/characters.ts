@@ -412,17 +412,37 @@ export async function registerCharacters(
   return result;
 }
 
+export interface BulkProgress extends BulkResult {
+  /** 이 회차까지 하고도 남은 수. 0이면 끝이다. */
+  remaining: number;
+}
+
 /**
- * 등록된 캐릭터를 전부 다시 조회한다.
+ * 등록된 캐릭터를 전부 다시 조회한다. **한 회차씩 끊어서** 돈다.
  *
  * 스펙이 바뀐 것도 반영하지만, **정규화 형식이 바뀌었을 때 옛 데이터를 되살리는**
- * 용도가 더 크다. 캐릭터마다 요청 1회가 나가고 큐가 직렬화한다.
+ * 용도가 더 크다. 캐릭터마다 요청 1회가 나가므로 200개면 분당 한도에 걸려 몇 분이 된다.
+ * 한 번에 다 돌면 서버리스 실행 시간 제한에 잘리므로 화면이 회차를 이어 부른다.
+ *
+ * 어디까지 했는지는 `syncedAt`이 안다. 갱신하면 그 값이 `startedAt` 뒤로 밀리므로
+ * 다음 회차는 자연히 아직 안 한 캐릭터만 집는다. 실패한 캐릭터도 `syncedAt`이 갱신되니
+ * 같은 회차를 맴돌지 않는다.
  */
-export async function syncAllCharacters(instanceId: string): Promise<BulkResult> {
+export async function syncAllBatch(
+  instanceId: string,
+  startedAt: Date,
+  limit = 50,
+): Promise<BulkProgress> {
+  const pending = {
+    instanceId,
+    OR: [{ syncedAt: null }, { syncedAt: { lt: startedAt } }],
+  };
+
   const rows = await prisma.character.findMany({
-    where: { instanceId },
+    where: pending,
     select: { id: true, name: true },
-    orderBy: { name: "asc" },
+    orderBy: { syncedAt: { sort: "asc", nulls: "first" } },
+    take: limit,
   });
 
   const result: BulkResult = { added: [], failed: [] };
@@ -431,7 +451,8 @@ export async function syncAllCharacters(instanceId: string): Promise<BulkResult>
     if (character.syncError) result.failed.push({ name: row.name, reason: character.syncError });
     else result.added.push(character.name);
   }
-  return result;
+
+  return { ...result, remaining: await prisma.character.count({ where: pending }) };
 }
 
 /**

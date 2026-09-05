@@ -4,13 +4,13 @@
  * API 키는 이 파일을 통해서만 읽는다. 클라이언트 번들에 절대 들어가면 안 되므로
  * `NEXT_PUBLIC_` 접두사를 쓰지 않고, 아래 가드로 브라우저 실행을 막는다.
  *
- * 공식 제한: 클라이언트당 분당 100회. 초과하면 429와 함께 X-RateLimit-* 헤더가 온다.
- * 원정대 일괄 등록은 캐릭터 수만큼 요청이 나가므로 큐로 직렬화한다.
+ * 공식 제한: **클라이언트(키)당** 분당 100회. 초과하면 429와 함께 X-RateLimit-* 헤더가 온다.
+ * 키를 여러 개 넣으면 그만큼 늘어난다(LOSTARK_API_KEYS).
  */
 
 const BASE_URL = "https://developer-lostark.game.onstove.com";
 
-/** 공식 제한은 분당 100회다. 여유를 두고 95로 잡는다. */
+/** 공식 제한은 키마다 분당 100회다. 여유를 두고 95로 잡는다. */
 const MAX_REQUESTS_PER_MINUTE = 95;
 const WINDOW_MS = 60_000;
 
@@ -39,50 +39,99 @@ function requireServer() {
   }
 }
 
-function apiKey(): string {
+/**
+ * 쓸 수 있는 키 목록.
+ *
+ * 개발자 포털에서 클라이언트를 여러 개 만들 수 있고 한도는 키마다 따로 센다.
+ * `LOSTARK_API_KEYS`에 쉼표로 나열하면 그만큼 한도가 늘어난다.
+ * 하나만 쓰던 기존 설정(`LOSTARK_API_KEY`)도 그대로 읽는다.
+ */
+function apiKeys(): string[] {
   requireServer();
-  const key = process.env.LOSTARK_API_KEY;
-  if (!key) {
+  const raw = process.env.LOSTARK_API_KEYS ?? process.env.LOSTARK_API_KEY ?? "";
+  const keys = raw
+    .split(",")
+    .map((k) => k.trim())
+    .filter(Boolean);
+
+  if (keys.length === 0) {
     throw new Error(
       "LOSTARK_API_KEY가 없다. .env.local에 로아 OpenAPI JWT를 넣어야 한다",
     );
   }
-  return key;
+  return keys;
 }
 
 /**
- * 분당 요청 수를 제한하는 큐.
+ * 키를 나눠 주는 큐.
+ *
+ * 키마다 최근 1분의 요청 시각을 들고 있다가 여유 있는 키를 내준다. 전부 찼으면
+ * 가장 먼저 풀리는 키까지 기다린다. 동시에 나가는 요청 수는 키 수와 같다.
+ * 키가 하나면 예전처럼 한 번에 하나씩 나간다.
  *
  * 서버리스에서는 인스턴스마다 별도로 존재하므로 완벽한 보장은 아니다.
  * 429가 오면 백오프로 다시 처리하는 것이 실제 방어선이고, 이 큐는 그 빈도를 줄인다.
  */
-class RequestQueue {
-  private timestamps: number[] = [];
-  private chain: Promise<unknown> = Promise.resolve();
+class KeyQueue {
+  private windows = new Map<string, number[]>();
+  /** 429를 받은 키. 이 시각까지는 건너뛴다. */
+  private blockedUntil = new Map<string, number>();
+  private waiting: (() => void)[] = [];
+  private busy = new Set<string>();
 
-  run<T>(task: () => Promise<T>): Promise<T> {
-    const next = this.chain.then(() => this.throttled(task));
-    // 앞선 작업이 실패해도 큐가 멈추지 않게 한다.
-    this.chain = next.catch(() => undefined);
-    return next;
+  /** 요청 하나를 키 하나로 실행한다. 어떤 키를 썼는지 함께 돌려준다. */
+  async run<T>(task: (key: string) => Promise<T>): Promise<{ key: string; value: T }> {
+    const key = await this.take();
+    try {
+      return { key, value: await task(key) };
+    } finally {
+      this.release(key);
+    }
   }
 
-  private async throttled<T>(task: () => Promise<T>): Promise<T> {
-    const now = Date.now();
-    this.timestamps = this.timestamps.filter((t) => now - t < WINDOW_MS);
+  /** 429를 받은 키를 한동안 쓰지 않는다. 남은 키로 계속 돈다. */
+  block(key: string, ms: number) {
+    this.blockedUntil.set(key, Date.now() + ms);
+  }
 
-    if (this.timestamps.length >= MAX_REQUESTS_PER_MINUTE) {
-      const oldest = this.timestamps[0];
-      await sleep(WINDOW_MS - (now - oldest) + 50);
-      return this.throttled(task);
+  private async take(): Promise<string> {
+    for (;;) {
+      const now = Date.now();
+      let soonest = Infinity;
+
+      for (const key of apiKeys()) {
+        if (this.busy.has(key)) continue;
+
+        const until = this.blockedUntil.get(key) ?? 0;
+        if (until > now) {
+          soonest = Math.min(soonest, until - now);
+          continue;
+        }
+
+        const recent = (this.windows.get(key) ?? []).filter((t) => now - t < WINDOW_MS);
+        if (recent.length < MAX_REQUESTS_PER_MINUTE) {
+          recent.push(now);
+          this.windows.set(key, recent);
+          this.busy.add(key);
+          return key;
+        }
+        this.windows.set(key, recent);
+        soonest = Math.min(soonest, WINDOW_MS - (now - recent[0]!));
+      }
+
+      // 모든 키가 쓰이는 중이면 하나가 끝날 때까지, 한도가 찼으면 창이 열릴 때까지 기다린다.
+      if (soonest === Infinity) await new Promise<void>((r) => this.waiting.push(r));
+      else await sleep(soonest + 50);
     }
+  }
 
-    this.timestamps.push(Date.now());
-    return task();
+  private release(key: string) {
+    this.busy.delete(key);
+    this.waiting.shift()?.();
   }
 }
 
-const queue = new RequestQueue();
+const queue = new KeyQueue();
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -109,21 +158,21 @@ function retryDelayMs(response: Response): number {
 }
 
 async function request<T>(path: string, characterName?: string): Promise<T | null> {
-  const key = apiKey();
-
   for (let attempt = 0; attempt < 3; attempt++) {
-    const response = await queue.run(() =>
+    const { key, value: response } = await queue.run((usedKey) =>
       fetch(`${BASE_URL}${path}`, {
         headers: {
           accept: "application/json",
-          authorization: `bearer ${key}`,
+          authorization: `bearer ${usedKey}`,
         },
         cache: "no-store",
       }),
     );
 
     if (response.status === 429) {
-      await sleep(retryDelayMs(response));
+      // 이 키만 쉬게 하고 다시 시도한다. 키가 여럿이면 다른 키로 이어진다.
+      const delay = retryDelayMs(response);
+      queue.block(key, delay);
       continue;
     }
 
