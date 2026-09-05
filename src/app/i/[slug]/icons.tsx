@@ -252,3 +252,20 @@ export function GoldIcon({ earning }: { earning: boolean }) {
     </svg>
   );
 }
+
+/**
+ * 경고 표시.
+ *
+ * 표는 한 칸이 이름 너비뿐이라 경고 문장을 이름 아래에 깔면 서너 줄로 접혀 그 줄만
+ * 키가 커진다. 삼각형 느낌표는 설명이 필요 없는 기호라 자리를 거의 쓰지 않고도
+ * "여기에 볼 것이 있다"를 말한다. 문장은 눌렀을 때 말풍선으로 나온다.
+ */
+export function WarnIcon() {
+  return (
+    <svg {...ICON_PROPS} className="size-3.5 shrink-0" strokeWidth={2}>
+      <path d="M12 4.2 21.2 20H2.8z" />
+      <path d="M12 10v4.2" />
+      <path d="M12 17.2v.3" />
+    </svg>
+  );
+}

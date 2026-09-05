@@ -1,10 +1,15 @@
 "use client";
 
 import {
+  type CSSProperties,
   type DragEvent,
+  type MouseEvent,
   type ReactNode,
   startTransition,
   useActionState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
   useState,
 } from "react";
 
@@ -12,7 +17,7 @@ import {
 import type { BoardSlotView, CellView } from "@/lib/board";
 import { classEmblem } from "@/lib/classEmblems";
 import { positionLabel } from "@/lib/positions";
-import { MISSING_SYNERGY_WARNING, getSynergies } from "@/lib/synergy";
+import { getSynergies } from "@/lib/synergy";
 
 import { NameInput } from "./NameInput";
 import { SlotHeader } from "./SlotHeader";
@@ -25,19 +30,9 @@ import {
 } from "./actions";
 import { DRAG_TYPE, moveForm, readDragSource, writeDragSource } from "./dragCell";
 import { ConfirmButton } from "./ConfirmButton";
-import { CloseIcon, GripIcon, PinIcon } from "./icons";
+import { CloseIcon, GripIcon, PinIcon, WarnIcon } from "./icons";
 
 const IDLE: CellState = { status: "idle", message: "" };
-
-/**
- * 좁은 칸에 맞춰 경고를 줄인다.
- *
- * 표는 한 칸이 이름 너비뿐이라 문장이 들어가면 서너 줄로 접힌다. 카드 보기는 자리가
- * 넉넉하므로 원문 그대로 둔다.
- */
-function shortWarning(warning: string) {
-  return warning === MISSING_SYNERGY_WARNING ? "시너지 트라이포드 없음" : warning;
-}
 
 /**
  * 간략 보기 — 8인이 한 줄에 들어가는 표.
@@ -372,15 +367,104 @@ function NameCell({
 
   return (
     <td className="board-cell board-cell--name">
-      <div className="truncate font-semibold" title={character.name}>
-        {character.name}
+      <div className="board-name">
+        <span className="truncate" title={character.name}>
+          {character.name}
+        </span>
+        {cell.warnings.length > 0 && <WarnBadge warnings={cell.warnings} />}
       </div>
-
-      {cell.warnings.map((warning) => (
-        <div key={warning} className="board-warn">
-          {shortWarning(warning)}
-        </div>
-      ))}
     </td>
+  );
+}
+
+/** 말풍선이 화면 가장자리에 남겨야 할 여백. */
+const BUBBLE_MARGIN = 8;
+
+/**
+ * 경고 — 이름 옆의 표시와 눌러서 여는 말풍선.
+ *
+ * 문장을 이름 아래에 그대로 깔면 한 칸이 이름 너비뿐이라 서너 줄로 접히고, 그 줄만
+ * 키가 커져 여덟 칸이 어긋난다. 표는 여덟을 한 줄에 놓고 훑는 보기라 줄이 어긋나면
+ * 이 보기를 쓰는 이유가 없어진다. 그래서 있다는 것만 아이콘으로 알리고 문장은 눌렀을
+ * 때 띄운다. 경고는 막는 것이 아니라 알리는 것이라(CLAUDE.md 3.4) 늘 펼쳐 둘 것도 아니다.
+ *
+ * **말풍선은 fixed다.** 표가 overflow-x: auto 안에 있어 칸에 붙여 그리면 잘리거나
+ * 없던 가로 스크롤이 생긴다. 화면 기준으로 띄우면 그 상자를 벗어난다.
+ */
+function WarnBadge({ warnings }: { warnings: string[] }) {
+  /** 누른 아이콘의 화면 좌표. null이면 닫혀 있다. */
+  const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
+  const [left, setLeft] = useState(0);
+  const bubble = useRef<HTMLDivElement>(null);
+
+  // 화면 밖으로 나가면 안으로 민다. 표가 가로로 넓어 양끝 칸이 특히 위험하다.
+  // 그리기 전에 옮겨야 말풍선이 한 번 튀지 않는다.
+  useLayoutEffect(() => {
+    const width = bubble.current?.offsetWidth;
+    if (!anchor || !width) return;
+
+    const half = width / 2;
+    const min = BUBBLE_MARGIN + half;
+    const max = Math.max(window.innerWidth - BUBBLE_MARGIN - half, min);
+    setLeft(Math.min(Math.max(anchor.x, min), max));
+  }, [anchor]);
+
+  // 3초 뒤에 저절로 닫힌다. 닫는 법을 따로 알려주지 않아도 되고, 좁은 표에서 오래
+  // 떠 있으면 아래 줄을 가린다.
+  useEffect(() => {
+    if (!anchor) return;
+    const timer = setTimeout(() => setAnchor(null), 3000);
+    return () => clearTimeout(timer);
+  }, [anchor]);
+
+  function toggle(e: MouseEvent<HTMLButtonElement>) {
+    // 열려 있는데 또 누르면 닫는다. 3초를 기다리게 하지 않는다.
+    if (anchor) {
+      setAnchor(null);
+      return;
+    }
+
+    const box = e.currentTarget.getBoundingClientRect();
+    const x = box.left + box.width / 2;
+    // 첫 그림도 아이콘 아래에서 시작한다. 0에서 시작하면 왼쪽 끝에서 미끄러져 온다.
+    setLeft(x);
+    setAnchor({ x, y: box.bottom + 6 });
+  }
+
+  return (
+    <span className="board-warn">
+      <button
+        type="button"
+        onClick={toggle}
+        className="board-warn-icon"
+        title="경고 보기"
+        aria-label="경고 보기"
+        aria-expanded={anchor !== null}
+      >
+        <WarnIcon />
+      </button>
+
+      {anchor && (
+        <div
+          ref={bubble}
+          role="status"
+          className="board-warn-bubble"
+          style={
+            {
+              left: left + "px",
+              top: anchor.y + "px",
+              // 꼬리는 말풍선이 밀린 만큼 되돌려 아이콘을 가리킨다.
+              "--tail": anchor.x - left + "px",
+            } as CSSProperties
+          }
+        >
+          {warnings.map((warning) => (
+            <span key={warning} className="block">
+              {warning}
+            </span>
+          ))}
+        </div>
+      )}
+    </span>
   );
 }
