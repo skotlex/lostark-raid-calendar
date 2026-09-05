@@ -98,6 +98,17 @@ describe("partySynergies", () => {
     expect(result).toHaveLength(0);
   });
 
+  it("어느 직업이 주는지 함께 알려준다", () => {
+    const result = partySynergies([
+      { className: "데빌헌터", role: "DPS" }, // 치적
+      { className: "건슬링어", role: "DPS" }, // 치적
+      { className: "건슬링어", role: "DPS" }, // 치적. 같은 직업이라 이름은 하나만 남는다
+    ]);
+    const crit = result.find((s) => s.kind === "치적");
+    expect(crit?.sources).toEqual(["데빌헌터", "건슬링어"]);
+    expect(crit?.count).toBe(3);
+  });
+
   it("워로드는 두 시너지를 함께 준다", () => {
     const result = partySynergies([{ className: "워로드", role: "DPS" }]);
     expect(result.map((s) => s.kind)).toEqual(["방깍", "백헤드"]);

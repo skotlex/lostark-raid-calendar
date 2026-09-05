@@ -133,13 +133,15 @@ function Party({
             <span
               key={synergy.kind}
               className={`syn ${SYNERGY_CLASS[synergy.kind]}`}
-              title={synergy.label}
+              title={`${synergy.label} — ${synergy.sources.join(", ")}`}
             >
               <span>
                 {synergy.kind}
                 {/* 수치는 종류마다 고정이라 함께 보여준다. 서폿은 딜러마다 달라 비어 있다. */}
                 {synergy.value && ` ${synergy.value}`}
               </span>
+              {/* 어느 직업이 주는지. 자리를 옮길 때 무엇이 따라 빠지는지 알아야 한다. */}
+              <span className="syn-from">{synergy.sources.join("·")}</span>
               {synergy.count > 1 && <span className="syn-count">×{synergy.count}</span>}
             </span>
           ))

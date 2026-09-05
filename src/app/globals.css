@@ -870,6 +870,12 @@ button:disabled,
   opacity: 0.75;
 }
 
+/* 시너지를 주는 직업. 종류·수치보다 한 단계 뒤로 물린다. */
+.syn-from {
+  font-size: 10px;
+  opacity: 0.6;
+}
+
 .syn-atk {
   color: var(--syn-atk);
 }

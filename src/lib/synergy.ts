@@ -272,6 +272,13 @@ export interface PartySynergy {
   value: string;
   /** 이 시너지를 주는 인원 수. 2 이상이면 겹친다 */
   count: number;
+  /**
+   * 이 시너지를 주는 직업. 들어온 순서대로, 같은 직업은 한 번만.
+   *
+   * 종류만 보여주면 "치적이 있다"까지만 알고 누구를 빼면 사라지는지는 모른다.
+   * 자리를 옮길 때 그게 필요한 정보다.
+   */
+  sources: string[];
 }
 
 /**
@@ -292,10 +299,16 @@ export function partySynergies(
   const found = new Map<SynergyKind, PartySynergy>();
 
   for (const member of members) {
+    const from = member.className?.trim() || "?";
     for (const synergy of getSynergies(member.className, member.role, member.detected)) {
       const existing = found.get(synergy.kind);
-      if (existing) existing.count += 1;
-      else found.set(synergy.kind, { ...synergy, count: 1 });
+      if (existing) {
+        existing.count += 1;
+        // 같은 직업 둘이 겹치면 이름은 하나만 두고 수는 count가 말한다.
+        if (!existing.sources.includes(from)) existing.sources.push(from);
+      } else {
+        found.set(synergy.kind, { ...synergy, count: 1, sources: [from] });
+      }
     }
   }
 
