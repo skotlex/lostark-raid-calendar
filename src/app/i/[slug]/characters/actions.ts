@@ -17,7 +17,8 @@ import {
 } from "@/lib/characters";
 import { logEvent } from "@/lib/history";
 import { findInstance } from "@/lib/instance";
-import { claimNames } from "@/lib/members";
+import { GOLD_LIMIT } from "@/lib/goldEarners";
+import { claimNames, clearGoldEarners, findMyMember, setGoldEarners } from "@/lib/members";
 import { type Session, requireSession } from "@/lib/session";
 
 /*
@@ -267,4 +268,57 @@ export async function syncAllAction(
   const progress = await syncAllBatch(instanceId, started);
   refresh(slug);
   return progress;
+}
+
+// --- 골드 획득 캐릭터 지정 ---------------------------------------------------
+
+export interface GoldState {
+  status: "idle" | "ok" | "error";
+  message: string;
+}
+
+/**
+ * 이 원정대에서 골드를 받는 캐릭터를 정한다.
+ *
+ * `roster`가 빈 문자열이면 아직 원정대가 안 붙은 내 캐릭터 묶음이다(goldEarners.ts의
+ * NO_ROSTER). 화면의 "미지정" 탭이 그것들을 보여준다.
+ *
+ * 고른 것이 하나도 없으면 지정을 지워 자동으로 되돌린다. "아무도 안 받는다"는 상태는
+ * 게임에 없으므로 그 뜻으로 읽을 수 없고, 전부 해제하는 동작에 되돌리기를 걸어 두면
+ * 버튼을 하나 덜 만들어도 된다.
+ */
+export async function setGoldEarnersAction(
+  _prev: GoldState,
+  formData: FormData,
+): Promise<GoldState> {
+  const slug = String(formData.get("slug") ?? "");
+  const roster = String(formData.get("roster") ?? "");
+  const ids = formData.getAll("earner").map(String).filter(Boolean);
+
+  try {
+    const { instanceId, session } = await authorize(slug);
+    const member = await findMyMember(instanceId, session.discordUserId);
+    if (!member) {
+      throw new CharacterError("먼저 캐릭터 관리에서 내 원정대를 불러와 주세요");
+    }
+    if (ids.length > GOLD_LIMIT) {
+      throw new CharacterError(`골드를 받는 캐릭터는 ${GOLD_LIMIT}명까지입니다`);
+    }
+
+    const rosterId = roster || null;
+    if (ids.length === 0) {
+      await clearGoldEarners({ instanceId, memberId: member.id, rosterId });
+    } else {
+      await setGoldEarners({ instanceId, memberId: member.id, rosterId, earnerIds: ids });
+    }
+
+    refresh(slug);
+    revalidatePath(`/i/${slug}/homework`);
+    return {
+      status: "ok",
+      message: ids.length === 0 ? "자동(템레벨 상위 6)으로 되돌렸습니다" : "저장했습니다",
+    };
+  } catch (error) {
+    return { status: "error", message: toMessage(error) };
+  }
 }

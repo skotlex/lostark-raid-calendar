@@ -1,10 +1,11 @@
 import { listCharacters } from "@/lib/characters";
 import { requireInstance } from "@/lib/instance";
-import { findMyMember } from "@/lib/members";
+import { findMyMember, listMyRosters } from "@/lib/members";
 import { requireSession } from "@/lib/session";
 
 import { CharacterCard } from "./CharacterCard";
 import { DeleteGroupButton } from "./DeleteGroupButton";
+import { type GoldRoster, GoldPanel } from "./GoldPanel";
 import { RegisterPanel } from "./RegisterPanel";
 import { SyncAllButton } from "./SyncAllButton";
 
@@ -49,6 +50,32 @@ export default async function CharactersPage({ params }: PageProps<"/i/[slug]/ch
   const supports = characters.filter((c) => c.role === "SUPPORT").length;
   const failed = characters.filter((c) => c.syncError).length;
 
+  /*
+   * 골드 지정은 **내 캐릭터만** 다룬다.
+   *
+   * 남의 원정대에서 누가 골드를 받는지는 그 사람이 정할 일이고, 숙제 화면도 자기 것만
+   * 보여준다. 여기서 길드 전체를 늘어놓으면 남의 원정대를 건드리는 화면이 된다.
+   *
+   * 원정대가 안 붙은 내 캐릭터는 "원정대 미지정" 묶음으로 맨 뒤에 붙인다. 편성 칸으로
+   * 만들어져 아직 불러오기를 거치지 않은 것들이라, 계정을 하나 더 가진 것처럼 보이지
+   * 않게 이름 있는 원정대와 순서를 나눈다.
+   */
+  const rosterList = myMember ? await listMyRosters(instance.id, myMember.id) : [];
+  const mine = myMember ? characters.filter((c) => c.memberId === myMember.id) : [];
+
+  const goldRosters: GoldRoster[] = rosterList
+    .map((roster) => ({
+      id: roster.id,
+      label: roster.label,
+      characters: mine.filter((c) => c.rosterId === roster.id),
+    }))
+    .filter((roster) => roster.characters.length > 0);
+
+  const unassigned = mine.filter((c) => c.rosterId === null);
+  if (unassigned.length > 0) {
+    goldRosters.push({ id: "", label: "원정대 미지정", characters: unassigned });
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -60,6 +87,8 @@ export default async function CharactersPage({ params }: PageProps<"/i/[slug]/ch
       </div>
 
       <RegisterPanel slug={slug} mine={myMember?.characterCount ?? 0} />
+
+      {goldRosters.length > 0 && <GoldPanel slug={slug} rosters={goldRosters} />}
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-dim">
         <span>

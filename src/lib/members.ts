@@ -175,3 +175,76 @@ export async function findOwnerByCharacterName(
   });
   return member?.id ?? null;
 }
+
+/**
+ * 내 원정대 목록. 캐릭터 관리의 탭이 된다.
+ *
+ * 원정대가 없는 캐릭터(편성 칸으로 만들어진 것들)는 여기 안 나온다. 화면이 별도의
+ * "미지정" 탭으로 따로 붙인다 — 진짜 원정대가 아니라 아직 안 붙은 것들이라
+ * 이름을 가진 원정대와 같은 줄에 세우면 계정을 하나 더 가진 것처럼 읽힌다.
+ */
+export async function listMyRosters(
+  instanceId: string,
+  memberId: string,
+): Promise<{ id: string; label: string }[]> {
+  return prisma.roster.findMany({
+    where: { instanceId, memberId },
+    select: { id: true, label: true },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
+/**
+ * 이 원정대의 골드 획득 캐릭터를 지정한다.
+ *
+ * **원정대 전체에 true/false를 박는다.** 일부만 박아 두면 자동과 수동이 섞여
+ * "지정한 둘 + 자동 넷"이 되는데, 그 넷이 왜 그 넷인지 화면에서 설명할 수 없다.
+ *
+ * `rosterId`가 null이면 아직 원정대가 안 붙은 내 캐릭터들이다. 화면의 "미지정" 탭이
+ * 그것들을 보여주므로 여기서도 같은 조건으로 잡는다.
+ *
+ * 남의 캐릭터를 건드리지 못하도록 memberId로 한 번 더 좁힌다. 서버 액션은 UI를 거치지
+ * 않고 불릴 수 있어 화면이 보여준 목록을 그대로 믿으면 안 된다.
+ */
+export async function setGoldEarners(params: {
+  instanceId: string;
+  memberId: string;
+  rosterId: string | null;
+  earnerIds: string[];
+}): Promise<void> {
+  const scope = {
+    instanceId: params.instanceId,
+    memberId: params.memberId,
+    rosterId: params.rosterId,
+  };
+  const ids = new Set(params.earnerIds);
+
+  const mine = await prisma.character.findMany({
+    where: scope,
+    select: { id: true },
+  });
+
+  const earners = mine.filter((c) => ids.has(c.id)).map((c) => c.id);
+  const others = mine.filter((c) => !ids.has(c.id)).map((c) => c.id);
+
+  await prisma.$transaction([
+    prisma.character.updateMany({ where: { id: { in: earners } }, data: { goldEarner: true } }),
+    prisma.character.updateMany({ where: { id: { in: others } }, data: { goldEarner: false } }),
+  ]);
+}
+
+/** 지정을 지워 자동(템레벨 상위 6)으로 되돌린다. */
+export async function clearGoldEarners(params: {
+  instanceId: string;
+  memberId: string;
+  rosterId: string | null;
+}): Promise<void> {
+  await prisma.character.updateMany({
+    where: {
+      instanceId: params.instanceId,
+      memberId: params.memberId,
+      rosterId: params.rosterId,
+    },
+    data: { goldEarner: null },
+  });
+}
