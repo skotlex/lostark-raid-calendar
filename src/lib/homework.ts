@@ -68,6 +68,13 @@ export interface Homework {
   remainingGold: number;
   /** 이번 주 편성 전체의 클리어 골드 합계 */
   totalGold: number;
+  /**
+   * 더보기를 모두 켰을 때 나가는 골드 합계. 양수다.
+   *
+   * 뺀 값을 미리 담지 않는다. 화면이 `totalGold - totalMoreCost`로 쓰는데,
+   * 캐릭터 카드도 같은 식으로 계산하고 있어 두 곳이 같은 모양이라야 어긋나지 않는다.
+   */
+  totalMoreCost: number;
   /** 이번 주에 잡아 둔 숙제 수 */
   totalCount: number;
   /** 그중 아직 안 한 것 */
@@ -111,6 +118,7 @@ export async function getHomework(
       raids: [],
       remainingGold: 0,
       totalGold: 0,
+      totalMoreCost: 0,
       totalCount: 0,
       remainingCount: 0,
     };
@@ -233,6 +241,7 @@ export async function getHomework(
     raids: [...raids.values()],
     remainingGold: [...raids.values()].reduce((sum, r) => sum + r.remainingGold, 0),
     totalGold: withWork.reduce((sum, c) => sum + c.clearGold, 0),
+    totalMoreCost: withWork.reduce((sum, c) => sum + c.moreCost, 0),
     totalCount: withWork.reduce((sum, c) => sum + c.entries.length, 0),
     remainingCount: withWork.reduce((sum, c) => sum + c.remaining, 0),
   };

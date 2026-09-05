@@ -69,6 +69,20 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
             label="남은 골드"
             value={gold.format(homework.remainingGold)}
             total={`/ ${gold.format(homework.totalGold)}`}
+            /*
+              더보기 값을 뺀 합계. 캐릭터 카드의 "더보기 함"과 같은 계산이다.
+
+              막대와 큰 숫자는 더보기를 안 켠 기준으로 둔다. 켤지 말지는 그때 정하는
+              것이고 자리에 따라 달라져 편성표가 알 수 없다(CLAUDE.md 2-3).
+              그래도 다 켜면 얼마가 남는지는 이 화면에서 바로 보여야 한다.
+            */
+            note={
+              homework.totalMoreCost > 0
+                ? `(더보기 제외: ${gold.format(
+                    homework.totalGold - homework.totalMoreCost,
+                  )} G)`
+                : undefined
+            }
             done={homework.totalGold - homework.remainingGold}
             all={homework.totalGold}
             tone="var(--accent)"
@@ -286,6 +300,7 @@ function Progress({
   label,
   value,
   total,
+  note,
   done,
   all,
   tone,
@@ -293,6 +308,13 @@ function Progress({
   label: string;
   value: string;
   total: string;
+  /**
+   * 합계 옆에 덧붙이는 값. 지금은 더보기 값을 뺀 골드가 들어간다.
+   *
+   * 막대와 큰 숫자는 계획을 세울 때 보는 값이라 하나여야 한다. 둘째 값을 같은 크기로
+   * 세우면 어느 쪽이 기준인지 매번 다시 정해야 한다. 흐리게, 괄호로 뒤에 붙인다.
+   */
+  note?: string;
   done: number;
   all: number;
   /** 막대 색. 골드와 숙제를 다른 색으로 둔다 */
@@ -308,6 +330,7 @@ function Progress({
           {value}
         </span>
         <span className="text-xs text-text-faint tabular">{total}</span>
+        {note && <span className="text-xs text-text-faint tabular">{note}</span>}
         <span className="ml-auto text-xs tabular text-text-dim">{percent}%</span>
       </div>
 
