@@ -20,6 +20,22 @@ import { classColor } from "@/lib/classColors";
  * 보이게 한다.
  */
 
+/*
+ * 개발 중에는 이미지 최적화를 끈다.
+ *
+ * next/image는 처음 보는 그림마다 서버에서 원본을 받아 sharp로 다시 굽는다. 배포판은
+ * 그 일을 Vercel이 하지만, 개발 중에는 **브라우저와 같은 컴퓨터**가 한다. 캐릭터를
+ * 여섯 개쯤 한꺼번에 등록하면 그만큼이 동시에 돌아 CPU가 다 차고, 그동안 브라우저가
+ * 화면을 못 그려 클릭해도 커서조차 안 생긴다.
+ *
+ * 한 번 구워두면 .next/dev/cache/images에 남아 다음부터는 빠르다. "처음 한 번만
+ * 멈춘다"는 증상이 이것이었다.
+ *
+ * 끄면 원본(612×708)을 그대로 받는다. 개발 중 대역폭은 문제가 아니고, 배포판은
+ * 그대로 최적화를 거친다.
+ */
+const UNOPTIMIZED = process.env.NODE_ENV !== "production";
+
 /** 잘라낼 구간. 이미지 크기와 무관한 비율이라 해상도가 바뀌어도 유지된다. */
 const CROP = { x: 0.34, y: 0.085, w: 0.32, h: 0.339 };
 
@@ -73,6 +89,7 @@ export function Portrait({
         width={612}
         height={708}
         sizes={spec.px}
+        unoptimized={UNOPTIMIZED}
         // Tailwind가 img에 max-width:100%를 걸어두므로 풀어야 확대가 먹는다.
         className="absolute max-w-none"
         style={IMAGE_STYLE}
@@ -138,6 +155,7 @@ export function PortraitBleed({
            * 그보다 큰 값을 주면 사실상 원본을 그대로 받는다.
            */
           sizes="400px"
+          unoptimized={UNOPTIMIZED}
           className="object-cover"
           style={{ objectPosition: BLEED_ORIGIN, transform: `scale(${BLEED_SCALE})`, transformOrigin: BLEED_ORIGIN }}
           onError={() => setBroken(true)}
