@@ -70,24 +70,41 @@ export function SlotForm({
     IDLE,
   );
 
-  // 액션이 끝나면 폼이 통째로 초기화된다. 추가 폼은 연달아 입력하라고 열어두는 곳이라
-  // 방금 고른 값이 매번 날아갔다. 네 칸 모두 직접 들고 있어 입력을 유지한다.
+  // 네 칸 모두 상태로 들고 있는다. 추가 폼은 연달아 입력하라고 열어두는 곳이라
+  // 방금 고른 값이 살아 있어야 한다.
   const [dayOfWeek, setDayOfWeek] = useState(slot?.dayOfWeek ?? defaultDay ?? 3);
   const [startTime, setStartTime] = useState(slot?.startTime ?? "20:00");
   const [raidName, setRaidName] = useState(slot?.raidName ?? "");
   const [difficulty, setDifficulty] = useState(slot?.difficulty ?? "");
 
+  /**
+   * 보낼 값은 DOM이 아니라 상태에서 모은다.
+   *
+   * `<form action={...}>`을 쓰면 액션이 끝난 뒤 React가 폼을 초기화한다. 칸이 전부
+   * 제어 컴포넌트라 상태는 그대로인데 DOM만 기본값으로 돌아가고, 둘이 어긋난 채 남는다.
+   * 요일이 수요일로 보였다가 다른 칸을 건드리는 순간(=다시 그릴 때) 되돌아오던 이유다.
+   *
+   * onSubmit으로 직접 보내면 그 초기화가 아예 일어나지 않는다. required·pattern 검사는
+   * 브라우저가 submit 전에 하므로 그대로 걸린다.
+   */
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+
+    const data = new FormData();
+    data.set("slug", slug);
+    if (slot) data.set("slotId", slot.id);
+    data.set("dayOfWeek", String(dayOfWeek));
+    data.set("startTime", startTime);
+    data.set("raidName", raidName);
+    data.set("difficulty", difficulty);
+
+    submit(data);
+    // 수정은 저장 후 닫는다. 추가는 연달아 넣는 경우가 많아 열어둔다.
+    if (editing) onDone?.();
+  }
+
   return (
-    <form
-      action={(formData) => {
-        submit(formData);
-        // 수정은 저장 후 닫는다. 추가는 연달아 넣는 경우가 많아 열어둔다.
-        if (editing) onDone?.();
-      }}
-      className="flex flex-wrap items-end gap-2"
-    >
-      <input type="hidden" name="slug" value={slug} />
-      {slot && <input type="hidden" name="slotId" value={slot.id} />}
+    <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-2">
 
       <Field label="요일">
         <select
