@@ -138,6 +138,11 @@ function ModeButton({
  *
  * 원정대를 아직 하나도 안 만들었으면 고를 것이 없으니 칸을 숨긴다. 원정대는 불러오기
  * 한 번이 하나씩 만든다(lib/members.ts).
+ *
+ * **원정대가 둘 이상이면 기본값을 비워 둔다.** 계정이 여럿인 사람이 칸을 안 건드리면
+ * 두 번째 계정 캐릭터가 조용히 첫 번째 원정대로 들어가는데, 골드 6명이 원정대 단위라
+ * 그만큼 어긋나면서 화면에는 아무 표시가 없다. 미지정은 최소한 탭 이름이 아직 안
+ * 정해졌다고 말해 준다. 원정대가 하나뿐이면 그 값이 거의 항상 맞으므로 그대로 고른다.
  */
 function SingleForm({
   slug,
@@ -162,7 +167,7 @@ function SingleForm({
         <Field label="원정대" className="w-40">
           <select
             name="roster"
-            defaultValue={rosters[0].id}
+            defaultValue={rosters.length === 1 ? rosters[0].id : ""}
             className="w-full rounded border border-border bg-bg px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
           >
             {rosters.map((roster) => (
