@@ -390,7 +390,7 @@ button:disabled,
   flex: 0 0 auto;
 }
 
-/* 좁은 칸에서는 소수점을 버린다. 폭을 아끼려는 것이다. */
+/* 좁은 칸에서는 템레벨의 소수점을 버린다. 전투력은 끝자리까지 그대로 둔다. */
 .char-num-full {
   display: none;
 }

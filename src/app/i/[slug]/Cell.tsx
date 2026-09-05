@@ -30,7 +30,7 @@ function format(value: number | null): string {
 }
 
 /**
- * 소수점을 버린 표기. 좁은 칸에서 폭을 아끼려고 쓴다.
+ * 소수점을 버린 표기. 좁은 칸에서 폭을 아끼려고 쓴다. 지금은 템레벨만 쓴다.
  *
  * 반올림이 아니라 버림이다. 템레벨은 구간 진입이 기준이라 1791.66을 1792로 올리면
  * 아직 닿지 않은 구간에 든 것처럼 읽힌다.
@@ -46,13 +46,28 @@ function formatShort(value: number | null): string {
  * 칸 폭에 따라 바꾸려면 둘 다 그려두는 수밖에 없다. 화면 낭독기가 같은 값을 두 번
  * 읽지 않도록 숨는 쪽은 display로 지운다(globals.css).
  */
-function Stat({ label, value }: { label: string; value: number | null }) {
+function Stat({
+  label,
+  value,
+  exact,
+}: {
+  label: string;
+  value: number | null;
+  /** 칸이 좁아도 소수점을 지킨다. 전투력은 끝자리가 곧 서열이라 잘리면 값이 죽는다. */
+  exact?: boolean;
+}) {
   return (
     <div className="char-stat">
       <span className="char-label">{label}</span>
       <span className="char-value">
-        <span className="char-num-full">{format(value)}</span>
-        <span className="char-num-short">{formatShort(value)}</span>
+        {exact ? (
+          format(value)
+        ) : (
+          <>
+            <span className="char-num-full">{format(value)}</span>
+            <span className="char-num-short">{formatShort(value)}</span>
+          </>
+        )}
       </span>
     </div>
   );
@@ -285,7 +300,7 @@ export function Cell({
         */}
         <div className="char-stat-line">
           <Stat label="레벨" value={character.itemLevel} />
-          <Stat label="전투력" value={character.combatPower} />
+          <Stat label="전투력" value={character.combatPower} exact />
 
           {character.arkGridSummary && (
             <div className="char-arkgrid char-faint tabular">{character.arkGridSummary}</div>
