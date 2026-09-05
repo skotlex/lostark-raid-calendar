@@ -213,6 +213,10 @@ async function resolveRoster(
  * 이름으로 주인을 찾는다. 캐릭터를 새로 등록할 때 소속을 붙이는 데 쓴다.
  *
  * 클레임한 사람이 없으면 null이고, 그 캐릭터는 소속 미지정으로 남는다.
+ *
+ * **먼저 클레임한 사람이 이긴다**(4장). 한 이름을 두 사람이 클레임한 데이터가 이미
+ * 있을 수 있어서 — 예전 단일 등록이 남의 캐릭터 이름도 그대로 쌓았다 — 정렬 없이
+ * 두면 같은 질문에 매번 다른 답이 나온다.
  */
 export async function findOwnerByCharacterName(
   instanceId: string,
@@ -220,6 +224,7 @@ export async function findOwnerByCharacterName(
 ): Promise<string | null> {
   const member = await prisma.member.findFirst({
     where: { instanceId, claimedNames: { has: characterName } },
+    orderBy: { createdAt: "asc" },
     select: { id: true },
   });
   return member?.id ?? null;
