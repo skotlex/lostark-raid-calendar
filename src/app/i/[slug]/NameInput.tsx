@@ -145,6 +145,7 @@ export function NameInput({
 
   /** 후보를 고르면 그대로 넣고 폼을 보낸다. 한 번 더 엔터를 치게 하지 않는다. */
   function choose(picked: string) {
+    inputRef.current?.setCustomValidity("");
     setValue(picked);
     setOpen(false);
     setActive(-1);
@@ -192,6 +193,12 @@ export function NameInput({
         value={pending ? "조회 중…" : value}
         readOnly={pending}
         required
+        /*
+         * 빈 채로 보내면 브라우저가 "Please fill out this field."를 띄운다. 그 문구는
+         * 브라우저 UI 언어를 따라가서 이 화면과 따로 논다. 우리 문구로 갈아 끼운다.
+         * 값이 바뀔 때 지우지 않으면 고쳐 넣어도 계속 막힌다(onChange, choose).
+         */
+        onInvalid={(e) => e.currentTarget.setCustomValidity("캐릭터 닉네임을 입력해 주세요")}
         autoComplete="off"
         placeholder={placeholder ?? "캐릭터 입력"}
         role="combobox"
@@ -200,6 +207,7 @@ export function NameInput({
         aria-autocomplete="list"
         onChange={(e) => {
           if (pending) return;
+          e.target.setCustomValidity("");
           setDismissed(true);
           setValue(e.target.value);
           setOpen(true);
