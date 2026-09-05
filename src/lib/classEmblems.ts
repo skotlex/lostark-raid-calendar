@@ -13,6 +13,10 @@
  *
  * **새 직업 둘은 밑줄이 들어간다**(dragon_knight, dimension_master). 한 낱말로 붙여 쓴
  * 옛 직업들과 규칙이 다르니, 찾을 때 밑줄 형태도 함께 넣어본다.
+ *
+ * **소서리스는 elementalmaster다.** 뿌리 클래스 이름을 옮긴 magician을 넣어 뒀었는데
+ * 그건 마법사 문장이라 칸에 엉뚱한 그림이 떴다. 뿌리 클래스 이름으로 짐작해 채우지
+ * 않는다. 표에 없으면 아이콘만 빠지지만, 틀린 이름은 다른 직업의 문장을 그린다.
  */
 const EMBLEMS: Record<string, string> = {
   가디언나이트: "dragon_knight",
@@ -41,7 +45,7 @@ const EMBLEMS: Record<string, string> = {
   아르카나: "arcana",
   서머너: "summoner",
   바드: "bard",
-  소서리스: "magician",
+  소서리스: "elementalmaster",
 
   블레이드: "blade",
   데모닉: "demonic",
