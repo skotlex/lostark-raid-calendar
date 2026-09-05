@@ -7,6 +7,7 @@ import {
   CharacterError,
   type SiblingPreview,
   deleteCharacter,
+  deleteMemberCharacters,
   previewSiblings,
   registerCharacter,
   registerCharacters,
@@ -166,6 +167,28 @@ export async function deleteAction(_prev: RowState, formData: FormData): Promise
     await deleteCharacter(instanceId, id);
     refresh(slug);
     return { status: "ok", message: "삭제됨" };
+  } catch (error) {
+    return { status: "error", message: toMessage(error) };
+  }
+}
+
+/**
+ * 한 사람의 캐릭터를 통째로 지운다.
+ *
+ * 확인은 화면에서 받는다(되돌릴 수 없고 편성 기록까지 사라진다).
+ */
+export async function deleteMemberAction(
+  _prev: RowState,
+  formData: FormData,
+): Promise<RowState> {
+  const slug = String(formData.get("slug") ?? "");
+  const label = String(formData.get("label") ?? "");
+
+  try {
+    const { instanceId } = await authorize(slug);
+    const count = await deleteMemberCharacters(instanceId, label);
+    refresh(slug);
+    return { status: "ok", message: `${count}개 삭제됨` };
   } catch (error) {
     return { status: "error", message: toMessage(error) };
   }

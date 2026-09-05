@@ -3,6 +3,7 @@ import { requireInstance } from "@/lib/instance";
 
 import { AutoSync } from "../AutoSync";
 import { CharacterCard } from "./CharacterCard";
+import { DeleteGroupButton } from "./DeleteGroupButton";
 import { RegisterPanel } from "./RegisterPanel";
 import { SyncAllButton } from "./SyncAllButton";
 
@@ -80,11 +81,13 @@ export default async function CharactersPage({ params }: PageProps<"/i/[slug]/ch
         <div className="space-y-6">
           {groups.map(([label, list]) => (
             <section key={label || "__none__"} className="space-y-2">
-              <h2 className="flex items-baseline gap-2 text-sm font-semibold">
+              <h2 className="flex flex-wrap items-center gap-2 text-sm font-semibold">
                 <span className={label ? "text-text" : "text-text-faint"}>
                   {label || "소속 미지정"}
                 </span>
                 <span className="text-xs text-text-faint tabular">{list.length}</span>
+                {/* 원정대를 골라 등록하면 부캐가 한 번에 여럿 들어온다. 무를 때도 한 번에. */}
+                <DeleteGroupButton slug={slug} label={label} count={list.length} />
               </h2>
               <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                 {list.map((character) => (

@@ -512,3 +512,43 @@ export async function syncStaleCharacters(instanceId: string, limit = 60): Promi
 export async function deleteCharacter(instanceId: string, characterId: string): Promise<void> {
   await prisma.character.deleteMany({ where: { id: characterId, instanceId } });
 }
+
+/**
+ * 한 사람에게 묶인 캐릭터를 통째로 지운다.
+ *
+ * 원정대를 골라 등록하면 부캐가 한 번에 여럿 들어온다. 잘못 등록했을 때 카드를
+ * 하나씩 지우게 하지 않는다.
+ *
+ * `label`이 비어 있으면 **아직 사람에 묶이지 않은 캐릭터**가 대상이다. 칸에 닉네임을
+ * 쳐서 만들어진 캐릭터가 여기 모인다(CLAUDE.md 4장).
+ *
+ * 편성 기록도 함께 사라진다. 되돌릴 수 없으므로 확인은 화면에서 받는다.
+ */
+export async function deleteMemberCharacters(
+  instanceId: string,
+  label: string | null,
+): Promise<number> {
+  const name = label?.trim();
+
+  if (!name) {
+    const { count } = await prisma.character.deleteMany({
+      where: { instanceId, memberId: null },
+    });
+    return count;
+  }
+
+  const member = await prisma.member.findFirst({
+    where: { instanceId, label: name },
+    select: { id: true },
+  });
+  if (!member) throw new CharacterError("원정대를 찾을 수 없습니다");
+
+  return prisma.$transaction(async (tx) => {
+    const { count } = await tx.character.deleteMany({
+      where: { instanceId, memberId: member.id },
+    });
+    // 빈 사람 행은 남겨두면 화면에 나오지도 않는 찌꺼기가 된다. 그룹은 캐릭터에서 나온다.
+    await tx.member.delete({ where: { id: member.id } });
+    return count;
+  });
+}
