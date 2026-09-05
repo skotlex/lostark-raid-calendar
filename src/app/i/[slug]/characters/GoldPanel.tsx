@@ -157,7 +157,7 @@ function GoldForm({
                       width={16}
                       height={16}
                       loading="lazy"
-                      className="board-emblem"
+                      className="board-emblem board-emblem--faint"
                     />
                   )}
                   {character.className ?? "?"}
