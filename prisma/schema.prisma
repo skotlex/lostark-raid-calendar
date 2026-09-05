@@ -34,6 +34,7 @@ model Instance {
   characters Character[]
   slots      RaidSlot[]
   changeLogs ChangeLog[]
+  presences  Presence[]
 }
 
 /// 사람별 화면 설정.
@@ -268,6 +269,37 @@ model ChangeLog {
   instance Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
 
   @@index([instanceId, createdAt])
+}
+
+/// 지금 편성표를 보고 있는 사람.
+///
+/// 여럿이 같은 화면을 고치는 자리라 남이 어느 칸을 만지는 중인지 보여준다(CLAUDE.md 2-4).
+/// **영속 데이터가 아니다.** 브라우저가 10초마다 찍어 두는 발자국이고, 읽을 때 최근
+/// 것만 골라 쓴다. 오래된 줄은 지우지 않는다 — 사람 하나에 줄 하나라 길드원 수를 넘지
+/// 않고, 지우는 쓰기를 매 요청에 붙이는 편이 오히려 비싸다.
+model Presence {
+  instanceId    String
+  /// 세션이 들고 있는 값이라 사람을 가리키는 키로 그대로 쓴다.
+  discordUserId String
+  /// 화면에 세울 이름과 얼굴. Member를 거치지 않는다 — 클레임하지 않은 사람도 보인다.
+  label         String
+  avatarUrl     String?
+  /// 보고 있는 주차. `toWeekParam` 형식("2026-09-02")이다.
+  ///
+  /// 다른 주차를 보는 사람의 표식을 이번 주 칸에 그리지 않으려고 함께 싣는다.
+  week          String
+  /// 보고 있는 요일 탭. 미정은 7이다(week.ts).
+  day           Int
+  /// 지금 손이 가 있는 칸. 아무 칸도 열지 않았으면 비어 있다.
+  slotId        String?
+  position      String?
+  /// 마지막 발자국. 이 값이 오래된 줄은 화면에 세우지 않는다.
+  seenAt        DateTime
+
+  instance Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@id([instanceId, discordUserId])
+  @@index([instanceId, seenAt])
 }
 
 enum Role {

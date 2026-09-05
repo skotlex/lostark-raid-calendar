@@ -24,6 +24,7 @@ import {
 import { AutoSync } from "./AutoSync";
 import { CompactSlot } from "./CompactSlot";
 import { KnownNamesProvider } from "./NameInput";
+import { PresenceBar, PresenceProvider } from "./Presence";
 import { ViewToggle } from "./ViewToggle";
 import { BOARD_VIEW_COOKIE, toBoardView } from "./view";
 import { RememberDay } from "./lastDay";
@@ -111,7 +112,7 @@ export default async function BoardPage({
     return `/i/${slug}?day=${d}&week=${w}`;
   }
 
-  return (
+  const content = (
     <div className="space-y-4">
       {/* 다른 화면에 갔다 돌아왔을 때 보던 요일로 열리게 한다. */}
       <RememberDay day={day} />
@@ -156,6 +157,12 @@ export default async function BoardPage({
             count={countByDay.get(UNDECIDED) ?? 0}
           />
         )}
+
+        {/*
+          같이 보고 있는 사람. 요일 줄 반대쪽, 보기 토글 왼쪽이다. 아무도 없으면
+          아무것도 서지 않는다(Presence.tsx).
+        */}
+        <PresenceBar />
 
         <div className="flex items-center gap-2 pb-1.5 text-sm">
           <ViewToggle initial={view} />
@@ -227,6 +234,20 @@ export default async function BoardPage({
         </KnownNamesProvider>
       )}
     </div>
+  );
+
+  /*
+   * 지난 주에는 실시간 표시를 걸지 않는다.
+   *
+   * 고칠 수 없는 화면이라 바뀔 것도, 남이 만지고 있을 칸도 없다. 여기까지 하트비트를
+   * 돌리면 아무도 읽지 않을 발자국 때문에 10초마다 요청이 하나씩 더 나간다.
+   */
+  if (!editable) return content;
+
+  return (
+    <PresenceProvider slug={slug} week={week} day={day}>
+      {content}
+    </PresenceProvider>
   );
 }
 

@@ -1861,3 +1861,93 @@ button:disabled,
   filter: brightness(0) invert(1);
   opacity: 0.85;
 }
+
+/*
+ * ── 같이 보고 있는 사람 ────────────────────────────────────────────────────
+ *
+ * 여럿이 한 편성표를 고치는 자리라 남의 손이 어디에 올라와 있는지 보여준다.
+ * 색은 사람마다 다르게 뽑아 인라인으로 실린다(--presence, Presence.tsx).
+ * 여기서는 색을 정하지 않는다 — 정하면 두 사람이 같은 색으로 서서 구분이 사라진다.
+ */
+
+/*
+ * 칸 위에 얹히는 이름표.
+ *
+ * 칸 내용을 덮는다. 밀어내면 그 칸만 키가 커져 격자가 어긋나는데, 표식은 몇 초 뒤
+ * 사라지는 것이라 그 사이 격자가 두 번 출렁인다. 덮는 편이 조용하다.
+ *
+ * pointer-events를 끊는 이유가 중요하다. 표식은 알리기만 하는 것이라 밑에 있는
+ * 입력창·버튼을 가로채면 남이 보고 있는 동안 그 칸을 아예 못 쓴다.
+ */
+.cell-presence {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  height: 1.05rem;
+  padding: 0 0.25rem;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  color: #fff;
+  pointer-events: none;
+}
+
+/* 테두리도 같은 색으로 물들여 이름표와 한 덩어리로 읽히게 한다. */
+.char-card[data-busy] {
+  border-color: var(--presence);
+  box-shadow: inset 0 0 0 1px var(--presence);
+}
+
+/*
+ * 표 보기는 한 자리가 곧 한 열이라 머리글에 세운다. 칸을 덮는 막대를 놓으면
+ * 그 줄만 키가 커져 여덟 칸이 어긋난다.
+ */
+.board-head[data-busy] {
+  box-shadow: inset 0 0 0 2px var(--presence);
+}
+
+/* 머리줄에 서는 얼굴. 겹쳐 세워 여럿이어도 요일 줄을 밀지 않는다. */
+.presence-face {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-right: -0.3rem;
+  border: 2px solid;
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 10px;
+  color: var(--text-dim);
+  overflow: hidden;
+}
+
+.presence-face img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/*
+ * 미뤄 둔 변경을 지금 반영하는 버튼.
+ *
+ * 악센트(금색)를 쓰지 않는다. 그 색은 이 화면에서 "이번 주로", 고정 표시처럼
+ * 상태를 가리키는 자리라, 눌러야 새것이 오는 이 버튼과 섞이면 둘 다 흐려진다.
+ */
+.presence-changed {
+  border-radius: 0.25rem;
+  border: 1px solid var(--ok);
+  padding: 0.15rem 0.4rem;
+  font-size: 11px;
+  color: var(--ok);
+  transition: background-color 0.15s;
+}
+
+.presence-changed:hover {
+  background: color-mix(in oklab, var(--ok) 15%, transparent);
+}

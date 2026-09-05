@@ -21,6 +21,7 @@ import { positionLabel } from "@/lib/positions";
 import { getSynergies, synergyLabel } from "@/lib/synergy";
 
 import { NameInput } from "./NameInput";
+import { presenceColor, useCellViewers, useFocusReport } from "./Presence";
 import { SlotHeader } from "./SlotHeader";
 import {
   type CellState,
@@ -213,6 +214,11 @@ function HeadCell({
   const [moveState, move, moving] = useActionState(moveAction, IDLE);
   const [dropping, setDropping] = useState(false);
 
+  // 표에서는 한 자리가 곧 한 열이라 표식을 머리글에 세운다. 카드처럼 칸을 덮는
+  // 막대를 놓으면 그 줄만 키가 커져 여덟 칸이 어긋난다(Presence.tsx).
+  const others = useCellViewers(slotId, cell.position);
+  const focusProps = useFocusReport(slotId, cell.position);
+
   const busy = pinning || removing || moving;
   const error = [pinState, removeState, moveState].find((s) => s.status === "error");
   const character = cell.character;
@@ -251,17 +257,30 @@ function HeadCell({
     </>
   );
 
+  // 표식이 선 동안에는 누가 만지는 중인지가 먼저다. 오류는 그다음 차례에 뜬다.
+  const title =
+    others.length > 0
+      ? `${others.map((v) => v.label).join(", ")} 님이 이 자리를 보고 있습니다`
+      : error?.message;
+
   return (
     <th
+      {...focusProps}
       className="board-head"
+      style={
+        others.length > 0
+          ? ({ "--presence": presenceColor(others[0].id) } as CSSProperties)
+          : undefined
+      }
       data-sup={cell.position.startsWith("SUP") ? "" : undefined}
+      data-busy={others.length > 0 ? "" : undefined}
       data-dropping={dropping ? "" : undefined}
       draggable={editable && filled}
       onDragStart={(e) => writeDragSource(e, { slotId, position: cell.position })}
       onDragOver={onDragOver}
       onDrop={onDrop}
       onDragLeave={() => setDropping(false)}
-      title={error?.message}
+      title={title}
     >
       <div className="board-head-row">
         {/* 끌 수 있다는 표시. 사람이 없으면 끌 것도 없어 자리만 지킨다. */}
@@ -353,6 +372,8 @@ function NameCell({
   const [assignState, assign, assigning] = useActionState(assignAction, IDLE);
   /** 차 있는 칸을 눌러 입력을 연 상태. 빈 칸은 늘 입력이라 이 값과 상관없다. */
   const [editing, setEditing] = useState(false);
+  // 표식은 머리글에 서지만 알림은 여기서도 보낸다. 이름을 치는 자리가 여기다.
+  const focusProps = useFocusReport(slotId, cell.position);
   const error = assignState.status === "error" ? assignState : null;
   const character = cell.character;
 
@@ -373,7 +394,7 @@ function NameCell({
 
   if (!character && !editable) {
     return (
-      <td className="board-cell board-cell--name">
+      <td className="board-cell board-cell--name" {...focusProps}>
         <span className="text-text-faint">-</span>
       </td>
     );
@@ -381,7 +402,7 @@ function NameCell({
 
   if (editable && (!character || editing)) {
     return (
-      <td className="board-cell board-cell--name">
+      <td className="board-cell board-cell--name" {...focusProps}>
         <form action={assign}>
           <input type="hidden" name="slug" value={slug} />
           <input type="hidden" name="slotId" value={slotId} />
@@ -414,7 +435,7 @@ function NameCell({
   const warned = cell.warnings.length > 0;
 
   return (
-    <td className="board-cell board-cell--name">
+    <td className="board-cell board-cell--name" {...focusProps}>
       {/*
         경고 표시는 이름 양옆에 같은 것이 하나씩 선다. 한쪽에만 두면 그 칸의 이름만
         반대쪽으로 밀려, 여덟 칸의 이름이 저마다 다른 자리에서 시작한다. 표는 같은

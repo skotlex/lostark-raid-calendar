@@ -1,6 +1,12 @@
 "use client";
 
-import { type DragEvent, startTransition, useActionState, useState } from "react";
+import {
+  type CSSProperties,
+  type DragEvent,
+  startTransition,
+  useActionState,
+  useState,
+} from "react";
 
 import type { CellView } from "@/lib/board";
 import { classEmblem } from "@/lib/classEmblems";
@@ -11,6 +17,7 @@ import { DRAG_TYPE, moveForm, readDragSource, writeDragSource } from "./dragCell
 import { ConfirmButton } from "./ConfirmButton";
 import { CloseIcon, PinIcon } from "./icons";
 import { NameInput } from "./NameInput";
+import { CellPresence, presenceColor, useCellViewers, useFocusReport } from "./Presence";
 import { PortraitCard } from "./Portrait";
 import {
   type CellState,
@@ -96,6 +103,15 @@ export function Cell({
   const [dropping, setDropping] = useState(false);
   const [dragging, setDragging] = useState(false);
 
+  // 지금 이 칸에 손을 올려 둔 남들, 그리고 내 손을 알리는 핸들러(Presence.tsx).
+  const others = useCellViewers(slotId, cell.position);
+  const focusProps = useFocusReport(slotId, cell.position);
+  // 테두리와 위에 얹히는 막대가 같은 색이라야 둘이 한 사람을 가리키는 것으로 읽힌다.
+  const presence =
+    others.length > 0
+      ? ({ "--presence": presenceColor(others[0].id) } as CSSProperties)
+      : undefined;
+
   const busy = assigning || removing || pinning || moving;
   const error = [assignState, removeState, pinState, moveState].find(
     (s) => s.status === "error",
@@ -165,10 +181,15 @@ export function Cell({
     return (
       <div
         {...dropProps}
+        {...focusProps}
         className={`char-card char-card--empty flex flex-col p-2 ${
           dropping ? "char-card--dropping" : ""
         }`}
+        data-busy={others.length > 0 ? "" : undefined}
+        style={presence}
       >
+        <CellPresence viewers={others} />
+
         {/* 빈 칸에는 자리 이름을 남긴다. 어느 자리를 채우는지 알 단서가 이것뿐이다. */}
         <div className="char-label">{positionLabel(cell.position)}</div>
 
@@ -209,13 +230,17 @@ export function Cell({
   return (
     <div
       {...dropProps}
+      {...focusProps}
       draggable={editable}
       onDragStart={onDragStart}
       onDragEnd={() => setDragging(false)}
       className={`char-card char-card--filled ${dropping ? "char-card--dropping" : ""} ${
         dragging ? "char-card--dragging" : ""
       }`}
+      data-busy={others.length > 0 ? "" : undefined}
+      style={presence}
     >
+      <CellPresence viewers={others} />
       <PortraitCard src={character.imageUrl} className={character.className} />
 
       <div className="char-top">
