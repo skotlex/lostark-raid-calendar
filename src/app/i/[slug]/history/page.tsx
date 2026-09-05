@@ -88,14 +88,15 @@ export default async function HistoryPage({
           {/*
             초점 테두리를 직접 그린다. 브라우저 기본 링은 윈도우의 시스템 강조색을
             따라가서, 앱과 상관없는 색(주황 등)이 뜬다. 다른 입력창(.char-input)과
-            같이 테두리만 짙게 바꾼다.
+            같이 강조색 테두리로 바꾼다. 평소 테두리를 짙게만 하면 회색끼리라
+            지금 여기에 쓰고 있다는 것이 눈에 걸리지 않는다.
           */}
           <input
             type="search"
             name="q"
             defaultValue={q}
             placeholder="캐릭터·레이드·사람 이름, 또는 배치·고정 같은 동작"
-            className="min-w-0 flex-1 rounded border border-border bg-surface px-3 py-1.5 text-sm focus:border-border-strong focus:outline-none"
+            className="min-w-0 flex-1 rounded border border-border bg-surface px-3 py-1.5 text-sm focus:border-accent focus:outline-none"
           />
           <button
             type="submit"
