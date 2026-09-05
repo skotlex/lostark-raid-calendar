@@ -67,7 +67,9 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
         <div className="grid gap-3 sm:grid-cols-2">
           <Progress
             label="남은 골드"
-            value={gold.format(homework.remainingGold)}
+            // 옆의 "남은 숙제"는 개수라 단위가 없다. 단위를 안 붙이면 두 칸의 큰 숫자가
+            // 같은 종류로 읽힌다.
+            value={`${gold.format(homework.remainingGold)} G`}
             total={`/ ${gold.format(homework.totalGold)}`}
             /*
               더보기 값을 뺀 합계. 캐릭터 카드의 "더보기 함"과 같은 계산이다.
@@ -260,13 +262,17 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
 
               {character.moreCost > 0 && (
                 <div className="flex items-baseline gap-x-2">
-                  <span className="text-text-faint">
-                    더보기 함{" "}
-                    <span className="tabular text-danger">
-                      -{gold.format(character.moreCost)}
-                    </span>
+                  <span className="text-text-faint">더보기 함</span>
+                  {/*
+                    빠지는 값은 결과 바로 왼쪽에 붙인다. 라벨 뒤에 두었더니 줄 양 끝에
+                    숫자가 하나씩 떨어져 있어, 위 줄의 179,000에서 얼마가 빠져 이 줄의
+                    121,720이 되었는지를 눈이 한 번 건너뛰어야 했다. 붙여 두면
+                    `-57,280  121,720 G`가 한 덩어리로 읽힌다.
+                  */}
+                  <span className="ml-auto tabular text-danger">
+                    -{gold.format(character.moreCost)}
                   </span>
-                  <span className="ml-auto tabular text-text-dim">
+                  <span className="tabular text-text-dim">
                     {gold.format(character.clearGold - character.moreCost)} G
                   </span>
                 </div>
