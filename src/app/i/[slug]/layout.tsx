@@ -86,7 +86,8 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
             ))}
           </nav>
 
-          <div className="ml-auto flex items-center gap-3">
+          {/* 나가기와 테마는 둘 다 작은 버튼이라 Viewer 안쪽 간격(gap-2)에 맞춘다. */}
+          <div className="ml-auto flex items-center gap-2">
             <Viewer session={session} />
             <ThemeToggle initial={theme} />
           </div>
