@@ -50,14 +50,17 @@ function Stat({
   label,
   value,
   exact,
+  dim,
 }: {
   label: string;
   value: number | null;
   /** 칸이 좁아도 소수점을 지킨다. 전투력은 끝자리가 곧 서열이라 잘리면 값이 죽는다. */
   exact?: boolean;
+  /** 좁은 칸에서만 흐려진다. 라벨이 숨는 폭이라 색으로 두 숫자를 갈라야 한다. */
+  dim?: boolean;
 }) {
   return (
-    <div className="char-stat">
+    <div className={`char-stat ${dim ? "char-stat--dim" : ""}`}>
       <span className="char-label">{label}</span>
       <span className="char-value">
         {exact ? (
@@ -300,7 +303,7 @@ export function Cell({
         */}
         <div className="char-stat-line">
           <Stat label="레벨" value={character.itemLevel} />
-          <Stat label="전투력" value={character.combatPower} exact />
+          <Stat label="전투력" value={character.combatPower} exact dim />
 
           {character.arkGridSummary && (
             <div className="char-arkgrid char-faint tabular">{character.arkGridSummary}</div>

@@ -390,6 +390,16 @@ button:disabled,
   flex: 0 0 auto;
 }
 
+/*
+ * 좁은 칸에서는 전투력을 한 단계 흐리게 둔다.
+ *
+ * 라벨이 숨는 폭이라 "1791 8326.34"가 한 줄에 붙어 나온다. 색까지 같으면 어디까지가
+ * 레벨인지 눈으로 잘라야 한다. 라벨이 보이는 넓은 칸에서는 그럴 이유가 없다.
+ */
+.char-stat--dim .char-value {
+  color: var(--c-dim);
+}
+
 /* 좁은 칸에서는 템레벨의 소수점을 버린다. 전투력은 끝자리까지 그대로 둔다. */
 .char-num-full {
   display: none;
@@ -542,6 +552,10 @@ button:disabled,
 
   .char-stat .char-label {
     display: block;
+  }
+
+  .char-stat--dim .char-value {
+    color: inherit;
   }
 
   /* 자리가 넉넉하면 소수점까지 보여준다. 템렙은 소수 둘째 자리까지가 기준이다. */
