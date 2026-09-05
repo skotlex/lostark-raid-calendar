@@ -61,52 +61,64 @@ export default async function HistoryPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold">편집 이력</h1>
-        <p className="mt-1 text-sm text-text-dim">
-          편성표와 요일표에서 일어난 변경을 최근 것부터 보여줍니다. 누구나 서로의 편성을
-          고칠 수 있으므로, 막는 대신 무엇이 바뀌었는지 남깁니다.
-        </p>
-      </div>
-
       {/*
-        검색.
-
-        next/form이라 눌러도 화면 전체가 다시 뜨지 않는다. 평범한 <form method="get">은
-        브라우저 통째 이동이라 머리줄까지 다시 그린다.
-
-        쪽 번호는 넘기지 않는다. 찾는 말이 바뀌면 결과도 달라져 3쪽이라는 값이 뜻을
-        잃는다. 늘 1쪽부터 본다.
+        제목·설명·검색은 한 묶음이다. 바깥 간격(space-y-6)을 그대로 받으면 설명과
+        입력창 사이가 목록 사이만큼 벌어져, 검색이 이 화면의 일부가 아니라 따로
+        떨어진 도구처럼 보인다.
       */}
-      <Form action={`/i/${slug}/history`} className="flex flex-wrap items-center gap-2">
-        <input
-          type="search"
-          name="q"
-          defaultValue={q}
-          placeholder="캐릭터·레이드·사람 이름, 또는 배치·고정 같은 동작"
-          className="min-w-0 flex-1 rounded border border-border bg-surface px-3 py-1.5 text-sm"
-        />
-        <button
-          type="submit"
-          className="rounded border border-border bg-surface-2 px-3 py-1.5 text-sm"
-        >
-          검색
-        </button>
-        {q && (
-          <Link
-            href={`/i/${slug}/history`}
-            className="rounded px-2 py-1.5 text-sm text-text-dim hover:underline"
-          >
-            지우기
-          </Link>
-        )}
-      </Form>
+      <div className="space-y-3">
+        <div>
+          <h1 className="text-xl font-bold">편집 이력</h1>
+          <p className="mt-1 text-sm text-text-dim">
+            편성표와 요일표에서 일어난 변경을 최근 것부터 보여줍니다. 누구나 서로의 편성을
+            고칠 수 있으므로, 막는 대신 무엇이 바뀌었는지 남깁니다.
+          </p>
+        </div>
 
-      {q && (
-        <p className="text-sm text-text-dim">
-          <span className="text-text">{q}</span> 검색 결과 {total}건
-        </p>
-      )}
+        {/*
+          검색.
+
+          next/form이라 눌러도 화면 전체가 다시 뜨지 않는다. 평범한 <form method="get">은
+          브라우저 통째 이동이라 머리줄까지 다시 그린다.
+
+          쪽 번호는 넘기지 않는다. 찾는 말이 바뀌면 결과도 달라져 3쪽이라는 값이 뜻을
+          잃는다. 늘 1쪽부터 본다.
+        */}
+        <Form action={`/i/${slug}/history`} className="flex flex-wrap items-center gap-2">
+          {/*
+            초점 테두리를 직접 그린다. 브라우저 기본 링은 윈도우의 시스템 강조색을
+            따라가서, 앱과 상관없는 색(주황 등)이 뜬다. 다른 입력창(.char-input)과
+            같이 테두리만 짙게 바꾼다.
+          */}
+          <input
+            type="search"
+            name="q"
+            defaultValue={q}
+            placeholder="캐릭터·레이드·사람 이름, 또는 배치·고정 같은 동작"
+            className="min-w-0 flex-1 rounded border border-border bg-surface px-3 py-1.5 text-sm focus:border-border-strong focus:outline-none"
+          />
+          <button
+            type="submit"
+            className="rounded border border-border bg-surface-2 px-3 py-1.5 text-sm hover:border-border-strong"
+          >
+            검색
+          </button>
+          {q && (
+            <Link
+              href={`/i/${slug}/history`}
+              className="rounded px-2 py-1.5 text-sm text-text-dim hover:underline"
+            >
+              지우기
+            </Link>
+          )}
+        </Form>
+
+        {q && (
+          <p className="text-sm text-text-dim">
+            <span className="text-text">{q}</span> 검색 결과 {total}건
+          </p>
+        )}
+      </div>
 
       {entries.length === 0 ? (
         <div className="rounded border border-dashed border-border px-4 py-10 text-center text-sm text-text-dim">
