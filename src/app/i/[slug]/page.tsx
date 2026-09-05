@@ -10,6 +10,7 @@ import {
   UNDECIDED,
   addWeeks,
   compareWeekDay,
+  dayName,
   dayNameFull,
   formatWeekLabel,
   getPlanningWeekStart,
@@ -123,8 +124,14 @@ export default async function BoardPage({
         아래쪽 공대를 읽는 화면이라 이 줄이 올라가 버리면 지금 무엇을 보고 있는지
         모른 채 스크롤하게 된다. 밑을 지나가는 카드가 비치지 않게 배경을 깐다.
       */}
-      <div className="sticky top-[var(--header-h)] z-20 flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border bg-bg pt-2">
-        <nav className="flex flex-wrap">
+      <div className="sticky top-[var(--header-h)] z-20 flex flex-wrap items-center justify-end gap-x-3 gap-y-2 border-b border-border bg-bg pt-2">
+        {/*
+          요일 줄만 왼쪽에 남기고(mr-auto) 나머지는 오른쪽으로 몬다. 줄이 넘칠 때가
+          이유다. ml-auto로 밀면 남는 자리가 있는 줄에서만 먹어서, 미정과 보기 토글이
+          아래 줄로 내려가는 순간 왼쪽 끝에 붙어 버렸다. justify-end는 접힌 줄에도
+          그대로 걸린다.
+        */}
+        <nav className="mr-auto flex flex-wrap">
           {days.map((d) => (
             <DayTab
               key={d}
@@ -147,14 +154,10 @@ export default async function BoardPage({
             day={UNDECIDED}
             active={day === UNDECIDED}
             count={countByDay.get(UNDECIDED) ?? 0}
-            className="ml-auto"
           />
         )}
 
-        {/* 남는 자리는 앞선 ml-auto 하나가 다 먹어야 한다. 둘이면 반씩 나눠 갖는다. */}
-        <div
-          className={`flex items-center gap-2 pb-1.5 text-sm ${hasUndecided ? "" : "ml-auto"}`}
-        >
+        <div className="flex items-center gap-2 pb-1.5 text-sm">
           <ViewToggle initial={view} />
 
           <Link
@@ -237,23 +240,30 @@ function DayTab({
   day,
   active,
   count,
-  className,
 }: {
   href: string;
   day: number;
   active: boolean;
   count: number;
-  /** 미정 탭이 오른쪽 끝으로 밀려날 때 쓰는 여백. */
-  className?: string;
 }) {
   return (
     <Link
       href={href}
-      className={`day-tab ${className ?? ""}`}
+      className="day-tab"
       data-active={active}
       aria-current={active ? "page" : undefined}
     >
-      {dayNameFull(day)}
+      {/*
+        좁아지면 `수요일`이 `수`가 된다. 요일이 일곱이면 뱃지까지 붙어 한 줄에 못 들어가고,
+        접힌 줄이 주차 이동과 보기 토글을 아래로 밀어 화면 위쪽을 통째로 먹는다.
+        미정은 두 이름이 같아 그대로다(week.ts).
+
+        지우지 않고 감추기만 한다. 화면 낭독기에는 늘 전체 이름이 읽힌다.
+      */}
+      <span className="day-tab-full">{dayNameFull(day)}</span>
+      <span className="day-tab-short" aria-hidden>
+        {dayName(day)}
+      </span>
       {count > 0 && (
         <span className="day-badge" title={`레이드 ${count}개`}>
           {count}

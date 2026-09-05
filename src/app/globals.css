@@ -239,8 +239,10 @@ button:disabled,
  * 걸려 있는 요일인지"를 세어봐야 했다.
  */
 .day-tab {
+  position: relative;
   display: inline-flex;
   align-items: center;
+  touch-action: manipulation;
   gap: 0.375rem;
   border-bottom: 2px solid transparent;
   padding: 0.375rem 0.625rem;
@@ -251,9 +253,12 @@ button:disabled,
     border-color 120ms;
 }
 
-.day-tab:hover {
-  color: var(--text);
-  border-bottom-color: var(--border-strong);
+/* 위의 .tab-label과 같은 이유로 hover가 되는 기기에서만. 터치에 눌어붙지 않게 한다. */
+@media (hover: hover) {
+  .day-tab:hover {
+    color: var(--text);
+    border-bottom-color: var(--border-strong);
+  }
 }
 
 .day-tab[data-active="true"] {
@@ -284,6 +289,35 @@ button:disabled,
 .week-arrow:hover {
   border-color: var(--border-strong);
   color: var(--text);
+}
+
+/*
+ * 요일 이름은 두 벌이다 — `수요일` / `수`.
+ *
+ * 폰 폭에서는 일곱 요일에 뱃지까지 붙어 한 줄에 들어가지 않는다. 줄이 접히면 주차
+ * 이동과 보기 토글이 아래로 밀려 화면 위쪽을 두 배로 먹는다. 한 글자로 줄이면
+ * 그대로 한 줄이고, 뱃지가 옆에 있어 무엇이 몇 개인지도 그대로 읽힌다.
+ *
+ * 감추기만 하고 지우지 않는다. display를 끄면 화면 낭독기가 `수`만 읽어 무슨 요일인지
+ * 모른 채 지나간다. 짧은 쪽은 aria-hidden이라 두 번 읽히지도 않는다.
+ */
+.day-tab-short {
+  display: none;
+}
+
+@media (max-width: 50rem) {
+  .day-tab-full {
+    position: absolute;
+    height: 1px;
+    width: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .day-tab-short {
+    display: inline;
+  }
 }
 
 .day-badge {
@@ -472,8 +506,18 @@ button:disabled,
   line-height: 1.3;
 }
 
+/*
+ * 수치 한 칸.
+ *
+ * **글꼴 크기를 여기서 정한다.** 안의 `.char-value`만 13px로 줄여뒀더니, 이 상자의
+ * 줄 상자는 물려받은 카드 글꼴(14px)에 줄 높이 1.3을 곱한 키로 서 있었다. 글자보다
+ * 상자가 5px쯤 큰 셈이라 좁은 칸에서 줄이 접히면(아래 컨테이너 쿼리) 이름·레벨·전투력이
+ * 눈에 띄게 벌어져 서로 다른 덩어리로 읽혔다. 상자를 글자에 맞춘다.
+ */
 .char-stat {
   flex: 0 0 auto;
+  font-size: 0.8125rem;
+  line-height: 1.2;
 }
 
 /*
@@ -600,9 +644,15 @@ button:disabled,
 }
 
 @container (max-width: 125px) {
-  /* 두 숫자를 한 줄에 못 담는다. 아크그리드는 다음 줄에서 말줄임으로 버틴다. */
+  /*
+   * 두 숫자를 한 줄에 못 담는다. 아크그리드는 다음 줄에서 말줄임으로 버틴다.
+   *
+   * 접히는 순간 gap이 줄 사이 간격으로도 걸린다. 옆으로 벌리려고 준 값이라 세로로는
+   * 넓다 — 줄 상자에 이미 여백이 있어 두 번 벌어지는 꼴이다. 가로만 남긴다.
+   */
   .char-stat-line {
     flex-wrap: wrap;
+    row-gap: 0;
   }
 
   .char-arkgrid {
@@ -1728,6 +1778,8 @@ button:disabled,
 .tab-link {
   display: flex;
   align-items: center;
+  /* 터치에서 더블탭 확대를 기다리느라 첫 탭이 늦게 먹는 것을 막는다. */
+  touch-action: manipulation;
   border-radius: 0.25rem;
   padding: 0.375rem 0.625rem;
   font-size: 0.875rem;
@@ -1772,8 +1824,22 @@ button:disabled,
       margin-left 220ms ease;
   }
 
-  .tab-link:hover .tab-label,
-  .tab-link:focus-visible .tab-label,
+  /*
+   * **손가락에는 hover가 없다.** 터치로 누르면 브라우저가 hover를 흉내 내 붙여두는데,
+   * 그 순간 이름이 펼쳐지며 머리글이 넓어진다. 한 줄에 안 들어가면 줄바꿈까지 일어나
+   * 방금 누른 아이콘이 손가락 밑에서 옆으로·아래로 달아난다. 눌러도 안 눌리거나
+   * 엉뚱한 탭이 열리던 원인이다. 실제로 hover가 되는 기기에서만 펼친다.
+   */
+  @media (hover: hover) {
+    .tab-link:hover .tab-label,
+    .tab-link:focus-visible .tab-label {
+      max-width: 8rem;
+      margin-left: 0.375rem;
+      opacity: 1;
+    }
+  }
+
+  /* 보고 있는 탭은 처음부터 펼쳐져 있다. 눌러서 넓어지는 것이 아니라 자리가 흔들리지 않는다. */
   .tab-link[data-active] .tab-label {
     max-width: 8rem;
     margin-left: 0.375rem;
