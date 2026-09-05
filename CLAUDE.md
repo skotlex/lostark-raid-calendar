@@ -544,8 +544,8 @@ Vercel 지역은 `vercel.json`에 박아뒀다. **Neon은 생성 후 지역 변�
 [x] 편집 이력 화면
 [x] 편성표 간략 보기 (8인 표)
 [x] 4인 레이드
-[ ] 고정 현황 화면 (/i/[slug]/pinned)   ← 여기부터
-[ ] Member 묶기 (첫 로그인 때 원정대 클레임)
+[x] 고정 현황 화면 (/i/[slug]/pinned)
+[ ] Member 묶기 (첫 로그인 때 원정대 클레임)   ← 여기부터
 [ ] Vercel 배포                          ← redirect URI에 실제 도메인을 넣어야 한다
 ```
 

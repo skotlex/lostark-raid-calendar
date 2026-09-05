@@ -25,6 +25,8 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
   // `remember`가 켜진 탭은 마지막으로 보던 요일로 돌아간다(lastDay.tsx 참조).
   const tabs = [
     { href: `/i/${slug}`, label: "편성표", remember: true },
+    // 편성표를 보다가 "무엇이 다음 주로 넘어가지?"를 확인하는 흐름이라 바로 옆에 둔다.
+    { href: `/i/${slug}/pinned`, label: "고정 현황", remember: false },
     { href: `/i/${slug}/slots`, label: "요일표 편집", remember: false },
     // 편성은 칸에서 바로 하므로 여기는 정리용 화면이다. 그래서 뒤로 뺐다.
     { href: `/i/${slug}/characters`, label: "캐릭터 관리", remember: false },
