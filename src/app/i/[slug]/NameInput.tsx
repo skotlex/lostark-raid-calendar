@@ -58,16 +58,33 @@ function suggest(
 
   if (!q) return pool.filter((c) => c.mine).slice(0, 8);
 
+  /*
+   * 딱 맞는 이름을 맨 앞에 둔다.
+   *
+   * 예전에는 "이미 다 친 이름을 다시 권할 것 없다"며 걸러냈는데, 그러면 이름을 끝까지
+   * 친 순간 후보가 하나도 안 남아 목록이 닫힌다. **다 쳤을 때가 목록이 가장 필요한
+   * 때다.** 등록된 이름이 맞는지, 오타는 아닌지를 그 줄로 확인한다. 목록이 사라지면
+   * 등록 안 된 이름을 친 것과 화면이 똑같아진다.
+   *
+   * 다른 이름이 이 이름을 품고 있으면(캔캠 / 캔캠브레이커) 그때만 목록이 남아 있었으니
+   * 동작도 들쭉날쭉했다.
+   *
+   * 앞자리 후보에도 딸려 들어가지만 목록 순서가 템레벨순이라 그냥 두면 뒤로 밀린다.
+   * 따로 담아 앞에 붙인다.
+   *
+   * 여덟 개를 채우면 멈추던 것도 뺐다. 앞자리 후보가 먼저 여덟이면 정작 딱 맞는 이름을
+   * 못 보고 끝난다. 목록은 길드 인원만큼이고 memo 안에서 도는 계산이라 다 훑어도 싸다.
+   */
+  const exact: KnownCharacter[] = [];
   const starts: KnownCharacter[] = [];
   const contains: KnownCharacter[] = [];
   for (const character of pool) {
     const lower = character.name.toLowerCase();
-    if (lower === q) continue; // 이미 다 친 이름을 다시 권하지 않는다
-    if (lower.startsWith(q)) starts.push(character);
+    if (lower === q) exact.push(character);
+    else if (lower.startsWith(q)) starts.push(character);
     else if (lower.includes(q)) contains.push(character);
-    if (starts.length >= 8) break;
   }
-  return [...starts, ...contains].slice(0, 8);
+  return [...exact, ...starts, ...contains].slice(0, 8);
 }
 
 /**
