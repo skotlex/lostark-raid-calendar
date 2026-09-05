@@ -162,3 +162,28 @@ describe("시너지 트라이포드 누락 경고", () => {
     expect(missingSynergy("바드", "SUPPORT", [])).toBe(false);
   });
 });
+
+describe("겹친 시너지 수치", () => {
+  it("같은 종류가 둘이면 수치를 더한다", () => {
+    const result = partySynergies([
+      { className: "데빌헌터", role: "DPS" }, // 치적 10%
+      { className: "건슬링어", role: "DPS" }, // 치적 10%
+    ]);
+    const crit = result.find((s) => s.kind === "치적");
+    expect(crit?.value).toBe("20%");
+    expect(crit?.count).toBe(2);
+  });
+
+  it("하나뿐이면 그대로 둔다", () => {
+    const result = partySynergies([{ className: "데빌헌터", role: "DPS" }]);
+    expect(result.find((s) => s.kind === "치적")?.value).toBe("10%");
+  });
+
+  it("수치가 없는 서폿 버프는 더하지 않는다", () => {
+    const result = partySynergies([
+      { className: "바드", role: "SUPPORT" },
+      { className: "도화가", role: "SUPPORT" },
+    ]);
+    expect(result.find((s) => s.kind === "서폿")?.value).toBe("");
+  });
+});

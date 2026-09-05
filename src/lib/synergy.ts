@@ -282,6 +282,28 @@ export interface PartySynergy {
 }
 
 /**
+ * 겹친 시너지의 수치를 더한다.
+ *
+ * 치적 10%짜리가 둘이면 20%로 적는다. 몇 명인지가 아니라 **얼마나 받는지**가 편성을
+ * 정할 때 보는 값이라, 종류 옆의 숫자가 곧 결론이어야 한다.
+ *
+ * 서폿처럼 수치가 비어 있는 종류는 더할 것이 없어 그대로 둔다. 값이 다른 것끼리도
+ * 더한다(치적 10% + 5% = 15%). 소수점은 버리지 않고 필요한 만큼만 남긴다.
+ */
+function addValues(a: string, b: string): string {
+  if (!a || !b) return a || b;
+
+  const left = Number.parseFloat(a);
+  const right = Number.parseFloat(b);
+  if (Number.isNaN(left) || Number.isNaN(right)) return a;
+
+  // "10%"의 "%"처럼 숫자 뒤에 붙은 것을 그대로 물려준다.
+  const suffix = a.replace(/^[0-9.]+/, "");
+  const sum = left + right;
+  return `${Number(sum.toFixed(2))}${suffix}`;
+}
+
+/**
  * 파티에 실제로 들어온 시너지를 종합한다.
  *
  * **시너지는 4인 파티 단위로 적용된다.** 8인 전체로 묶어 계산하면 실제 게임과 어긋난다.
@@ -304,6 +326,7 @@ export function partySynergies(
       const existing = found.get(synergy.kind);
       if (existing) {
         existing.count += 1;
+        existing.value = addValues(existing.value, synergy.value);
         // 같은 직업 둘이 겹치면 이름은 하나만 두고 수는 count가 말한다.
         if (!existing.sources.includes(from)) existing.sources.push(from);
       } else {
