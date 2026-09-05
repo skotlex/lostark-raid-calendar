@@ -1,4 +1,6 @@
-import { listHistory } from "@/lib/history";
+import Link from "next/link";
+
+import { HISTORY_PAGE_SIZE, listHistory } from "@/lib/history";
 import { requireInstance } from "@/lib/instance";
 
 export const dynamic = "force-dynamic";
@@ -23,12 +25,19 @@ const DAY = new Intl.DateTimeFormat("ko-KR", {
   dateStyle: "full",
 });
 
-export default async function HistoryPage({ params }: PageProps<"/i/[slug]/history">) {
+export default async function HistoryPage({
+  params,
+  searchParams,
+}: PageProps<"/i/[slug]/history">) {
   const { slug } = await params;
+  const query = await searchParams;
   const instance = await requireInstance(slug);
-  const entries = await listHistory(instance.id);
 
-  // 날짜별로 묶는다. 200줄이 한 덩어리로 쏟아지면 언제 일인지 세어야 한다.
+  // 범위를 벗어난 값은 listHistory가 안쪽으로 당겨서 돌려준다. 여기서는 숫자로만 만든다.
+  const asked = Number(typeof query.page === "string" ? query.page : "1");
+  const { entries, page, pageCount, total } = await listHistory(instance.id, asked);
+
+  // 날짜별로 묶는다. 100줄이 한 덩어리로 쏟아지면 언제 일인지 세어야 한다.
   const days = new Map<string, typeof entries>();
   for (const entry of entries) {
     const key = DAY.format(new Date(entry.createdAt));
@@ -36,6 +45,12 @@ export default async function HistoryPage({ params }: PageProps<"/i/[slug]/histo
     if (list) list.push(entry);
     else days.set(key, [entry]);
   }
+
+  const href = (p: number) => `/i/${slug}/history?page=${p}`;
+
+  // 이 쪽이 전체에서 몇 번째 줄들인지. "3 / 12"만으로는 얼마나 뒤로 온 것인지 모른다.
+  const first = (page - 1) * HISTORY_PAGE_SIZE + 1;
+  const last = Math.min(page * HISTORY_PAGE_SIZE, total);
 
   return (
     <div className="space-y-6">
@@ -75,6 +90,43 @@ export default async function HistoryPage({ params }: PageProps<"/i/[slug]/histo
             </section>
           ))}
         </div>
+      )}
+
+      {/*
+        쪽 넘김. 한 쪽뿐이면 세우지 않는다 — 넘길 곳이 없는 화살표는 무엇을 더 볼 수
+        있는지에 대해 아무것도 말해주지 않는다.
+
+        화살표는 편성표의 주차 이동과 같은 모양이다(.week-arrow). 둘 다 "같은 화면을
+        앞뒤로 넘기는" 동작이라 다르게 생길 이유가 없다. 끝에서는 Link 대신 span으로
+        내려 눌러도 아무 일이 없는 자리를 만들지 않는다.
+      */}
+      {pageCount > 1 && (
+        <nav className="flex items-center justify-center gap-2 text-sm">
+          {page > 1 ? (
+            <Link href={href(page - 1)} className="week-arrow" aria-label="이전 쪽">
+              ‹
+            </Link>
+          ) : (
+            <span className="week-arrow opacity-30" aria-hidden>
+              ‹
+            </span>
+          )}
+          <span className="px-1 text-xs text-text-dim tabular">
+            {page} / {pageCount}
+            <span className="ml-2 text-text-faint">
+              {first}–{last} / {total}
+            </span>
+          </span>
+          {page < pageCount ? (
+            <Link href={href(page + 1)} className="week-arrow" aria-label="다음 쪽">
+              ›
+            </Link>
+          ) : (
+            <span className="week-arrow opacity-30" aria-hidden>
+              ›
+            </span>
+          )}
+        </nav>
       )}
     </div>
   );

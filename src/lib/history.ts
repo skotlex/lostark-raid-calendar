@@ -121,18 +121,53 @@ function describe(action: string, detail: Detail): string {
   }
 }
 
-export async function listHistory(instanceId: string, limit = 200): Promise<HistoryEntry[]> {
+/**
+ * 한 쪽에 담는 줄 수.
+ *
+ * 기록은 지워지지 않고 쌓이기만 하므로 언제가 됐든 한 화면에 다 담기지 않는다.
+ * 예전에는 최근 200줄만 잘라 보여줬는데, 그러면 그보다 오래된 일이 화면에서 아예
+ * 사라져 "언제 누가 바꿨나"를 물어볼 길이 없었다. 자르는 대신 쪽으로 나눈다.
+ */
+export const HISTORY_PAGE_SIZE = 100;
+
+export interface HistoryPage {
+  entries: HistoryEntry[];
+  /** 1부터. 범위를 벗어난 값을 받으면 안쪽으로 당겨서 돌려준다 */
+  page: number;
+  pageCount: number;
+  total: number;
+}
+
+export async function listHistory(
+  instanceId: string,
+  page = 1,
+  pageSize = HISTORY_PAGE_SIZE,
+): Promise<HistoryPage> {
+  const total = await prisma.changeLog.count({ where: { instanceId } });
+  // 기록이 하나도 없어도 1쪽은 있다. 0쪽으로 두면 화면에 "1 / 0"이 찍힌다.
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  // 주소에 손으로 친 숫자가 들어올 수 있다. 빈 쪽을 보여주는 대신 끝으로 당긴다.
+  const current = Math.min(Math.max(1, Math.trunc(page) || 1), pageCount);
+
   const rows = await prisma.changeLog.findMany({
     where: { instanceId },
     select: { id: true, action: true, detail: true, actorLabel: true, createdAt: true },
-    orderBy: { createdAt: "desc" },
-    take: limit,
+    // createdAt만으로는 같은 시각에 들어온 줄들의 순서가 조회마다 달라질 수 있어,
+    // 쪽을 넘길 때 같은 줄이 두 번 나오거나 한 줄이 통째로 빠진다. id로 한 번 더 가른다.
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    skip: (current - 1) * pageSize,
+    take: pageSize,
   });
 
-  return rows.map((row) => ({
-    id: row.id,
-    text: describe(row.action, (row.detail ?? {}) as Detail),
-    actorLabel: row.actorLabel,
-    createdAt: row.createdAt.toISOString(),
-  }));
+  return {
+    entries: rows.map((row) => ({
+      id: row.id,
+      text: describe(row.action, (row.detail ?? {}) as Detail),
+      actorLabel: row.actorLabel,
+      createdAt: row.createdAt.toISOString(),
+    })),
+    page: current,
+    pageCount,
+    total,
+  };
 }
