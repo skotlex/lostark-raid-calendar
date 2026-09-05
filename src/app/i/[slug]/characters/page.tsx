@@ -3,7 +3,6 @@ import { requireInstance } from "@/lib/instance";
 import { findMyMember } from "@/lib/members";
 import { requireSession } from "@/lib/session";
 
-import { AutoSync } from "../AutoSync";
 import { CharacterCard } from "./CharacterCard";
 import { ClaimPanel } from "./ClaimPanel";
 import { DeleteGroupButton } from "./DeleteGroupButton";
@@ -38,8 +37,15 @@ export default async function CharactersPage({ params }: PageProps<"/i/[slug]/ch
     return a[0].localeCompare(b[0], "ko");
   });
 
-  // 조회 실패한 캐릭터는 빼고 센다. 실패도 syncedAt을 남기므로 6시간 동안은 다시 가지 않는다.
-  const staleCount = characters.filter((c) => c.stale && !c.syncError).length;
+/*
+   * 이 화면에서는 자동 갱신을 돌리지 않는다.
+   *
+   * 여기는 등록·삭제를 몰아서 하는 자리다. 그 사이에 캐릭터 수십 개를 조회하면 로아 큐가
+   * 길어지고(분당 한도 때문에 최대 1분까지 잠든다), 바로 뒤에 누른 등록·삭제가 그만큼
+   * 늦게 끝난다. 화면이 멎은 것처럼 보이는 원인이 된다.
+   *
+   * 갱신이 필요하면 이 화면에는 `전체 갱신`이 있고, 편성표를 열면 어차피 자동으로 돈다.
+   */
 
   const supports = characters.filter((c) => c.role === "SUPPORT").length;
   const failed = characters.filter((c) => c.syncError).length;
@@ -53,8 +59,6 @@ export default async function CharactersPage({ params }: PageProps<"/i/[slug]/ch
           여기서는 잘못 들어간 캐릭터 삭제, 딜/서폿 교정, 스펙 갱신, 부캐 묶기를 합니다.
         </p>
       </div>
-
-      <AutoSync slug={slug} staleCount={staleCount} />
 
       <ClaimPanel slug={slug} member={myMember} />
 
