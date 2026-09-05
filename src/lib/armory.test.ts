@@ -525,6 +525,37 @@ describe("트라이포드 시너지", () => {
     ]);
   });
 
+  it("공이속 — 한 문장에 둘을 적어도 한 번만 센다", () => {
+    // 스킬과 문구 모두 실측이 아니라 추정이다(SYNERGY_RULES 주석 참조). 규칙이
+    // 자버프와 갈리는지, 둘을 함께 적은 문장을 두 번 세지 않는지만 확인한다.
+    const skills = [
+      {
+        Name: "질풍의 검",
+        Level: 10,
+        Tripods: [
+          tripod(
+            "쾌속",
+            "자신 및 파티원의 공격속도와 이동속도가 6.0초간 8.0% 증가한다.",
+          ),
+        ],
+      },
+    ];
+    expect(normalizeSkillSynergies(skills)).toEqual([
+      { kind: "공이속", value: "8%", source: "질풍의 검 · 쾌속" },
+    ]);
+  });
+
+  it("자기만 빨라지는 트라이포드는 공이속이 아니다", () => {
+    const skills = [
+      {
+        Name: "질풍의 검",
+        Level: 10,
+        Tripods: [tripod("돌진", "자신의 이동속도가 20.0% 증가한다.")],
+      },
+    ];
+    expect(normalizeSkillSynergies(skills)).toEqual([]);
+  });
+
   it("안 찍은 트라이포드는 세지 않는다", () => {
     const skills = [
       {

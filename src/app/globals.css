@@ -175,6 +175,7 @@ button:disabled,
   --syn-critdmg: #e0a05a;
   --syn-back: #5fc39a;
   --syn-mana: #5ec6c9;
+  --syn-speed: #9ab84f;
   --syn-sup: #6aa9d9;
 
   /*
@@ -579,6 +580,9 @@ button:disabled,
 }
 .char-syn[data-kind="마나"] {
   color: var(--syn-mana);
+}
+.char-syn[data-kind="공이속"] {
+  color: var(--syn-speed);
 }
 .char-syn[data-kind="서폿"] {
   color: var(--syn-sup);
@@ -1093,6 +1097,7 @@ button:disabled,
   --syn-critdmg: #9c521a;
   --syn-back: #1d6b50;
   --syn-mana: #1b6f72;
+  --syn-speed: #55701f;
   --syn-sup: #26608a;
 }
 
@@ -1105,6 +1110,7 @@ button:disabled,
     --syn-critdmg: #e0a05a;
     --syn-back: #5fc39a;
     --syn-mana: #5ec6c9;
+    --syn-speed: #9ab84f;
     --syn-sup: #6aa9d9;
   }
 }
@@ -1117,6 +1123,7 @@ button:disabled,
   --syn-critdmg: #e0a05a;
   --syn-back: #5fc39a;
   --syn-mana: #5ec6c9;
+  --syn-speed: #9ab84f;
   --syn-sup: #6aa9d9;
 }
 
@@ -1169,6 +1176,9 @@ button:disabled,
 }
 .syn-mana {
   color: var(--syn-mana);
+}
+.syn-speed {
+  color: var(--syn-speed);
 }
 .syn-sup {
   color: var(--syn-sup);

@@ -17,6 +17,7 @@ export type SynergyKind =
   | "치피증"
   | "백헤드"
   | "마나"
+  | "공이속"
   | "서폿";
 
 export type Role = "DPS" | "SUPPORT";
@@ -36,6 +37,7 @@ export const SYNERGY_LABEL: Record<SynergyKind, string> = {
   치피증: "치피증",
   백헤드: "백헤드",
   마나: "마회",
+  공이속: "공이속",
   서폿: "서폿",
 };
 
@@ -225,13 +227,13 @@ export interface DetectedSynergy {
 /**
  * 트라이포드에서 읽어 그대로 보여주는 종류.
  *
- * 마나는 딜 시너지가 아니라 유틸이라 커버리지(TRACKED_KINDS)에는 넣지 않는다. 빠졌다고
- * 편성이 틀린 것이 아니어서 "무엇이 비었나"를 셀 대상이 아니다.
+ * 마나와 공이속은 딜 시너지가 아니라 유틸이라 커버리지(TRACKED_KINDS)에는 넣지 않는다.
+ * 빠졌다고 편성이 틀린 것이 아니어서 "무엇이 비었나"를 셀 대상이 아니다.
  *
  * 클래스 표에도 넣지 않는다. 서머너 슈르디의 마나 회복처럼 **골라 찍는 트라이포드**라
  * "이 직업은 보통 준다"고 말할 근거가 없다. 실제로 찍고 온 사람만 보여준다.
  */
-const DETECTED_KINDS: SynergyKind[] = [...TRACKED_KINDS, "마나"];
+const DETECTED_KINDS: SynergyKind[] = [...TRACKED_KINDS, "마나", "공이속"];
 
 const KINDS = new Set<string>(DETECTED_KINDS);
 
