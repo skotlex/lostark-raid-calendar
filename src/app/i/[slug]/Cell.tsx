@@ -281,7 +281,7 @@ export function Cell({
           넓어지면 아래로 내려가 제자리를 찾는다(globals.css).
         */}
         <div className="char-stat-line">
-          <Stat label="템렙" value={character.itemLevel} />
+          <Stat label="레벨" value={character.itemLevel} />
           <Stat label="전투력" value={character.combatPower} dim />
 
           {character.arkGridSummary && (

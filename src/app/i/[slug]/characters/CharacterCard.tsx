@@ -61,7 +61,7 @@ export function CharacterCard({
 
           <div className="mt-1.5 flex gap-3">
             <div>
-              <div className="char-label">템렙</div>
+              <div className="char-label">레벨</div>
               <div className="char-value">{formatLevel(character.itemLevel)}</div>
             </div>
             <div>
