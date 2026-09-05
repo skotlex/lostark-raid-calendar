@@ -46,6 +46,31 @@ const IDLE_MS = 15_000;
 /** 남이 같이 보고 있을 때. 시트에 가까운 체감이 여기서 나온다. */
 const BUSY_MS = 3_000;
 
+/**
+ * 이만큼 손을 놓고 있으면 아예 멈춘다.
+ *
+ * **Neon 무료 플랜이 세는 것은 쿼리 수가 아니라 컴퓨트가 깨어 있던 시간이다.**
+ * 5분간 아무 활동이 없어야 잠들고(이 설정은 끄지도 늘리지도 못한다), 한 달에 깨어
+ * 있어도 되는 시간이 400시간 — 하루 평균 13시간뿐이다.
+ *
+ * 우리 간격(3~15초)은 그 5분을 절대 못 넘긴다. 그러니 멈추는 장치가 없으면 **누구든
+ * 탭을 열어둔 내내** DB가 깨어 있다. 사람 수에 비례하지도 않는다. 벽시계라서 한 명만
+ * 아침에 켜고 밤에 닫아도 하루치를 다 쓴다.
+ *
+ * 편성표는 열어둔 채 자리를 비우는 것이 기본 사용 패턴이라 이 장치가 곧 한도를
+ * 지키는 장치다. 손을 대는 순간 다시 돌아온다.
+ */
+const IDLE_STOP_MS = 2 * 60 * 1000;
+
+/**
+ * 손을 놓았다고 볼 신호.
+ *
+ * `pointermove`까지 듣는다. 편성표를 눌러보지 않고 읽기만 하는 시간이 짧지 않아,
+ * 누름과 입력만 세면 읽는 중에 멈춰 버린다. 핸들러가 하는 일은 시각 하나를
+ * 적는 것뿐이라 자주 불려도 부담이 없다.
+ */
+const ACTIVITY_EVENTS = ["pointerdown", "pointermove", "keydown", "wheel", "touchstart"] as const;
+
 /** 표식 얼굴을 이만큼만 세우고 나머지는 숫자로 접는다. */
 const FACE_LIMIT = 5;
 
@@ -163,11 +188,26 @@ export function PresenceProvider({
   const seenRef = useRef("");
   /** 다음 차례까지의 간격. 응답을 받을 때마다 다시 정한다. */
   const delayRef = useRef(IDLE_MS);
+  /** 마지막으로 손을 댄 시각. 화면이 열리는 것이 첫 활동이라 효과에서 채운다. */
+  const lastActiveRef = useRef(0);
+  /** 손을 놓아 멈춰 있는 상태인가. 다시 손을 대면 그 자리에서 깨운다. */
+  const restingRef = useRef(false);
 
   const send = useCallback(async () => {
     // 다른 탭을 보고 있으면 발자국도 필요 없고 화면을 다시 그릴 이유도 없다.
     // 돌아오는 순간 visibilitychange가 한 번 불러준다.
     if (document.visibilityState !== "visible") return;
+
+    /*
+     * 열어만 두고 손을 놓았으면 멈춘다. Neon 컴퓨트가 잠들 수 있는 유일한 길이다.
+     *
+     * 내 발자국도 함께 끊긴다. 그게 맞다 — 자리를 뜬 사람이 남의 화면에 "보고 있는
+     * 사람"으로 서 있으면 그 표시가 아무 뜻도 없어진다. 35초 뒤 조용히 사라진다.
+     */
+    if (Date.now() - lastActiveRef.current > IDLE_STOP_MS) {
+      restingRef.current = true;
+      return;
+    }
 
     let data: { version?: unknown; viewers?: unknown } | null = null;
     try {
@@ -230,32 +270,68 @@ export function PresenceProvider({
      */
     let alive = true;
     aliveRef.current = true;
+    // 화면을 연 것 자체가 활동이다. 0인 채로 두면 첫 차례부터 멈춘 것으로 잡힌다.
+    lastActiveRef.current = Date.now();
+    restingRef.current = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
-    const loop = async () => {
+    /*
+     * 돌고 있는 줄은 언제나 하나다.
+     *
+     * 깨우는 쪽은 잡혀 있는 타이머를 지우지만, 이미 요청을 기다리는 중인 줄까지
+     * 끊지는 못한다. 그 줄이 끝나면서 다음 차례를 또 잡으면 줄이 둘로 갈려 간격이
+     * 반으로 준다. 번호를 붙여 옛 줄은 조용히 끝나게 한다.
+     */
+    let generation = 0;
+
+    const loop = async (gen: number) => {
       await send();
-      if (!alive) return;
-      timer = setTimeout(() => void loop(), delayRef.current);
+      if (!alive || gen !== generation) return;
+      timer = setTimeout(() => void loop(gen), delayRef.current);
     };
-    void loop();
+    void loop(generation);
 
     /*
      * 탭이 뒤로 가면 브라우저가 타이머를 1분 단위까지 늦춘다. 돌아오는 순간
      * **잡혀 있던 차례를 버리고 다시 시작한다.** 한 번 부르기만 하면 그다음 차례가
      * 최대 1분 뒤라, 돌아와서 한 번 반짝하고 다시 굼떠진다.
      */
+    const wake = () => {
+      generation += 1;
+      clearTimeout(timer);
+      void loop(generation);
+    };
+
     const onVisible = () => {
       if (document.visibilityState !== "visible") return;
-      clearTimeout(timer);
-      void loop();
+      lastActiveRef.current = Date.now();
+      restingRef.current = false;
+      wake();
     };
     document.addEventListener("visibilitychange", onVisible);
+
+    /*
+     * 멈춰 있던 동안에는 남의 변경도 안 받았으므로 **손을 대는 순간 바로 한 번**
+     * 돌린다. 다음 차례를 기다리면 돌아와서 몇 초 동안 옛 편성을 보게 된다.
+     */
+    const onActivity = () => {
+      lastActiveRef.current = Date.now();
+      if (!restingRef.current) return;
+      restingRef.current = false;
+      wake();
+    };
+    for (const name of ACTIVITY_EVENTS) {
+      document.addEventListener(name, onActivity, { passive: true });
+    }
 
     return () => {
       alive = false;
       aliveRef.current = false;
       clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVisible);
+      for (const name of ACTIVITY_EVENTS) {
+        document.removeEventListener(name, onActivity);
+      }
     };
   }, [send]);
 
