@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-import { type ThemeChoice, applyTheme, readTheme } from "./theme";
+import { type ThemeChoice, applyTheme } from "./theme";
 
 const OPTIONS: { value: ThemeChoice; label: string; title: string }[] = [
   { value: "system", label: "자동", title: "시스템 설정을 따릅니다" },
@@ -10,15 +10,14 @@ const OPTIONS: { value: ThemeChoice; label: string; title: string }[] = [
   { value: "dark", label: "다크", title: "어두운 테마로 고정합니다" },
 ];
 
-export function ThemeToggle() {
-  const [choice, setChoice] = useState<ThemeChoice>("system");
-  // 서버 렌더 결과에는 저장된 값이 없다. 첫 렌더 이후에 읽어 불일치를 피한다.
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    setChoice(readTheme());
-    setReady(true);
-  }, []);
+/**
+ * 라이트·다크·자동 3단 토글.
+ *
+ * 지금 값은 서버가 쿠키에서 읽어 넘긴다. 예전에는 첫 렌더 뒤 localStorage를 읽느라
+ * 켜진 버튼이 한 박자 늦게 표시됐다.
+ */
+export function ThemeToggle({ initial }: { initial: ThemeChoice }) {
+  const [choice, setChoice] = useState<ThemeChoice>(initial);
 
   function pick(next: ThemeChoice) {
     setChoice(next);
@@ -32,7 +31,7 @@ export function ThemeToggle() {
       aria-label="테마"
     >
       {OPTIONS.map((option) => {
-        const active = ready && choice === option.value;
+        const active = choice === option.value;
         return (
           <button
             key={option.value}

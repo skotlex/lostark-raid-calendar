@@ -1,9 +1,11 @@
 import Image from "next/image";
+import { cookies } from "next/headers";
 import Link from "next/link";
 
 import { requireInstance } from "@/lib/instance";
 import { requireSession } from "@/lib/session";
 
+import { THEME_COOKIE, toThemeChoice } from "../../theme";
 import { ThemeToggle } from "../../ThemeToggle";
 import { BoardTabLink } from "./lastDay";
 import { Viewer } from "./Viewer";
@@ -17,6 +19,8 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
   // 서버 액션은 레이아웃을 거치지 않으니 액션마다 따로 확인한다(actions.ts).
   const session = await requireSession(`/i/${slug}`);
   const instance = await requireInstance(slug);
+  // 켜진 버튼을 첫 렌더부터 맞춘다. 루트 레이아웃이 <html>에 박는 값과 같은 쿠키다.
+  const theme = toThemeChoice((await cookies()).get(THEME_COOKIE)?.value);
 
   // `remember`가 켜진 탭은 마지막으로 보던 요일로 돌아간다(lastDay.tsx 참조).
   const tabs = [
@@ -65,7 +69,7 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
 
           <div className="ml-auto flex items-center gap-3">
             <Viewer session={session} />
-            <ThemeToggle />
+            <ThemeToggle initial={theme} />
           </div>
         </div>
       </header>
