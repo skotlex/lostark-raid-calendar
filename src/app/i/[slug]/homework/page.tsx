@@ -98,9 +98,9 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
               style={{ backgroundColor: classColor(character.className) }}
             >
               {/*
-                직업 문장. rloa.gg의 CDN을 그대로 가리킨다(classEmblems.ts).
-                next/image를 거치지 않는 이유는 SVG라 최적화할 것이 없고, 거치려면
-                SVG 허용 설정을 켜야 하기 때문이다. 없으면 자리만 비운다.
+                직업 문장(classEmblems.ts). next/image를 거치지 않는다. SVG라 최적화할
+                것이 없고, 거치려면 SVG 허용 설정을 켜야 하는데 그건 다른 위험을 연다.
+                없는 직업이면 자리만 비운다.
               */}
               {classEmblem(character.className) && (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -110,7 +110,7 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
                   width={28}
                   height={28}
                   loading="lazy"
-                  className="size-7 shrink-0 opacity-90"
+                  className="class-emblem size-7 shrink-0"
                 />
               )}
 
