@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getBoard } from "@/lib/board";
 import { prisma } from "@/lib/prisma";
 import { requireInstance } from "@/lib/instance";
+import { findMyMember } from "@/lib/members";
 import { requireSession } from "@/lib/session";
 import {
   addWeeks,
@@ -69,12 +70,17 @@ export default async function BoardPage({
 
   // 칸 입력의 자동완성 목록. 이미 등록된 캐릭터는 API를 다시 부르지 않는다.
   // 컨텍스트로 한 번만 실어 보낸다. 칸마다 넘기면 같은 목록이 칸 수만큼 직렬화된다.
+  const myMember = await findMyMember(instance.id, session.discordUserId);
   const known = await prisma.character.findMany({
     where: { instanceId: instance.id },
-    select: { name: true },
+    select: { name: true, memberId: true },
     orderBy: { itemLevel: "desc" },
   });
-  const knownNames = known.map((c) => c.name);
+  // 아무것도 안 쳤을 때는 내 캐릭터만 보여준다(NameInput). 그래서 소속을 함께 싣는다.
+  const knownCharacters = known.map((c) => ({
+    name: c.name,
+    mine: Boolean(myMember && c.memberId === myMember.id),
+  }));
 
   // 편성에 들어와 있는 캐릭터 중 스펙이 오래된 것. 있으면 화면이 열린 뒤 알아서 갱신된다.
   const stale = new Set<string>();
@@ -166,7 +172,7 @@ export default async function BoardPage({
           </Link>
         </div>
       ) : (
-        <KnownNamesProvider names={knownNames}>
+        <KnownNamesProvider characters={knownCharacters}>
           <div className="space-y-4">
             {slots.map((slot) =>
               // 4인은 카드로도 한 줄에 들어간다. 초상까지 보이는 편이 낫다.

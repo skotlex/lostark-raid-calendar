@@ -549,14 +549,18 @@ export async function deleteCharacter(
 export async function deleteMemberCharacters(
   instanceId: string,
   label: string | null,
-): Promise<number> {
+): Promise<string[]> {
   const name = label?.trim();
 
   if (!name) {
-    const { count } = await prisma.character.deleteMany({
+    // 이름은 지우기 전에 읽는다. 기록에 무엇이 사라졌는지 남겨야 한다.
+    const rows = await prisma.character.findMany({
       where: { instanceId, memberId: null },
+      select: { name: true },
+      orderBy: { itemLevel: "desc" },
     });
-    return count;
+    await prisma.character.deleteMany({ where: { instanceId, memberId: null } });
+    return rows.map((r) => r.name);
   }
 
   const member = await prisma.member.findFirst({
@@ -566,11 +570,14 @@ export async function deleteMemberCharacters(
   if (!member) throw new CharacterError("원정대를 찾을 수 없습니다");
 
   return prisma.$transaction(async (tx) => {
-    const { count } = await tx.character.deleteMany({
+    const rows = await tx.character.findMany({
       where: { instanceId, memberId: member.id },
+      select: { name: true },
+      orderBy: { itemLevel: "desc" },
     });
+    await tx.character.deleteMany({ where: { instanceId, memberId: member.id } });
     // 빈 사람 행은 남겨두면 화면에 나오지도 않는 찌꺼기가 된다. 그룹은 캐릭터에서 나온다.
     await tx.member.delete({ where: { id: member.id } });
-    return count;
+    return rows.map((r) => r.name);
   });
 }

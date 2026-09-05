@@ -47,6 +47,7 @@ export function SlotCard({
             slotId={slot.id}
             week={week}
             party={party}
+            taken={slot.takenNames}
             // 파티가 하나뿐인 4인 레이드에 "1파티"는 알려주는 것이 없다.
             showLabel={slot.parties.length > 1}
             editable={editable}
@@ -67,6 +68,7 @@ function Party({
   slotId,
   week,
   party,
+  taken,
   showLabel,
   editable,
 }: {
@@ -74,6 +76,7 @@ function Party({
   slotId: string;
   week: string;
   party: PartyView;
+  taken: string[];
   showLabel: boolean;
   editable: boolean;
 }) {
@@ -119,6 +122,7 @@ function Party({
             slotId={slotId}
             week={week}
             cell={cell}
+            taken={taken}
             editable={editable}
           />
         ))}

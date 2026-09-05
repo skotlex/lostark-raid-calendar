@@ -79,6 +79,7 @@ export function CompactSlot({
                   slotId={slot.id}
                   week={week}
                   cell={cell}
+                  taken={slot.takenNames}
                   editable={editable}
                 />
               ))}
@@ -282,12 +283,15 @@ function NameCell({
   slotId,
   week,
   cell,
+  taken,
   editable,
 }: {
   slug: string;
   slotId: string;
   week: string;
   cell: CellView;
+  /** 이 레이드에 이미 들어간 캐릭터. 자동완성에서 뺀다 */
+  taken: string[];
   editable: boolean;
 }) {
   const [assignState, assign, assigning] = useActionState(assignAction, IDLE);
@@ -308,6 +312,7 @@ function NameCell({
               pending={assigning}
               resetOn={assignState.status === "ok" ? assignState : null}
               error={error?.message}
+              taken={taken}
               placeholder="캐릭터 입력"
               className="board-input"
             />

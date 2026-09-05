@@ -111,7 +111,9 @@ function describe(action: string, detail: Detail): string {
       return `캐릭터 ${character} 삭제`;
     case "character_delete_many": {
       const who = str(detail, "member") || "소속 미지정";
-      return `${who} 캐릭터 ${detail.count}개 삭제`;
+      const names = str(detail, "characters");
+      const head = `${who} 캐릭터 ${detail.count}개 삭제`;
+      return names ? `${head} (${names})` : head;
     }
     default:
       // 옛 기록이나 아직 문장을 안 만든 동작. 무엇인지는 알 수 있게 둔다.

@@ -1,8 +1,5 @@
 import "server-only";
 
-import { CharacterError } from "./characters";
-import { logEvent } from "./history";
-import { fetchSiblings } from "./lostark";
 import { prisma } from "./prisma";
 
 /**
@@ -24,10 +21,8 @@ export interface ClaimResult {
   added: number;
   /** 이번에 소속이 붙은, 이미 등록돼 있던 캐릭터 수 */
   linked: number;
-  /** 클레임을 마친 뒤 목록에 있는 전체 캐릭터 수 */
+  /** 묶고 난 뒤 목록에 있는 전체 캐릭터 수 */
   total: number;
-  /** 원정대 대표로 조회한 이름 */
-  searched: string;
 }
 
 export interface MyMember {
@@ -88,34 +83,32 @@ async function upsertMyMember(
 }
 
 /**
- * 원정대를 통째로 내 것으로 묶는다. 요청 1회(siblings)만 쓴다.
+ * 이름 목록을 내 것으로 묶는다.
  *
- * 여기서 캐릭터를 새로 등록하지는 않는다. 원정대에는 저렙 부캐가 스물몇 개씩 들어 있어
- * 전부 등록하면 목록이 그걸로 덮이고 API 요청도 그만큼 나간다. 등록은 캐릭터 관리의
- * `원정대 불러오기`에서 고를 것만 한다.
+ * **원정대 불러오기와 한 명씩 등록이 이 함수를 거친다.** 등록하는 사람이 곧 주인이라고
+ * 보는 자리이기 때문이다. 편성 칸에 남의 닉네임을 쳐 넣는 경로만 예외로 두고 무소속으로
+ * 남긴다(characters.ts).
+ *
+ * 이름은 `Member.claimedNames`에 쌓인다. 나중에 같은 이름이 등록되면 자동으로 붙으므로,
+ * 남이 편성 칸에 대신 넣어줘도 소속이 잡힌다.
+ *
+ * 계정이 여럿인 사람은 계정마다 한 번씩 불러오면 된다. 이름이 계속 쌓이는 구조라 그대로
+ * 동작한다. 로아 `siblings`가 부계정을 이어주지 않아 이 방법뿐이다.
  */
-export async function claimRoster(params: {
+export async function claimNames(params: {
   instanceId: string;
   discordUserId: string;
   label: string;
-  representative: string;
+  names: string[];
 }): Promise<ClaimResult> {
-  const searched = params.representative.trim();
-  if (!searched) throw new CharacterError("원정대의 대표 캐릭터 닉네임을 입력해 주세요");
-
-  const siblings = await fetchSiblings(searched);
-  if (siblings.length === 0) {
-    throw new CharacterError(`'${searched}' 원정대를 찾을 수 없습니다. 닉네임을 확인해 주세요`);
-  }
+  const wanted = params.names.map((n) => n.trim()).filter(Boolean);
+  if (wanted.length === 0) return { added: 0, linked: 0, total: 0 };
 
   const member = await upsertMyMember(params.instanceId, params.discordUserId, params.label);
 
-  // 조회한 이름도 함께 넣는다. 대표가 원정대 목록에 빠지는 경우를 본 적은 없지만,
-  // 빠져 있으면 정작 자기가 친 캐릭터만 소속이 없는 이상한 상태가 된다.
   const names = new Set(member.claimedNames);
   const before = names.size;
-  names.add(searched);
-  for (const sibling of siblings) names.add(sibling.CharacterName);
+  for (const name of wanted) names.add(name);
 
   const claimedNames = [...names];
   await prisma.member.update({
@@ -129,18 +122,10 @@ export async function claimRoster(params: {
     data: { memberId: member.id },
   });
 
-  await logEvent({
-    instanceId: params.instanceId,
-    action: "member_claim",
-    actorLabel: params.label,
-    detail: { searched, total: claimedNames.length, linked: linked.count },
-  });
-
   return {
     added: claimedNames.length - before,
     linked: linked.count,
     total: claimedNames.length,
-    searched,
   };
 }
 

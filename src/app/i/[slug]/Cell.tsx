@@ -76,12 +76,15 @@ export function Cell({
   slotId,
   week,
   cell,
+  taken,
   editable,
 }: {
   slug: string;
   slotId: string;
   week: string;
   cell: CellView;
+  /** 이 레이드에 이미 들어간 캐릭터. 자동완성에서 뺀다 */
+  taken: string[];
   editable: boolean;
 }) {
   const [assignState, assign, assigning] = useActionState(assignAction, IDLE);
@@ -177,6 +180,7 @@ export function Cell({
               // 성공했을 때만 비운다. 실패한 이름은 남겨 고쳐 칠 수 있게 한다.
               resetOn={assignState.status === "ok" ? assignState : null}
               error={error?.message}
+              taken={taken}
             />
           </form>
         )}

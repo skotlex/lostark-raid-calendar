@@ -4,7 +4,6 @@ import { findMyMember } from "@/lib/members";
 import { requireSession } from "@/lib/session";
 
 import { CharacterCard } from "./CharacterCard";
-import { ClaimPanel } from "./ClaimPanel";
 import { DeleteGroupButton } from "./DeleteGroupButton";
 import { RegisterPanel } from "./RegisterPanel";
 import { SyncAllButton } from "./SyncAllButton";
@@ -60,9 +59,7 @@ export default async function CharactersPage({ params }: PageProps<"/i/[slug]/ch
         </p>
       </div>
 
-      <ClaimPanel slug={slug} member={myMember} />
-
-      <RegisterPanel slug={slug} />
+      <RegisterPanel slug={slug} mine={myMember?.characterCount ?? 0} />
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-dim">
         <span>

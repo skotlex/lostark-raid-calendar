@@ -21,28 +21,47 @@ const SIBLINGS_IDLE: SiblingsState = {
 const IMPORT_IDLE: ImportState = { status: "idle", message: "", result: null };
 
 /** 원정대에는 저렙 부캐가 잔뜩 섞여 있다. 기본 선택 기준선을 이 값으로 잡는다. */
-const DEFAULT_MIN_LEVEL = 1600;
+const DEFAULT_MIN_LEVEL = 1730;
 
 /**
- * 여기서 등록한 캐릭터의 **소속은 등록하는 사람과 무관하다.**
+ * 여기서 등록한 캐릭터는 **등록한 사람 소속이 된다.**
  *
- * 남의 캐릭터를 대신 등록하는 일이 흔해서, 등록한 사람으로 묶으면 남의 부캐가 내
- * 소속이 되고 중복 참여 경고가 엉뚱한 사람에게 뜬다. 소속은 주인이 자기 원정대를
- * 클레임해 둔 목록으로 정한다(ClaimPanel, lib/members.ts).
+ * 캐릭터 관리는 자기 캐릭터를 챙기는 화면이라 그렇게 본다. 남의 캐릭터를 대신 넣는 일은
+ * 편성 칸에서 일어나고, 그 경로만 무소속으로 남긴다(lib/board.ts).
+ *
+ * 로아 API에는 캐릭터의 주인이 없다. 그래서 등록이 곧 "이건 내 것"이라는 신고다.
+ * 여기서 한 번 불러두면 나중에 남이 편성 칸에 대신 넣어줘도 소속이 잡힌다
+ * (lib/members.ts의 claimedNames).
  */
-export function RegisterPanel({ slug }: { slug: string }) {
+export function RegisterPanel({ slug, mine }: { slug: string; mine: number }) {
   const [mode, setMode] = useState<"single" | "siblings">("siblings");
 
   return (
     <section className="rounded border border-border bg-surface p-4">
-      <div className="mb-3 flex gap-1">
+      <div className="mb-3 flex flex-wrap items-center gap-1">
         <ModeButton active={mode === "siblings"} onClick={() => setMode("siblings")}>
-          원정대 불러오기
+          내 원정대 불러오기
         </ModeButton>
         <ModeButton active={mode === "single"} onClick={() => setMode("single")}>
           한 명씩 등록
         </ModeButton>
+
+        <span className="ml-auto text-xs text-text-faint">
+          {mine > 0 ? (
+            <>
+              내 캐릭터 <span className="tabular text-text-dim">{mine}</span>명
+            </>
+          ) : (
+            "아직 내 캐릭터가 없습니다"
+          )}
+        </span>
       </div>
+
+      <p className="mb-3 text-xs text-text-dim">
+        여기서 등록한 캐릭터는 <strong className="text-text">내 캐릭터</strong>로 묶입니다.
+        계정이 여러 개면 계정마다 한 번씩 불러와 주세요. 편성표 칸에 다른 분의 닉네임을
+        넣는 것은 소속에 영향을 주지 않습니다.
+      </p>
 
       {mode === "siblings" ? <SiblingsForm slug={slug} /> : <SingleForm slug={slug} />}
     </section>
@@ -111,7 +130,7 @@ function SiblingsForm({ slug }: { slug: string }) {
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  // 조회 결과가 새로 오면 쓸 만한 것만 미리 골라 둔다.
+  // 조회 결과가 새로 오면 쓸 만한 것만 미리 골라 둔다. 목록은 이미 레벨 내림차순이다.
   // 25개를 전부 등록하면 API 요청도 그만큼 나가고 목록도 저렙 부캐로 덮인다.
   useEffect(() => {
     if (search.status !== "ok") return;
@@ -139,7 +158,7 @@ function SiblingsForm({ slug }: { slug: string }) {
     <div className="space-y-3">
       <form action={searchSubmit} className="flex flex-wrap items-end gap-2">
         {/* 힌트를 라벨 옆에 두면 좁은 칸에서 줄이 갈린다. 자리표시자가 같은 일을 한다. */}
-        <Field label="대표 캐릭터 닉네임" className="w-48">
+        <Field label="내 캐릭터 아무거나" className="w-48">
           <input
             name="name"
             required
@@ -181,7 +200,7 @@ function SiblingsForm({ slug }: { slug: string }) {
             </div>
           </div>
 
-          <ul className="grid max-h-72 gap-1 overflow-y-auto rounded border border-border bg-bg p-2 sm:grid-cols-2">
+          <ul className="grid max-h-72 gap-1 overflow-y-auto rounded border border-border bg-bg p-2 sm:grid-cols-2 xl:grid-cols-3">
             {search.siblings.map((sibling) => (
               <li key={sibling.name}>
                 <label

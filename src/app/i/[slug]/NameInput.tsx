@@ -12,35 +12,56 @@ import {
 } from "react";
 
 /**
- * 이미 등록된 캐릭터 이름.
+ * 이미 등록된 캐릭터.
  *
  * 칸마다 배열을 내려보내면 같은 목록이 칸 수만큼 직렬화된다. 한 번만 실어 보내고
- * 컨텍스트로 꺼내 쓴다.
+ * 컨텍스트로 꺼내 쓴다. **템레벨 내림차순으로 들어온다.**
  */
-const KnownNamesContext = createContext<readonly string[]>([]);
-
-export function KnownNamesProvider({
-  names,
-  children,
-}: {
-  names: readonly string[];
-  children: ReactNode;
-}) {
-  return <KnownNamesContext value={names}>{children}</KnownNamesContext>;
+export interface KnownCharacter {
+  name: string;
+  /** 보고 있는 사람의 캐릭터인가. 내 것만 아무것도 안 쳤을 때 먼저 보여준다 */
+  mine: boolean;
 }
 
-/** 입력한 글자로 후보를 좁힌다. 앞부분이 맞는 이름을 먼저 보여준다. */
-function suggest(names: readonly string[], query: string): string[] {
+const KnownNamesContext = createContext<readonly KnownCharacter[]>([]);
+
+export function KnownNamesProvider({
+  characters,
+  children,
+}: {
+  characters: readonly KnownCharacter[];
+  children: ReactNode;
+}) {
+  return <KnownNamesContext value={characters}>{children}</KnownNamesContext>;
+}
+
+/**
+ * 후보를 고른다. 목록은 이미 템레벨 내림차순이라 순서를 그대로 물려받는다.
+ *
+ * **아무것도 안 쳤을 때는 내 캐릭터만 보여준다.** 편성표에서 칸을 누르는 사람은 대개
+ * 자기 캐릭터를 넣으려는 것이고, 길드 전체 목록을 먼저 들이밀면 그 중에서 자기 것을
+ * 찾아야 한다. 남의 캐릭터를 대신 넣을 때는 이름을 알고 있으므로 한 글자만 치면 된다.
+ *
+ * `taken`은 이미 같은 레이드에 들어가 있는 캐릭터다. 한 캐릭터는 같은 레이드를 한 주에
+ * 한 번만 가므로(3.4-1) 애초에 후보로 두지 않는다.
+ */
+function suggest(
+  characters: readonly KnownCharacter[],
+  query: string,
+  taken: ReadonlySet<string>,
+): string[] {
   const q = query.trim().toLowerCase();
-  if (!q) return [];
+  const pool = characters.filter((c) => !taken.has(c.name));
+
+  if (!q) return pool.filter((c) => c.mine).map((c) => c.name).slice(0, 8);
 
   const starts: string[] = [];
   const contains: string[] = [];
-  for (const name of names) {
-    const lower = name.toLowerCase();
+  for (const character of pool) {
+    const lower = character.name.toLowerCase();
     if (lower === q) continue; // 이미 다 친 이름을 다시 권하지 않는다
-    if (lower.startsWith(q)) starts.push(name);
-    else if (lower.includes(q)) contains.push(name);
+    if (lower.startsWith(q)) starts.push(character.name);
+    else if (lower.includes(q)) contains.push(character.name);
     if (starts.length >= 8) break;
   }
   return [...starts, ...contains].slice(0, 8);
@@ -58,6 +79,7 @@ export function NameInput({
   pending,
   resetOn,
   error,
+  taken,
   placeholder,
   className,
 }: {
@@ -68,11 +90,13 @@ export function NameInput({
   resetOn?: unknown;
   /** 실패 사유. 칸 위에 말풍선으로 띄운다. */
   error?: string | null;
+  /** 이미 같은 레이드에 들어간 캐릭터. 후보에서 뺀다 */
+  taken?: readonly string[];
   placeholder?: string;
   /** 표에서는 테두리 없는 칸으로 쓴다. 기본은 카드 안의 입력창이다. */
   className?: string;
 }) {
-  const names = useContext(KnownNamesContext);
+  const characters = useContext(KnownNamesContext);
   const [value, setValue] = useState("");
   const [active, setActive] = useState(-1);
   const [open, setOpen] = useState(false);
@@ -95,7 +119,28 @@ export function NameInput({
     if (resetOn && value !== "") setValue("");
   }
 
-  const items = useMemo(() => suggest(names, value), [names, value]);
+  /*
+   * 말풍선은 **글자를 고치는 순간 사라진다.**
+   *
+   * 실패 사유는 액션 상태에 남아 있어 그냥 두면 계속 떠 있다. 이름을 고쳐 쓰는 동안
+   * 옛 오류가 칸 위를 덮고 있으면 방금 친 것이 잘못된 줄 알게 된다.
+   *
+   * 같은 오류가 다시 날 수도 있어(같은 이름을 또 보냄) 다시 보낼 때마다 되살린다.
+   */
+  const [dismissed, setDismissed] = useState(false);
+  const [lastError, setLastError] = useState(error);
+  const [lastPending, setLastPending] = useState(pending);
+  if (error !== lastError || pending !== lastPending) {
+    setLastError(error);
+    setLastPending(pending);
+    if (dismissed) setDismissed(false);
+  }
+
+  const takenSet = useMemo(() => new Set(taken ?? []), [taken]);
+  const items = useMemo(
+    () => suggest(characters, value, takenSet),
+    [characters, value, takenSet],
+  );
   const showing = open && !pending && items.length > 0;
 
   /** 후보를 고르면 그대로 넣고 폼을 보낸다. 한 번 더 엔터를 치게 하지 않는다. */
@@ -155,6 +200,7 @@ export function NameInput({
         aria-autocomplete="list"
         onChange={(e) => {
           if (pending) return;
+          setDismissed(true);
           setValue(e.target.value);
           setOpen(true);
           setActive(-1);
@@ -170,7 +216,7 @@ export function NameInput({
         실패 사유는 칸 위에 띄운다. 아래에 줄로 붙이면 칸이 그만큼 자라 입력창이
         위로 밀리고, 방금 친 자리에서 손이 한 번 헛돈다.
       */}
-      {error && !showing && (
+      {error && !dismissed && !showing && (
         <p role="alert" className="combo-error">
           {error}
         </p>

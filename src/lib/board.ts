@@ -63,6 +63,13 @@ export interface BoardSlotView extends SlotView {
   parties: PartyView[];
   /** 자리 수(4 또는 8) 중 채워진 수 */
   filled: number;
+  /**
+   * 이 레이드에 이번 주 이미 들어간 캐릭터 이름.
+   *
+   * 한 캐릭터는 같은 레이드를 난이도가 달라도 한 주에 한 번만 간다(CLAUDE.md 3.4-1).
+   * 칸의 자동완성에서 미리 빼두면 경고가 뜰 편성을 애초에 만들지 않는다.
+   */
+  takenNames: string[];
 }
 
 const characterSelect = {
@@ -205,6 +212,8 @@ export async function getBoard(
   // 서로 다른 레이드는 몇 개를 가든 상관없고, 부캐를 바꿔 같은 레이드를 또 가는 것도
   // 정상이다. 사람(원정대) 단위로 세면 그 정상 편성에 경고가 붙는다.
   const characterRaidCount = new Map<string, number>();
+  /** 레이드 이름 → 이번 주 그 레이드에 들어간 캐릭터 이름들 */
+  const raidRoster = new Map<string, Set<string>>();
   for (const slot of slots) {
     const raid = slot.raidName.trim();
     const mine = slot.dayOfWeek === TUESDAY ? tuesdayWeek : weekStart;
@@ -212,6 +221,10 @@ export async function getBoard(
       if (a.weekStart.getTime() !== mine.getTime()) continue;
       const key = `${a.character.id}::${raid}`;
       characterRaidCount.set(key, (characterRaidCount.get(key) ?? 0) + 1);
+
+      const roster = raidRoster.get(raid) ?? new Set<string>();
+      roster.add(a.character.name);
+      raidRoster.set(raid, roster);
     }
   }
 
@@ -301,6 +314,7 @@ export async function getBoard(
     return {
       ...view,
       parties,
+      takenNames: [...(raidRoster.get(view.raidName.trim()) ?? [])],
       filled: parties.reduce(
         (sum, party) => sum + party.cells.filter((c) => c.character).length,
         0,
