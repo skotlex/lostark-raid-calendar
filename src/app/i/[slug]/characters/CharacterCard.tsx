@@ -47,7 +47,11 @@ export function CharacterCard({
           <div className="flex flex-wrap gap-1">
             <span className="char-chip">{character.className ?? "클래스 미상"}</span>
             {character.classEngraving && (
-              <span className="char-chip char-chip--engraving">
+              <span
+                className={`char-chip ${
+                  isSupport ? "char-chip--engraving-sup" : "char-chip--engraving"
+                }`}
+              >
                 {character.classEngraving}
               </span>
             )}

@@ -212,7 +212,13 @@ export function Cell({
           {/* 직업 각인이 칸에서 가장 먼저 읽히는 정보다. 클래스는 그다음. */}
           <div className="char-chip-line">
             {character.classEngraving && (
-              <span className="char-chip char-chip--engraving">
+              <span
+                className={`char-chip ${
+                  character.role === "SUPPORT"
+                    ? "char-chip--engraving-sup"
+                    : "char-chip--engraving"
+                }`}
+              >
                 {character.classEngraving}
               </span>
             )}
