@@ -7,6 +7,7 @@ import { type CharacterSpec, enlightenmentNames, toCharacterSpec } from "./armor
 import { summarizeArkGrid } from "./arkGridCores";
 import { pickClassEngraving } from "./classEngravings";
 import { LostArkError, fetchArmory, fetchSiblings } from "./lostark";
+import { findOwnerByCharacterName } from "./members";
 import { prisma } from "./prisma";
 import { resolveRole } from "./synergy";
 
@@ -221,9 +222,19 @@ export async function registerCharacter(
     throw new CharacterError(`'${name}' 캐릭터를 찾을 수 없습니다. 닉네임을 확인해 주세요`);
   }
 
-  const memberId = await resolveMemberId(instanceId, memberLabel);
   // 로아가 돌려준 정식 표기를 쓴다. 사용자가 대소문자를 다르게 쳐도 한 행으로 모인다.
   const canonicalName = armory?.ArmoryProfile?.CharacterName ?? name;
+
+  /*
+   * 소속은 **클레임한 사람**이 먼저다.
+   *
+   * 칸에 이름을 치는 사람이 그 캐릭터 주인인 경우가 오히려 드물다. 공대장이 남의
+   * 캐릭터를 대신 넣는 일이 흔해서, 친 사람 기준으로 묶으면 남의 부캐가 전부 공대장
+   * 소속이 된다. 주인이 자기 원정대를 클레임해 두었으면 그쪽으로 붙인다(members.ts).
+   */
+  const memberId =
+    (await findOwnerByCharacterName(instanceId, canonicalName)) ??
+    (await resolveMemberId(instanceId, memberLabel));
   const role = specRole(spec);
 
   const spec_data = {

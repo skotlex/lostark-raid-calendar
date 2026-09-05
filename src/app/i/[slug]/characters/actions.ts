@@ -17,6 +17,7 @@ import {
 } from "@/lib/characters";
 import { logEvent } from "@/lib/history";
 import { findInstance } from "@/lib/instance";
+import { claimRoster } from "@/lib/members";
 import { type Session, requireSession } from "@/lib/session";
 
 /*
@@ -59,9 +60,13 @@ export async function registerAction(
   const name = String(formData.get("name") ?? "");
 
   try {
-    // 부캐를 묶는 이름은 들어와 있는 사람의 디스코드 닉네임이다. 물어보지 않는다.
+    /*
+     * 소속은 클레임한 사람을 따라간다(characters.ts). 등록하는 사람 이름을 넘기지
+     * 않는 이유는, 여기서 남의 캐릭터를 등록하는 일이 흔하기 때문이다. 넘기면 그
+     * 캐릭터가 등록한 사람 소속이 되어 중복 참여 경고가 엉뚱한 사람에게 뜬다.
+     */
     const { instanceId, session } = await authorize(slug);
-    const character = await registerCharacter(instanceId, name, session.label);
+    const character = await registerCharacter(instanceId, name);
     await logEvent({
       instanceId,
       action: "character_add",
@@ -73,6 +78,43 @@ export async function registerAction(
       status: "ok",
       message: `${character.name} (${character.className ?? "?"}) 등록됨`,
     };
+  } catch (error) {
+    return { status: "error", message: toMessage(error) };
+  }
+}
+
+// --- 내 원정대 묶기 -----------------------------------------------------------
+
+export interface ClaimState {
+  status: "idle" | "ok" | "error";
+  message: string;
+}
+
+/**
+ * 대표 캐릭터 하나로 원정대를 내 것으로 묶는다.
+ *
+ * 누구 것인지는 로아 API가 모른다. 들어와 있는 디스코드 계정이 자기 것이라고 말하면
+ * 그대로 믿는다(CLAUDE.md 4장의 "못 하는 것").
+ */
+export async function claimRosterAction(
+  _prev: ClaimState,
+  formData: FormData,
+): Promise<ClaimState> {
+  const slug = String(formData.get("slug") ?? "");
+
+  try {
+    const { instanceId, session } = await authorize(slug);
+    const result = await claimRoster({
+      instanceId,
+      discordUserId: session.discordUserId,
+      label: session.label,
+      representative: String(formData.get("name") ?? ""),
+    });
+    refresh(slug);
+
+    const parts = [`원정대 ${result.total}명 묶음`];
+    if (result.linked > 0) parts.push(`등록된 ${result.linked}명에 소속 붙임`);
+    return { status: "ok", message: parts.join(" / ") };
   } catch (error) {
     return { status: "error", message: toMessage(error) };
   }
@@ -130,7 +172,7 @@ export async function importSiblingsAction(
 
   try {
     const { instanceId, session } = await authorize(slug);
-    const result = await registerCharacters(instanceId, names, session.label);
+    const result = await registerCharacters(instanceId, names);
     if (result.added.length > 0) {
       // 원정대 등록은 한 번에 여럿이다. 줄을 여럿 남기면 이력이 그 사람 부캐로 덮인다.
       await logEvent({

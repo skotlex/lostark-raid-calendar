@@ -24,11 +24,11 @@ const IMPORT_IDLE: ImportState = { status: "idle", message: "", result: null };
 const DEFAULT_MIN_LEVEL = 1600;
 
 /**
- * 부캐를 묶는 "사람 이름"은 묻지 않는다. 들어와 있는 사람의 디스코드 닉네임으로
- * 서버가 채운다(characters/actions.ts).
+ * 여기서 등록한 캐릭터의 **소속은 등록하는 사람과 무관하다.**
  *
- * 남의 캐릭터를 대신 등록하면 그 사람 것이 내 이름으로 묶여 중복 참여 경고가 엉뚱하게
- * 뜬다. 경고일 뿐 막지는 않으므로 칸을 하나 더 두는 값보다 낫다고 봤다.
+ * 남의 캐릭터를 대신 등록하는 일이 흔해서, 등록한 사람으로 묶으면 남의 부캐가 내
+ * 소속이 되고 중복 참여 경고가 엉뚱한 사람에게 뜬다. 소속은 주인이 자기 원정대를
+ * 클레임해 둔 목록으로 정한다(ClaimPanel, lib/members.ts).
  */
 export function RegisterPanel({ slug }: { slug: string }) {
   const [mode, setMode] = useState<"single" | "siblings">("siblings");

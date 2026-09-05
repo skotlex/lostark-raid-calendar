@@ -105,6 +105,8 @@ function describe(action: string, detail: Detail): string {
       const count = typeof detail.count === "number" ? detail.count : 1;
       return count > 1 ? `캐릭터 ${count}명 등록 (${character})` : `캐릭터 ${character} 등록`;
     }
+    case "member_claim":
+      return `원정대 묶음 (대표 ${str(detail, "searched")}, 캐릭터 ${detail.total}명)`;
     case "character_delete":
       return `캐릭터 ${character} 삭제`;
     case "character_delete_many": {
