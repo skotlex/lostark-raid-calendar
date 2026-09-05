@@ -9,10 +9,13 @@
  * 워로드는 gunlancer가 아니라 warlord이고, 기공사는 soulfist가 아니라 soulmaster다.
  * 서른 개를 하나씩 눌러 확인했다. 새 직업이 나오면 같은 방식으로 확인해 추가한다.
  *
- * 가디언나이트와 차원술사는 아직 그 CDN에 없다. 이름을 여럿 넣어봤지만 전부 404였다.
- * 올라오면 여기에 한 줄 더한다.
+ * **새 직업 둘은 밑줄이 들어간다**(dragon_knight, dimension_master). 한 낱말로 붙여 쓴
+ * 옛 직업들과 규칙이 다르니, 찾을 때 밑줄 형태도 함께 넣어본다.
  */
 const EMBLEMS: Record<string, string> = {
+  가디언나이트: "dragon_knight",
+  차원술사: "dimension_master",
+
   버서커: "berserker",
   디스트로이어: "destroyer",
   워로드: "warlord",
