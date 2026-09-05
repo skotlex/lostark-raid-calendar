@@ -8,6 +8,7 @@ import {
   type SiblingPreview,
   deleteCharacter,
   deleteMemberCharacters,
+  deleteRosterCharacters,
   previewSiblings,
   registerCharacter,
   registerCharacters,
@@ -125,6 +126,8 @@ export interface SiblingsState {
   siblings: SiblingPreview[];
   /** 이 원정대를 이미 클레임한 다른 사람. 있으면 화면이 목록을 통째로 잠근다 */
   owner: string | null;
+  /** 이 계정이 이미 붙어 있는 내 원정대 이름. 있으면 그리로 넣는다(lib/characters.ts) */
+  roster: string | null;
 }
 
 export async function previewSiblingsAction(
@@ -138,7 +141,11 @@ export async function previewSiblingsAction(
     const { instanceId, session } = await authorize(slug);
     // 내 원정대를 다시 부르는 것과 남의 것을 부르는 것을 가르려면 내가 누구인지 알아야 한다.
     const mine = await findMyMember(instanceId, session.discordUserId);
-    const { siblings, owner } = await previewSiblings(instanceId, name, mine?.id ?? null);
+    const { siblings, owner, roster } = await previewSiblings(
+      instanceId,
+      name,
+      mine?.id ?? null,
+    );
     return {
       status: "ok",
       // 주인이 있으면 "골라 주세요"라고 하지 않는다. 고를 수 있는 것이 없다.
@@ -149,6 +156,7 @@ export async function previewSiblingsAction(
       searched: name.trim(),
       siblings,
       owner,
+      roster,
     };
   } catch (error) {
     return {
@@ -157,6 +165,7 @@ export async function previewSiblingsAction(
       searched: "",
       siblings: [],
       owner: null,
+      roster: null,
     };
   }
 }
@@ -281,6 +290,45 @@ export async function deleteMemberAction(
       actorLabel: session.label,
       // 무엇이 사라졌는지 남긴다. 되돌릴 수 없는 일이라 수만 남기면 확인할 길이 없다.
       detail: { member: label, count: names.length, characters: names.join(", ") },
+    });
+    refresh(slug);
+    return { status: "ok", message: `${names.length}개 삭제됨` };
+  } catch (error) {
+    return { status: "error", message: toMessage(error) };
+  }
+}
+
+/**
+ * 한 사람의 원정대 하나만 지운다. 탭 단위 삭제다.
+ *
+ * `roster`가 비어 있으면 그 사람의 **원정대 미지정** 묶음이다(lib/characters.ts).
+ * 확인은 묶음 전체 삭제와 마찬가지로 화면에서 받는다.
+ */
+export async function deleteRosterAction(
+  _prev: RowState,
+  formData: FormData,
+): Promise<RowState> {
+  const slug = String(formData.get("slug") ?? "");
+  const roster = String(formData.get("roster") ?? "");
+  const label = String(formData.get("label") ?? "");
+  const rosterLabel = String(formData.get("rosterLabel") ?? "");
+
+  try {
+    const { instanceId, session } = await authorize(slug);
+    const names = await deleteRosterCharacters(instanceId, {
+      rosterId: roster || null,
+      memberLabel: label,
+    });
+    await logEvent({
+      instanceId,
+      action: "character_delete_many",
+      actorLabel: session.label,
+      detail: {
+        member: label,
+        roster: rosterLabel,
+        count: names.length,
+        characters: names.join(", "),
+      },
     });
     refresh(slug);
     return { status: "ok", message: `${names.length}개 삭제됨` };

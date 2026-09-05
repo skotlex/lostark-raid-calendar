@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useState } from "react";
 
 import {
   type ImportState,
@@ -18,6 +18,7 @@ const SIBLINGS_IDLE: SiblingsState = {
   searched: "",
   siblings: [],
   owner: null,
+  roster: null,
 };
 const IMPORT_IDLE: ImportState = { status: "idle", message: "", result: null };
 
@@ -27,14 +28,15 @@ const DEFAULT_MIN_LEVEL = 1730;
 /**
  * 고를 수 있는 캐릭터인지.
  *
- * 아직 없는 캐릭터와, 등록은 됐지만 **소속이 빈** 캐릭터를 고를 수 있다. 뒤쪽은 남이
- * 편성 칸에 대신 넣어 만들어진 것들이라 여기서 집어야 주인과 원정대가 붙는다.
- * 이미 소속이 붙은 캐릭터는 잠근다. 여기서 소속을 갈아치우면 먼저 클레임한 사람의
- * 원정대에서 캐릭터가 조용히 빠져나간다.
+ * 아직 없는 캐릭터, 등록은 됐지만 **소속이 빈** 캐릭터, 그리고 **이미 내 것인** 캐릭터를
+ * 고를 수 있다. 가운데는 남이 편성 칸에 대신 넣어 만들어진 것들이라 여기서 집어야
+ * 주인이 붙고, 마지막은 원정대를 붙이거나 고치는 유일한 길이다 — 등록됐다는 이유로
+ * 잠그면 원정대가 생기기 전에 등록한 내 캐릭터가 영영 `원정대 미지정`으로 남는다.
  *
  * **원정대에 주인이 있으면 목록 전체를 잠근다.** 로아 siblings는 같은 계정만 주므로
  * 아직 등록 안 된 캐릭터도 그 사람 것이다. 그것만 열어 두면 한 계정이 원정대 둘로
  * 갈려 골드 6명이 양쪽에서 따로 계산된다(lib/characters.ts의 SiblingsPreview).
+ * 남의 클레임을 빼앗는 것은 이 관문이 막으므로 캐릭터 단위로 또 잠글 필요가 없다.
  *
  * 타입은 서버 모듈(lib/characters)이 아니라 액션 결과에서 꺼낸다. `server-only`가
  * 붙어 있어 클라이언트 파일이 이름을 직접 들고 오면 안 된다.
@@ -44,7 +46,7 @@ function canPick(
   owner: string | null,
 ): boolean {
   if (owner) return false;
-  return !sibling.registered || sibling.unclaimed;
+  return !sibling.registered || sibling.unclaimed || sibling.mine;
 }
 
 /**
@@ -203,22 +205,50 @@ function SiblingsForm({ slug }: { slug: string }) {
   );
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  /**
+   * 등록이 끝나면 목록을 접는다.
+   *
+   * 다 넣고 나면 이 목록은 할 일이 없는데 스무 줄이 그대로 남아, 정작 확인해야 할
+   * 아래 캐릭터 목록을 화면 밖으로 밀어낸다. 지우지 않고 접는 이유는 실패한 캐릭터를
+   * 다시 고를 일이 있어서다.
+   */
+  const [folded, setFolded] = useState(false);
 
-  // 조회 결과가 새로 오면 쓸 만한 것만 미리 골라 둔다. 목록은 이미 레벨 내림차순이다.
-  // 25개를 전부 등록하면 API 요청도 그만큼 나가고 목록도 저렙 부캐로 덮인다.
-  //
-  // 소속이 빈 캐릭터도 함께 고른다. 불러오기를 누른 사람이 곧 주인이라 소속을 붙이는
-  // 것이 이 화면의 목적이고, 손으로 다시 체크하게 하면 무엇을 눌러야 하는지 알 수 없다.
-  useEffect(() => {
-    if (search.status !== "ok") return;
+  /*
+   * 조회·등록 결과가 새로 오면 그 자리에서 선택과 접힘을 맞춘다.
+   *
+   * 효과(useEffect)가 아니라 **렌더 중에** 바꾼다. 효과로 하면 옛 값으로 한 번 그린
+   * 뒤에 다시 그려서, 조회 직후 아무것도 선택되지 않은 목록이 한 박자 스쳐 지나간다.
+   * 리액트가 권하는 "값이 바뀌었을 때 상태 맞추기"가 이 형태다.
+   *
+   * 조회 결과에서는 쓸 만한 것만 미리 골라 둔다. 목록은 이미 레벨 내림차순이다.
+   * 25개를 전부 등록하면 API 요청도 그만큼 나가고 목록도 저렙 부캐로 덮인다.
+   * 소속이 빈 캐릭터와 이미 내 것인 캐릭터도 함께 고른다 — 불러오기를 누른 사람이 곧
+   * 주인이라 소속과 원정대를 붙이는 것이 이 화면의 목적이고, 손으로 다시 체크하게 하면
+   * 무엇을 눌러야 하는지 알 수 없다.
+   */
+  const [seen, setSeen] = useState<{ search: SiblingsState; imported: ImportState }>({
+    search,
+    imported,
+  });
+  if (seen.search !== search) {
+    setSeen({ search, imported });
+    setFolded(false);
     setSelected(
-      new Set(
-        search.siblings
-          .filter((s) => canPick(s, search.owner) && (s.itemLevel ?? 0) >= DEFAULT_MIN_LEVEL)
-          .map((s) => s.name),
-      ),
+      search.status === "ok"
+        ? new Set(
+            search.siblings
+              .filter(
+                (s) => canPick(s, search.owner) && (s.itemLevel ?? 0) >= DEFAULT_MIN_LEVEL,
+              )
+              .map((s) => s.name),
+          )
+        : new Set(),
     );
-  }, [search]);
+  } else if (seen.imported !== imported) {
+    setSeen({ search, imported });
+    if (imported.status === "ok") setFolded(true);
+  }
 
   function toggle(name: string) {
     setSelected((prev) => {
@@ -254,14 +284,42 @@ function SiblingsForm({ slug }: { slug: string }) {
         <Feedback status={search.status} message={search.message} />
       </form>
 
-      {search.status === "ok" && search.siblings.length > 0 && (
+      {search.status === "ok" && search.siblings.length > 0 && folded && (
+        <div className="flex flex-wrap items-center gap-2 rounded border border-border bg-bg px-3 py-2 text-xs text-text-dim">
+          <span>
+            <strong className="text-text">{search.searched}</strong> 원정대 등록을 마쳤습니다.
+          </span>
+          <Feedback status={imported.status} message={imported.message} />
+          <button
+            type="button"
+            onClick={() => setFolded(false)}
+            className="rounded border border-border px-2 py-0.5 text-text-dim hover:text-text"
+          >
+            목록 다시 보기
+          </button>
+        </div>
+      )}
+
+      {imported.result && imported.result.failed.length > 0 && (
+        <ul className="space-y-0.5 text-xs text-danger">
+          {imported.result.failed.map((f) => (
+            <li key={f.name}>
+              {f.name}: {f.reason}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {search.status === "ok" && search.siblings.length > 0 && !folded && (
         <form action={importSubmit} className="space-y-3">
           <input type="hidden" name="slug" value={slug} />
           {/*
-            조회할 때 친 이름을 그대로 넘긴다. 이 한 번이 원정대 하나가 되고 이 이름이
-            캐릭터 관리의 탭 이름이 된다(members.ts의 claimNames).
+            이 한 번이 원정대 하나가 되고 그 이름이 캐릭터 관리의 탭이 된다
+            (members.ts의 claimNames). 이 계정에 이미 붙어 있는 원정대가 있으면
+            그 이름을 그대로 쓴다. 같은 계정을 다른 캐릭터명으로 다시 불렀을 때
+            원정대가 둘로 갈리지 않게 하려는 것이다.
           */}
-          <input type="hidden" name="roster" value={search.searched} />
+          <input type="hidden" name="roster" value={search.roster ?? search.searched} />
 
           {/*
             남의 원정대다. 왜 못 고르는지와 잘못됐을 때 푸는 방법을 함께 적는다.
@@ -327,7 +385,7 @@ function SiblingsForm({ slug }: { slug: string }) {
                   </span>
                   {sibling.registered && (
                     <span className="shrink-0 text-xs text-text-faint">
-                      {sibling.unclaimed ? "소속 없음" : "등록됨"}
+                      {sibling.unclaimed ? "소속 없음" : sibling.mine ? "내 캐릭터" : "등록됨"}
                     </span>
                   )}
                 </label>
@@ -349,16 +407,6 @@ function SiblingsForm({ slug }: { slug: string }) {
               </span>
               <Feedback status={imported.status} message={imported.message} />
             </div>
-          )}
-
-          {imported.result && imported.result.failed.length > 0 && (
-            <ul className="space-y-0.5 text-xs text-danger">
-              {imported.result.failed.map((f) => (
-                <li key={f.name}>
-                  {f.name}: {f.reason}
-                </li>
-              ))}
-            </ul>
           )}
         </form>
       )}

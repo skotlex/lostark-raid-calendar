@@ -408,6 +408,17 @@ export interface SiblingPreview {
    * 안 붙는다. 그래서 이것만 다시 고를 수 있게 열어 둔다.
    */
   unclaimed: boolean;
+  /**
+   * **이미 내 것으로 묶여 있는 캐릭터인지.**
+   *
+   * 이것도 고를 수 있어야 한다. 원정대(`Roster`)는 나중에 생긴 개념이라 그 전에 등록한
+   * 캐릭터는 원정대가 비어 있고, 한 명씩 등록에서 `지정 안 함`으로 넣은 것도 마찬가지다.
+   * 등록됐다는 이유로 잠그면 **내 캐릭터인데 원정대를 붙일 길이 아예 없어져** 골드
+   * 지정 화면에서 영영 `원정대 미지정`으로 남는다.
+   *
+   * 남의 클레임을 빼앗는 것과는 다르다. 그쪽은 목록 전체를 잠그는 `owner`가 막는다.
+   */
+  mine: boolean;
 }
 
 /**
@@ -427,6 +438,14 @@ export interface SiblingsPreview {
    * 갈려 골드 6명이 양쪽에서 따로 계산된다(goldEarners.ts).
    */
   owner: string | null;
+  /**
+   * 이 계정 캐릭터가 이미 붙어 있는 **내 원정대 이름.** 없으면 null이다.
+   *
+   * 있으면 이번 불러오기가 그 원정대로 들어간다. 없을 때만 조회에 친 이름으로 새
+   * 원정대를 만든다. 같은 계정을 다른 캐릭터명으로 다시 부르는 일이 흔한데, 그때마다
+   * 새 원정대가 생기면 한 계정이 둘로 갈려 골드 6명이 양쪽에서 따로 계산된다.
+   */
+  roster: string | null;
 }
 
 export async function previewSiblings(
@@ -453,15 +472,26 @@ export async function previewSiblings(
 
   const existing = await prisma.character.findMany({
     where: { instanceId, name: { in: siblings.map((s) => s.CharacterName) } },
-    select: { name: true, memberId: true, member: { select: { label: true } } },
+    select: {
+      name: true,
+      memberId: true,
+      member: { select: { label: true } },
+      roster: { select: { label: true } },
+    },
   });
   const registered = new Map(existing.map((c) => [c.name, c.memberId]));
 
   // 소속이 있는 캐릭터 하나면 충분하다. 같은 계정이라 나머지도 같은 주인이다.
   const other = existing.find((c) => c.memberId && c.memberId !== myMemberId);
 
+  // 원정대도 하나면 충분하다. 같은 계정의 캐릭터가 둘로 갈려 있으면 앞의 것으로 모은다.
+  const kept = myMemberId
+    ? existing.find((c) => c.memberId === myMemberId && c.roster)?.roster?.label
+    : null;
+
   return {
     owner: other?.member?.label ?? null,
+    roster: kept ?? null,
     siblings: siblings
       .map((s) => ({
         name: s.CharacterName,
@@ -469,6 +499,7 @@ export async function previewSiblings(
         itemLevel: Number(s.ItemAvgLevel.replace(/,/g, "")) || null,
         registered: registered.has(s.CharacterName),
         unclaimed: registered.get(s.CharacterName) === null,
+        mine: myMemberId !== null && registered.get(s.CharacterName) === myMemberId,
       }))
       .sort((a, b) => (b.itemLevel ?? 0) - (a.itemLevel ?? 0)),
   };
@@ -665,6 +696,73 @@ export async function deleteMemberCharacters(
     await tx.character.deleteMany({ where: { instanceId, memberId: member.id } });
     // 빈 사람 행은 남겨두면 화면에 나오지도 않는 찌꺼기가 된다. 그룹은 캐릭터에서 나온다.
     await tx.member.delete({ where: { id: member.id } });
+    return rows.map((r) => r.name);
+  });
+}
+
+/**
+ * 한 사람의 캐릭터 중 **원정대 하나만** 지운다.
+ *
+ * 계정이 여럿인 사람은 묶음 하나에 원정대가 여럿이다. 그중 하나를 잘못 불러왔을 때
+ * 통째로 지우면 멀쩡한 나머지 계정까지 날아가고, 다시 부르려면 계정마다 한 번씩
+ * 반복해야 한다. 그래서 탭 단위로도 지울 수 있게 둔다.
+ *
+ * `rosterId`가 null이면 그 사람의 **원정대 미지정** 묶음이다. 편성 칸으로 만들어져
+ * 아직 어느 계정인지 안 정해진 캐릭터들이라 화면에서도 탭 하나로 서 있다.
+ *
+ * **지운 이름은 클레임에서도 뺀다.** 남겨두면 그 이름이 다시 등록될 때 자동으로 같은
+ * 사람에게 붙어(members.ts의 claimedNames) 잘못 클레임한 것을 지워도 풀리지 않는다.
+ * 묶음 전체를 지울 때 `Member` 행까지 지우는 것과 같은 이유다.
+ */
+export async function deleteRosterCharacters(
+  instanceId: string,
+  target: { rosterId: string | null; memberLabel: string },
+): Promise<string[]> {
+  const label = target.memberLabel.trim();
+  if (!label) throw new CharacterError("원정대를 찾을 수 없습니다");
+
+  const member = await prisma.member.findFirst({
+    where: { instanceId, label },
+    select: { id: true },
+  });
+  if (!member) throw new CharacterError("원정대를 찾을 수 없습니다");
+
+  // 화면이 보낸 id를 그대로 믿지 않는다. 남의 원정대를 지우는 요청일 수 있다.
+  if (target.rosterId) {
+    const roster = await prisma.roster.findFirst({
+      where: { id: target.rosterId, instanceId, memberId: member.id },
+      select: { id: true },
+    });
+    if (!roster) throw new CharacterError("원정대를 찾을 수 없습니다");
+  }
+
+  const where = { instanceId, memberId: member.id, rosterId: target.rosterId };
+
+  return prisma.$transaction(async (tx) => {
+    const rows = await tx.character.findMany({
+      where,
+      select: { name: true },
+      orderBy: { itemLevel: "desc" },
+    });
+    await tx.character.deleteMany({ where });
+    if (target.rosterId) await tx.roster.delete({ where: { id: target.rosterId } });
+
+    const gone = new Set(rows.map((r) => r.name));
+    const row = await tx.member.findUnique({
+      where: { id: member.id },
+      select: { claimedNames: true, _count: { select: { characters: true } } },
+    });
+    if (row) {
+      // 캐릭터가 하나도 안 남았으면 사람 행도 지운다. 남은 원정대 행이 함께 사라진다.
+      if (row._count.characters === 0) await tx.member.delete({ where: { id: member.id } });
+      else {
+        await tx.member.update({
+          where: { id: member.id },
+          data: { claimedNames: row.claimedNames.filter((name) => !gone.has(name)) },
+        });
+      }
+    }
+
     return rows.map((r) => r.name);
   });
 }

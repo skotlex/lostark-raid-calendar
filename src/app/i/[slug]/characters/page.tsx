@@ -3,13 +3,43 @@ import { requireInstance } from "@/lib/instance";
 import { findMyMember, listMyRosters } from "@/lib/members";
 import { requireSession } from "@/lib/session";
 
-import { CharacterCard } from "./CharacterCard";
-import { DeleteGroupButton } from "./DeleteGroupButton";
+import { CharacterGroup, type RosterGroup } from "./CharacterGroup";
 import { type GoldRoster, GoldPanel } from "./GoldPanel";
 import { RegisterPanel } from "./RegisterPanel";
 import { SyncAllButton } from "./SyncAllButton";
 
 export const dynamic = "force-dynamic";
+
+type CharacterList = Awaited<ReturnType<typeof listCharacters>>;
+
+/**
+ * 한 사람의 캐릭터를 원정대별로 가른다.
+ *
+ * 원정대가 안 붙은 캐릭터는 맨 뒤의 `원정대 미지정` 묶음이 된다. 편성 칸으로 만들어져
+ * 아직 불러오기를 거치지 않은 것들이라, 계정을 하나 더 가진 것처럼 보이지 않게
+ * 이름 있는 원정대와 순서를 나눈다. 골드 지정 화면과 같은 규칙이다.
+ */
+function byRoster(list: CharacterList): RosterGroup[] {
+  const map = new Map<string, CharacterList>();
+  for (const character of list) {
+    const key = character.rosterId ?? "";
+    const found = map.get(key);
+    if (found) found.push(character);
+    else map.set(key, [character]);
+  }
+
+  return [...map.entries()]
+    .map(([id, characters]) => ({
+      id,
+      label: (id && characters[0].rosterLabel) || "원정대 미지정",
+      characters,
+    }))
+    .sort((a, b) => {
+      if (a.id === "") return 1;
+      if (b.id === "") return -1;
+      return a.label.localeCompare(b.label, "ko");
+    });
+}
 
 // 이 페이지의 서버 액션에 적용된다. 자동 갱신이 캐릭터 수십 개를 순차로 조회하므로
 // 기본 제한(10초)으로는 중간에 끊긴다.
@@ -31,11 +61,20 @@ export default async function CharactersPage({ params }: PageProps<"/i/[slug]/ch
     else grouped.set(key, [character]);
   }
   // 소속 없는 캐릭터는 맨 아래로 내린다.
-  const groups = [...grouped.entries()].sort((a, b) => {
-    if (a[0] === "") return 1;
-    if (b[0] === "") return -1;
-    return a[0].localeCompare(b[0], "ko");
-  });
+  const groups = [...grouped.entries()]
+    .sort((a, b) => {
+      if (a[0] === "") return 1;
+      if (b[0] === "") return -1;
+      return a[0].localeCompare(b[0], "ko");
+    })
+    /*
+     * 사람 안에서 다시 원정대로 가른다.
+     *
+     * 계정이 여럿인 사람은 원정대마다 골드 여섯을 따로 받는다(GoldPanel). 위에서
+     * 원정대별로 고르게 해놓고 아래 목록만 한 덩어리면 어느 캐릭터가 어느 여섯에
+     * 드는지 눈으로 맞춰봐야 한다. 삭제도 이 경계로 갈린다.
+     */
+    .map(([label, list]) => ({ label, rosters: byRoster(list) }));
 
 /*
    * 이 화면에서는 자동 갱신을 돌리지 않는다.
@@ -120,22 +159,13 @@ export default async function CharactersPage({ params }: PageProps<"/i/[slug]/ch
         </div>
       ) : (
         <div className="space-y-6">
-          {groups.map(([label, list]) => (
-            <section key={label || "__none__"} className="space-y-2">
-              <h2 className="flex flex-wrap items-center gap-2 text-sm font-semibold">
-                <span className={label ? "text-text" : "text-text-faint"}>
-                  {label || "소속 미지정"}
-                </span>
-                <span className="text-xs text-text-faint tabular">{list.length}</span>
-                {/* 원정대를 골라 등록하면 부캐가 한 번에 여럿 들어온다. 무를 때도 한 번에. */}
-                <DeleteGroupButton slug={slug} label={label} count={list.length} />
-              </h2>
-              <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                {list.map((character) => (
-                  <CharacterCard key={character.id} slug={slug} character={character} />
-                ))}
-              </ul>
-            </section>
+          {groups.map((group) => (
+            <CharacterGroup
+              key={group.label || "__none__"}
+              slug={slug}
+              label={group.label}
+              rosters={group.rosters}
+            />
           ))}
         </div>
       )}
