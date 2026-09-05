@@ -165,24 +165,39 @@ export function ItemLevelIcon() {
 }
 
 /**
- * 전투력. 검 한 자루.
+ * 전투력. 엇갈린 검 두 자루.
  *
- * 비스듬히 누운 윤곽선으로 먼저 그렸더니 연필로 보였다. 14px에서는 기울어진 가는 선이
- * 날인지 심인지 구분이 안 되고, 자루와 날의 굵기 차이도 1px 안쪽이라 사라진다.
+ * 한 자루로는 무기 아이콘이지 싸움이 아니다. 엇갈린 X는 전투를 뜻하는 오래된 기호라
+ * 옆의 갈매기(아이템 레벨)와 실루엣이 겹치지 않는다.
  *
- * 그래서 세워서 속을 채운다. 좌우 대칭이면 기울기를 읽을 필요가 없고, 면으로 그리면
- * 폭 차이가 남아 뾰족한 날 · 넓은 코등이 · 가는 자루 셋이 작아도 구분된다.
+ * 비스듬히 누운 윤곽선으로 먼저 그렸더니 연필로 보였다. 작은 크기에서는 기울어진
+ * 가는 선이 날인지 심인지 구분이 안 된다. 그래서 속을 채운다. 면으로 그리면 폭 차이가
+ * 남아 뾰족한 날 · 넓은 코등이 · 가는 자루 셋이 작아도 구분된다.
+ *
+ * 검 하나를 세워 그리고 ±45°로 두 번 놓는다. 회전 중심을 날 한가운데(12,12)에 두어야
+ * 칼끝 둘이 위로, 손잡이 둘이 아래로 벌어진 X가 된다. 손잡이 쪽에서 겹치면 칼끝만
+ * 벌어진 V가 되어 검으로 안 읽힌다.
+ *
+ * 갈매기보다 한 치수 크다(16px). X는 대각선이라 같은 상자에서 작아 보이고, 코등이가
+ * 14px에서는 날에 붙어 뭉갠다.
  */
+const SWORD = (
+  <>
+    {/* 날. 위로 갈수록 좁아져 끝이 뾰족하다 */}
+    <path d="M12 .6 13.5 3.8V15.4h-3V3.8z" />
+    {/* 코등이. 날보다 넉넉히 넓어야 검으로 읽힌다 */}
+    <path d="M8.2 15.5h7.6v1.9H8.2z" />
+    {/* 자루와 손잡이 끝 */}
+    <path d="M11 17.4h2v3.1h-2z" />
+    <path d="M9.6 20.4h4.8v1.8H9.6z" />
+  </>
+);
+
 export function CombatPowerIcon() {
   return (
-    <svg {...STAT_ICON} strokeWidth={0} fill="currentColor">
-      {/* 날. 위로 갈수록 좁아져 끝이 뾰족하다 */}
-      <path d="M12 1.5 14.5 7.5V15h-5V7.5z" />
-      {/* 코등이. 날보다 넉넉히 넓어야 검으로 읽힌다 */}
-      <path d="M5 15.2h14v2.2H5z" />
-      {/* 자루와 손잡이 끝 */}
-      <path d="M10.9 17.6h2.2v3.2h-2.2z" />
-      <path d="M9 20.6h6v1.9H9z" />
+    <svg {...STAT_ICON} className="size-4 shrink-0" strokeWidth={0} fill="currentColor">
+      <g transform="rotate(45 12 12)">{SWORD}</g>
+      <g transform="rotate(-45 12 12)">{SWORD}</g>
     </svg>
   );
 }
@@ -193,25 +208,47 @@ export function CombatPowerIcon() {
  * 원정대 하나에서 여섯뿐이라(goldEarners.ts) 나머지는 레이드를 가도 골드가 0이다.
  * 숙제 카드에서 그 둘을 가려야 합계를 읽을 수 있다.
  *
- * 동전으로 그린다. 골드라는 말을 그림으로 옮길 때 가장 짧은 길이고, 안이 빈 원과
- * 채운 원으로 "받는다 / 못 받는다"가 갈린다. 색만 다르게 두면 색약인 사람에게는
- * 같은 그림 둘이 된다.
+ * 게임 안의 골드 아이콘을 옮겨 그린다. 저울이 새겨진 금화가 쌓인 그림이라 처음 보는
+ * 사람도 설명 없이 "골드"로 읽는다. 게임 이미지를 가져다 붙이지 않는 이유는 둘이다 —
+ * 비트맵은 확대하면 뭉개지고, 게임 리소스를 저장소에 넣으면 남의 것을 담게 된다.
+ *
+ * 색은 금색으로 박는다. 다른 아이콘처럼 currentColor를 따라가면 카드 머리띠의
+ * 직업색을 입어 금화로 보이지 않는다. 대신 못 받는 캐릭터는 currentColor 윤곽선으로
+ * 두어 두 상태가 색이 아니라 그림으로 갈린다. 색만 다르면 색약인 사람에게는 같은
+ * 그림 둘이 된다.
+ *
+ * 다른 스펙 아이콘보다 한 치수 크다(18px). 저울이 14px에서는 뭉쳐서 얼룩이 된다.
  */
+const COIN_ICON = { ...STAT_ICON, className: "size-4.5 shrink-0" } as const;
+const COIN_EDGE = "#a8690a";
+
 export function GoldIcon({ earning }: { earning: boolean }) {
+  // 못 받는 캐릭터: 빈 동전에 사선을 그어 막힌 것을 보인다.
+  if (!earning) {
+    return (
+      <svg {...COIN_ICON} strokeWidth={1.8}>
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="m6.5 17.5 11-11" />
+      </svg>
+    );
+  }
+
   return (
-    <svg {...STAT_ICON} strokeWidth={1.8}>
-      <circle cx="12" cy="12" r="8.5" fill={earning ? "currentColor" : "none"} />
-      {earning ? (
-        // 받는 캐릭터: 동전 위에 어두운 G가 파여 있다.
-        <path
-          d="M14.6 9.6a3.6 3.6 0 1 0 .3 3.6h-2.4"
-          stroke="var(--surface)"
-          strokeWidth={1.7}
-        />
-      ) : (
-        // 못 받는 캐릭터: 빈 동전에 사선을 그어 막힌 것을 보인다.
-        <path d="m7.5 16.5 9-9" />
-      )}
+    <svg {...COIN_ICON} strokeWidth={0}>
+      {/* 뒤에 쌓인 두 닢. 테두리를 둘러야 한 덩어리로 뭉치지 않는다 */}
+      <circle cx="8.4" cy="11" r="6.4" fill={COIN_EDGE} />
+      <circle cx="8.4" cy="8.2" r="6.4" fill="#dc9a12" stroke={COIN_EDGE} strokeWidth={1} />
+      {/* 앞 동전. 안쪽 테두리 한 줄이 도드라진 면을 만든다 */}
+      <circle cx="14.2" cy="14.2" r="8" fill="#f5c344" stroke={COIN_EDGE} strokeWidth={1.2} />
+      <circle cx="14.2" cy="14.2" r="6.1" stroke="#d18f10" strokeWidth={0.9} />
+      {/* 새겨진 저울. 접시를 대에서 떼어 놔야 작을 때 가로줄 하나로 붙지 않는다 */}
+      <g fill={COIN_EDGE}>
+        <rect x="9.9" y="10.4" width="8.6" height="1.25" rx="0.6" />
+        <rect x="13.55" y="10.4" width="1.3" height="7.6" />
+        <rect x="11.6" y="17" width="5.2" height="1.3" rx="0.6" />
+        <path d="M9.8 12.7h3.7L11.65 15z" />
+        <path d="M14.9 12.7h3.7L16.75 15z" />
+      </g>
     </svg>
   );
 }
