@@ -94,8 +94,17 @@ export default async function HistoryPage({
 
           쪽 번호는 넘기지 않는다. 찾는 말이 바뀌면 결과도 달라져 3쪽이라는 값이 뜻을
           잃는다. 늘 1쪽부터 본다.
+
+          key로 조건을 물린다. 두 칸 모두 defaultValue를 쓰는 uncontrolled 입력이라
+          클라이언트 이동으로 같은 DOM이 남으면 **화면만 옛 값을 그대로 들고 있다.**
+          초기화를 눌러도 드롭다운은 여전히 "최근 30일"이고 친 말도 칸에 남았다.
+          조건이 달라질 때 통째로 다시 그려 서버가 답한 것과 칸이 어긋나지 않게 한다.
         */}
-        <Form action={`/i/${slug}/history`} className="flex flex-wrap items-center gap-2">
+        <Form
+          key={`${period}|${q}`}
+          action={`/i/${slug}/history`}
+          className="flex flex-wrap items-center gap-2"
+        >
           <PeriodSelect value={period} />
           {/*
             초점 테두리를 직접 그린다. 브라우저 기본 링은 윈도우의 시스템 강조색을
