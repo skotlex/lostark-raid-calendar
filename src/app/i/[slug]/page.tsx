@@ -7,12 +7,14 @@ import { requireInstance } from "@/lib/instance";
 import { findMyMember } from "@/lib/members";
 import { requireSession } from "@/lib/session";
 import {
+  UNDECIDED,
   addWeeks,
   compareWeekDay,
   dayNameFull,
   formatWeekLabel,
   getPlanningWeekStart,
   isCurrentWeek,
+  isUndecided,
   parseDayParam,
   parseWeekParam,
   toWeekParam,
@@ -61,11 +63,18 @@ export default async function BoardPage({
   }
   // 레이드가 있는 요일만 탭으로 낸다. 일곱 개를 늘 세워두면 빈 요일을 짚어 들어갔다가
   // 되돌아 나오게 된다. 수요일 시작 순서는 주차 경계(수 06시)와 같다.
-  const days = [...countByDay.keys()].sort(compareWeekDay);
+  //
+  // 미정은 요일이 아니라 요일 밖의 칸이라 이 줄에 끼우지 않는다. 주간 일정을 훑는
+  // 자리에 섞이면 "화요일 다음"으로 읽혀 언제 가는 것인지 헷갈린다. 반대쪽 끝,
+  // 보기 토글 왼쪽에 따로 세운다.
+  const days = [...countByDay.keys()].filter((d) => !isUndecided(d)).sort(compareWeekDay);
+  const hasUndecided = countByDay.has(UNDECIDED);
 
   // 물어본 요일이 비어 있으면 레이드가 있는 첫 요일로 데려간다. 오늘이 빈 요일이라
-  // 처음부터 빈 화면이 열리는 일이 없게 한다.
-  const day = countByDay.has(asked) ? asked : (days[0] ?? asked);
+  // 처음부터 빈 화면이 열리는 일이 없게 한다. 미정에만 레이드가 있으면 미정으로 간다.
+  const day = countByDay.has(asked)
+    ? asked
+    : (days[0] ?? (hasUndecided ? UNDECIDED : asked));
   const slots = board.filter((slot) => slot.dayOfWeek === day);
 
   // 칸 입력의 자동완성 목록. 이미 등록된 캐릭터는 API를 다시 부르지 않는다.
@@ -110,28 +119,36 @@ export default async function BoardPage({
       {/* 밑줄이 놓일 레일. 이게 없으면 켜진 탭의 밑줄만 허공에 떠 보인다. */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border">
         <nav className="flex flex-wrap">
-          {days.map((d) => {
-            const count = countByDay.get(d) ?? 0;
-            return (
-              <Link
-                key={d}
-                href={href({ day: d })}
-                className="day-tab"
-                data-active={d === day}
-                aria-current={d === day ? "page" : undefined}
-              >
-                {dayNameFull(d)}
-                {count > 0 && (
-                  <span className="day-badge" title={`레이드 ${count}개`}>
-                    {count}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
+          {days.map((d) => (
+            <DayTab
+              key={d}
+              href={href({ day: d })}
+              day={d}
+              active={d === day}
+              count={countByDay.get(d) ?? 0}
+            />
+          ))}
         </nav>
 
-        <div className="ml-auto flex items-center gap-2 pb-1.5 text-sm">
+        {/*
+          미정 탭. 요일 줄이 아니라 보기 토글 바로 왼쪽이다.
+          nav 밖에 두되 레일의 직계 자식으로 남긴다. 오른쪽 묶음(pb-1.5) 안으로
+          넣으면 밑줄이 레일에서 떠 다른 탭과 어긋난다.
+        */}
+        {hasUndecided && (
+          <DayTab
+            href={href({ day: UNDECIDED })}
+            day={UNDECIDED}
+            active={day === UNDECIDED}
+            count={countByDay.get(UNDECIDED) ?? 0}
+            className="ml-auto"
+          />
+        )}
+
+        {/* 남는 자리는 앞선 ml-auto 하나가 다 먹어야 한다. 둘이면 반씩 나눠 갖는다. */}
+        <div
+          className={`flex items-center gap-2 pb-1.5 text-sm ${hasUndecided ? "" : "ml-auto"}`}
+        >
           <ViewToggle initial={view} />
 
           <Link
@@ -201,5 +218,41 @@ export default async function BoardPage({
         </KnownNamesProvider>
       )}
     </div>
+  );
+}
+
+/**
+ * 요일 탭 하나.
+ *
+ * 요일 줄과 미정이 같은 모양이라야 둘이 같은 종류의 칸으로 읽힌다. 자리만 다르다.
+ */
+function DayTab({
+  href,
+  day,
+  active,
+  count,
+  className,
+}: {
+  href: string;
+  day: number;
+  active: boolean;
+  count: number;
+  /** 미정 탭이 오른쪽 끝으로 밀려날 때 쓰는 여백. */
+  className?: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`day-tab ${className ?? ""}`}
+      data-active={active}
+      aria-current={active ? "page" : undefined}
+    >
+      {dayNameFull(day)}
+      {count > 0 && (
+        <span className="day-badge" title={`레이드 ${count}개`}>
+          {count}
+        </span>
+      )}
+    </Link>
   );
 }

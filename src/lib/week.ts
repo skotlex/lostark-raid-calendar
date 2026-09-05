@@ -169,7 +169,7 @@ export function currentKstDay(now: Date = new Date()): number {
 export function parseDayParam(value: string | undefined | null): number {
   if (value === null || value === undefined || value === "") return currentKstDay();
   const n = Number(value);
-  // 미정(7)까지 받는다. 편성표가 요일 탭 옆에 미정 탭을 세우므로 주소로도 돌아올 수 있어야 한다.
+  // 미정(7)까지 받는다. 편성표에 미정 탭이 서므로 주소로도 돌아올 수 있어야 한다.
   return Number.isInteger(n) && n >= 0 && n <= UNDECIDED ? n : currentKstDay();
 }
 
