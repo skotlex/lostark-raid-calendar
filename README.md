@@ -176,6 +176,7 @@ npm run db:seed
 | `src/lib/members.ts` | 원정대 클레임. 캐릭터의 주인을 정하는 유일한 경로입니다 |
 | `src/lib/history.ts` | 편집 이력. 기록을 남기는 곳을 여기 하나로 모았습니다 |
 | `src/lib/raidRewards.ts` | 레이드 클리어 골드·더보기 비용 표 (gcalc.kr에서 옮겼습니다) |
+| `src/lib/classEmblems.ts` | 직업 문장 아이콘 주소 (rloa.gg CDN을 가리킵니다) |
 
 ## 라이선스
 

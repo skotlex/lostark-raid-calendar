@@ -5,6 +5,7 @@ import { requireInstance } from "@/lib/instance";
 import { findMyMember } from "@/lib/members";
 import { requireSession } from "@/lib/session";
 import { classColor } from "@/lib/classColors";
+import { classEmblem } from "@/lib/classEmblems";
 import { dayName } from "@/lib/week";
 
 export const dynamic = "force-dynamic";
@@ -93,13 +94,32 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
             className="overflow-hidden rounded border border-border bg-surface"
           >
             <div
-              className="px-3 py-2 text-white"
+              className="flex items-center gap-2 px-3 py-2 text-white"
               style={{ backgroundColor: classColor(character.className) }}
             >
-              <div className="font-semibold">{character.name}</div>
-              <div className="text-xs tabular opacity-90">
-                {character.itemLevel?.toFixed(2) ?? "-"}
-                {character.combatPower !== null && ` · ${character.combatPower.toFixed(2)}`}
+              {/*
+                직업 문장. rloa.gg의 CDN을 그대로 가리킨다(classEmblems.ts).
+                next/image를 거치지 않는 이유는 SVG라 최적화할 것이 없고, 거치려면
+                SVG 허용 설정을 켜야 하기 때문이다. 없으면 자리만 비운다.
+              */}
+              {classEmblem(character.className) && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={classEmblem(character.className)!}
+                  alt=""
+                  width={28}
+                  height={28}
+                  loading="lazy"
+                  className="size-7 shrink-0 opacity-90"
+                />
+              )}
+
+              <div className="min-w-0">
+                <div className="truncate font-semibold">{character.name}</div>
+                <div className="text-xs tabular opacity-90">
+                  {character.itemLevel?.toFixed(2) ?? "-"}
+                  {character.combatPower !== null && ` · ${character.combatPower.toFixed(2)}`}
+                </div>
               </div>
             </div>
 
