@@ -1,12 +1,12 @@
 import "server-only";
 
 import { NO_ROSTER, goldEarnerIds } from "./goldEarners";
+import { compareHomeworkRows, goldAt } from "./homeworkOrder";
 import { prisma } from "./prisma";
 import { raidReward } from "./raidRewards";
 import { raidLabel } from "./raids";
 import {
   TUESDAY,
-  compareWeekDay,
   dayOffsetInWeek,
   getPlanningWeekStart,
   tuesdayWeekFor,
@@ -38,9 +38,22 @@ export interface HomeworkEntry {
    * 편성이 비워질 때 함께 사라진다.
    */
   done: boolean;
-  /** 표에 없으면 null */
+  /**
+   * 이 캐릭터가 이 레이드에서 실제로 받는 골드. 표에 없으면 null.
+   *
+   * 한도(3개)를 넘긴 자리면 값을 알아도 0이다. `baseGold`와 비교하면 얼마를
+   * 흘리고 있는지가 나온다.
+   */
   clearGold: number | null;
   moreCost: number | null;
+  /**
+   * 한도를 따지기 전, 이 레이드가 원래 주는 골드. 표에 없으면 null.
+   *
+   * 순서를 끌어 옮기는 화면이 **서버를 기다리지 않고** 골드를 다시 계산하려면
+   * 원래 값이 있어야 한다. 없으면 놓는 순간과 새로고침 사이에 숫자가 멎어 보인다.
+   * 골드를 못 받는 캐릭터는 여기도 0이다. 순서를 어떻게 바꿔도 0이라야 맞다.
+   */
+  baseGold: number | null;
 }
 
 export interface HomeworkCharacter {
@@ -96,6 +109,17 @@ export interface Homework {
   totalCount: number;
   /** 그중 아직 안 한 것 */
   remainingCount: number;
+}
+
+/**
+ * 정렬하기 전의 한 줄. 한도를 매기려면 순서가 먼저 정해져야 한다.
+ *
+ * `HomeworkEntry`와 달리 `clearGold`가 없다. 그 값이 이 목록에서 몇 번째냐에
+ * 달려 있어서, 줄을 세우기 전에는 아직 답이 없다.
+ */
+interface Row extends Omit<HomeworkEntry, "clearGold"> {
+  /** `Assignment.homeworkOrder`. 사람이 끌어 옮긴 자리. 안 옮겼으면 null */
+  order: number | null;
 }
 
 /**
@@ -171,6 +195,7 @@ export async function getHomework(
             },
           },
           weekStart: true,
+          homeworkOrder: true,
         },
       },
     },
@@ -224,7 +249,7 @@ export async function getHomework(
 
   const result: HomeworkCharacter[] = characters.map((character) => {
     const goldEarner = earners.has(character.id);
-    const entries: HomeworkEntry[] = [];
+    const rows: Row[] = [];
 
     for (const assignment of character.assignments) {
       const slot = assignment.slot;
@@ -238,7 +263,7 @@ export async function getHomework(
       const reward = raidReward(slot.raidName, slot.difficulty);
       const base = slot.dayOfWeek === TUESDAY ? tuesdayWeek : planningWeek;
 
-      entries.push({
+      rows.push({
         slotId: slot.id,
         raidName: slot.raidName,
         difficulty: slot.difficulty,
@@ -253,18 +278,34 @@ export async function getHomework(
          * 아는데 이 캐릭터에게 안 들어오는 것이라 0이 맞다.
          *
          * 더보기도 공짜다. 골드를 못 받는 대신 더보기 비용이 붙지 않는다.
+         * 한도를 넘긴 자리는 이와 다르다. 골드를 받는 캐릭터라 더보기 값은 치른다.
          */
-        clearGold: goldEarner ? (reward?.clearGold ?? null) : 0,
+        baseGold: goldEarner ? (reward?.clearGold ?? null) : 0,
         moreCost: goldEarner ? (reward?.moreCost ?? null) : 0,
+        order: assignment.homeworkOrder,
       });
     }
 
-    // 요일 순서대로 세운다. 화면을 위에서 아래로 읽으면 주간 일정이 된다.
-    // 미정은 일정에 자리가 없으므로 맨 뒤다(WEEK_DAYS).
-    entries.sort((a, b) => {
-      const day = compareWeekDay(a.dayOfWeek, b.dayOfWeek);
-      return day !== 0 ? day : a.startTime.localeCompare(b.startTime);
-    });
+    rows.sort(compareHomeworkRows);
+
+    /*
+     * 앞의 셋만 골드를 받는다(goldEarners.ts).
+     *
+     * 순서가 곧 답이라 여기서는 자르기만 한다. 어느 셋인지는 위의 정렬이 정했고,
+     * 사람이 끌어 옮겼으면 그 순서가 그대로 온다.
+     */
+    const entries: HomeworkEntry[] = rows.map((row, index) => ({
+      slotId: row.slotId,
+      raidName: row.raidName,
+      difficulty: row.difficulty,
+      label: row.label,
+      dayOfWeek: row.dayOfWeek,
+      startTime: row.startTime,
+      done: row.done,
+      clearGold: goldAt(row.baseGold, index),
+      moreCost: row.moreCost,
+      baseGold: row.baseGold,
+    }));
 
     for (const entry of entries) {
       const summary = raids.get(entry.raidName) ?? {
@@ -309,4 +350,79 @@ export async function getHomework(
     totalCount: withWork.reduce((sum, c) => sum + c.entries.length, 0),
     remainingCount: withWork.reduce((sum, c) => sum + c.remaining, 0),
   };
+}
+
+/** 순서 저장이 막힌 이유. 화면이 그대로 보여준다. */
+export class HomeworkError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "HomeworkError";
+  }
+}
+
+/**
+ * 이 캐릭터의 이번 주 숙제 순서를 박는다.
+ *
+ * **앞의 셋만 골드를 받으므로**(goldEarners.ts) 이건 순서를 바꾸는 일이 아니라
+ * "어느 레이드에서 골드를 받을 것인가"를 고르는 일이다. 게임에서 사람이 고르는
+ * 값이라 앱이 대신 정하지 않는다.
+ *
+ * **내 캐릭터만 바꿀 수 있다.** 편성은 누구나 손대지만(CLAUDE.md 4장) 이건 편성이
+ * 아니라 남의 골드 계산이다. 남이 바꿔 봐야 그 사람 화면에는 보이지도 않는다.
+ *
+ * 넘어온 목록에 없는 배정은 null로 되돌린다. 그 사이 새로 들어온 레이드가 여기
+ * 섞이면 사람이 보지도 않은 줄에 번호를 박게 된다. null이면 맨 뒤로 가므로
+ * 골드 자리를 뺏지도 않는다.
+ */
+export async function setHomeworkOrder(
+  instanceId: string,
+  memberId: string | null,
+  characterId: string,
+  slotIds: readonly string[],
+): Promise<void> {
+  if (!memberId) throw new HomeworkError("내 원정대를 먼저 불러와 주세요");
+
+  const character = await prisma.character.findFirst({
+    where: { id: characterId, instanceId, memberId },
+    select: { id: true },
+  });
+  if (!character) throw new HomeworkError("내 캐릭터가 아닙니다");
+
+  const planningWeek = getPlanningWeekStart();
+  const tuesdayWeek = tuesdayWeekFor(planningWeek);
+
+  const rows = await prisma.assignment.findMany({
+    where: { characterId, weekStart: { in: [planningWeek, tuesdayWeek] } },
+    select: {
+      id: true,
+      slotId: true,
+      weekStart: true,
+      homeworkOrder: true,
+      slot: { select: { dayOfWeek: true, archivedAt: true } },
+    },
+  });
+
+  // 화요일 슬롯은 주차가 다르다. 두 주차를 함께 읽었으니 제 것만 고른다(week.ts).
+  const mine = rows.filter(
+    (row) =>
+      !row.slot.archivedAt &&
+      row.weekStart.getTime() ===
+        weekStartForDay(planningWeek, row.slot.dayOfWeek).getTime(),
+  );
+
+  const rank = new Map(slotIds.map((slotId, index) => [slotId, index]));
+  const changed = mine
+    .map((row) => ({ id: row.id, order: rank.get(row.slotId) ?? null, was: row.homeworkOrder }))
+    .filter((row) => row.order !== row.was);
+  if (changed.length === 0) return;
+
+  // 한 번에 넣는다. 반만 박히면 두 레이드가 같은 자리를 갖거나 비어 순서가 어긋난다.
+  await prisma.$transaction(
+    changed.map((row) =>
+      prisma.assignment.update({
+        where: { id: row.id },
+        data: { homeworkOrder: row.order },
+      }),
+    ),
+  );
 }

@@ -6,27 +6,12 @@ import { findMyMember } from "@/lib/members";
 import { requireSession } from "@/lib/session";
 import { classColor } from "@/lib/classColors";
 import { classEmblem } from "@/lib/classEmblems";
-import { dayName, isUndecided } from "@/lib/week";
-
 import { CombatPowerIcon, GoldIcon, ItemLevelIcon } from "../icons";
+import { EntryList } from "./EntryList";
 
 export const dynamic = "force-dynamic";
 
 const gold = new Intl.NumberFormat("ko-KR");
-
-/**
- * 줄 앞뒤에 서는 두 뱃지(순번·요일)의 색.
- *
- * 아직 안 간 숙제는 악센트로 띄우고 다녀온 숙제는 가라앉힌다. 이 카드에서 눈이 찾는
- * 것은 "어디까지 갔나"뿐이라, 남은 줄만 떠오르면 이름을 읽지 않아도 답이 나온다.
- * 악센트는 테마마다 다른 값이라(globals.css) 라이트에서는 짙은 금색, 다크에서는
- * 밝은 금색이 된다.
- *
- * 두 뱃지가 같은 값을 쓰므로 한곳에 둔다. 각자 적어두면 한쪽만 고쳐진다.
- */
-function badgeTone(done: boolean) {
-  return done ? "bg-surface-2/60 text-text-faint" : "bg-accent/15 text-accent";
-}
 
 /**
  * 숙제 관리.
@@ -185,9 +170,18 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
         </ul>
       </section>
 
-      {/* 캐릭터별 숙제 — 위에서 아래로 읽으면 주간 일정이 된다. */}
+      {/*
+        캐릭터별 숙제.
+
+        **보상이 큰 순으로 세운다.** 앞의 셋만 골드를 받으므로(goldEarners.ts) 이 순서가
+        곧 "어느 레이드에서 골드를 받을 것인가"다. 요일 순으로 두면 늦은 요일에 잡힌
+        큰 레이드가 이유 없이 잘려 나간다. 요일은 줄마다 뱃지로 그대로 보인다.
+      */}
       <section className="space-y-2">
-        <SectionTitle title="캐릭터별 숙제" hint="캐릭터마다 어느 레이드가 남았는지" />
+        <SectionTitle
+          title="캐릭터별 숙제"
+          hint="번호를 끌어 옮기면 골드를 받을 세 개가 바뀝니다"
+        />
 
         <ul className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(18rem,1fr))]">
         {homework.characters.map((character) => (
@@ -250,88 +244,7 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
               </span>
             </div>
 
-            <ul className="divide-y divide-border">
-              {character.entries.map((entry, index) => (
-                <li
-                  key={entry.slotId}
-                  className={`flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-1.5 text-sm ${
-                    entry.done ? "text-text-faint" : ""
-                  }`}
-                >
-                  {/*
-                    이번 주 몇 번째로 가는 레이드인가. 목록이 이미 요일·시각 순이라
-                    (homework.ts) 번호가 곧 순서다. 카드가 여럿 늘어선 화면에서
-                    "이 캐릭터는 셋 중 둘째까지 갔다"를 줄을 세지 않고 짚게 한다.
-                  */}
-                  <span
-                    className={`inline-flex h-4.5 min-w-4.5 shrink-0 items-center justify-center rounded px-1 text-[11px] font-semibold tabular ${badgeTone(
-                      entry.done,
-                    )}`}
-                  >
-                    {index + 1}
-                  </span>
-
-                  <span className={entry.done ? "line-through" : "font-medium"}>
-                    {entry.label}
-                  </span>
-
-                  {/*
-                    요일·시각도 뱃지로 두른다. 흐린 글자로만 두었더니 레이드 이름의
-                    꼬리처럼 붙어 "벨가르딘 나이트메어 수"까지가 한 이름으로 읽혔다.
-                    난이도가 이름 뒤에 붙는 표기라 더 그렇다.
-                  */}
-                  <span
-                    className={`rounded px-1.5 py-0.5 text-[11px] tabular ${badgeTone(entry.done)}`}
-                  >
-                    {dayName(entry.dayOfWeek)}
-                    {!isUndecided(entry.dayOfWeek) && ` ${entry.startTime}`}
-                  </span>
-
-                  <span className="ml-auto text-xs tabular">
-                    {entry.clearGold === null ? "-" : `${gold.format(entry.clearGold)} G`}
-                  </span>
-                </li>
-              ))}
-            </ul>
-
-            {/*
-              더보기는 골드를 주는 것이 아니라 **쓰는** 것이다. 그래서 두 줄로 나눈다.
-              위는 그냥 클리어만 했을 때, 아래는 더보기를 다 켰을 때 손에 남는 골드다.
-              한 줄에 "75,000 G 더보기 -24,000"으로만 두면 결국 얼마가 남는지는
-              머리로 빼야 한다.
-            */}
-            <div className="space-y-0.5 border-t border-border px-3 py-2 text-xs">
-              <div className="flex items-baseline gap-x-2">
-                <span className="text-text-dim">
-                  남은 숙제 <span className="tabular">{character.remaining}</span>개
-                </span>
-              </div>
-
-              <div className="flex items-baseline gap-x-2">
-                <span className="text-text-faint">더보기 안 함</span>
-                <span className="ml-auto tabular text-text-dim">
-                  {gold.format(character.clearGold)} G
-                </span>
-              </div>
-
-              {character.moreCost > 0 && (
-                <div className="flex items-baseline gap-x-2">
-                  <span className="text-text-faint">더보기 함</span>
-                  {/*
-                    빠지는 값은 결과 바로 왼쪽에 붙인다. 라벨 뒤에 두었더니 줄 양 끝에
-                    숫자가 하나씩 떨어져 있어, 위 줄의 179,000에서 얼마가 빠져 이 줄의
-                    121,720이 되었는지를 눈이 한 번 건너뛰어야 했다. 붙여 두면
-                    `-57,280  121,720 G`가 한 덩어리로 읽힌다.
-                  */}
-                  <span className="ml-auto tabular text-danger">
-                    -{gold.format(character.moreCost)} G
-                  </span>
-                  <span className="tabular text-text-dim">
-                    {gold.format(character.clearGold - character.moreCost)} G
-                  </span>
-                </div>
-              )}
-            </div>
+            <EntryList slug={slug} characterId={character.id} entries={character.entries} />
             </li>
           ))}
         </ul>
