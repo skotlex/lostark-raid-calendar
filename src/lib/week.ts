@@ -109,6 +109,24 @@ export function weekStartForDay(
   return dayOfWeek === TUESDAY ? tuesdayWeekFor(planningWeek, now) : planningWeek;
 }
 
+/**
+ * KST 기준 오늘 00:00을 UTC Date로.
+ *
+ * **주차 경계(수 06시)와는 다른 자다.** 사람이 "오늘"이나 "어제"라고 말할 때의
+ * 그냥 하루이고, 편집 이력의 기간 고르기가 이걸 쓴다. 주차와 섞이지 않게 이름을
+ * 달리 두되, KST를 다루는 규칙은 이 파일 하나에 모아 둔다.
+ */
+export function kstDayStart(now: Date = new Date()): Date {
+  const kst = new Date(now.getTime() + KST_OFFSET_MS);
+  kst.setUTCHours(0, 0, 0, 0);
+  return new Date(kst.getTime() - KST_OFFSET_MS);
+}
+
+/** 하루를 n칸 이동한다. 음수면 과거로 간다. KST는 서머타임이 없어 단순 덧셈이다. */
+export function addDays(day: Date, n: number): Date {
+  return new Date(day.getTime() + n * DAY_MS);
+}
+
 /** 주차를 n칸 이동한다. 음수면 과거로 간다. */
 export function addWeeks(weekStart: Date, n: number): Date {
   return new Date(weekStart.getTime() + n * WEEK_MS);

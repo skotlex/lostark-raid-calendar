@@ -2,6 +2,7 @@ import "server-only";
 
 import { Prisma } from "@/generated/prisma/client";
 
+import { type HistoryPeriod, periodRange } from "./historyPeriod";
 import { positionLabel } from "./positions";
 import { prisma } from "./prisma";
 
@@ -178,6 +179,18 @@ function actionsMatching(query: string): string[] {
   );
 }
 
+/**
+ * 시각 하나를 SQL에 넘길 값으로 바꾼다.
+ *
+ * `createdAt`이 timestamp **without time zone**이라 UTC 벽시계가 그대로 들어 있다.
+ * 여기에 JS Date를 파라미터로 그냥 넘기면 드라이버가 실행 환경의 시간대를 붙인
+ * 문자열로 보내고, 시간대 없는 칸과 비교되면서 그만큼 어긋난다(KST면 9시간).
+ * 실제로 같은 조건이 37건과 253건으로 갈렸다. ISO 문자열을 timestamp로 못 박는다.
+ */
+function utcStamp(date: Date): Prisma.Sql {
+  return Prisma.sql`${date.toISOString()}::timestamp`;
+}
+
 /** ILIKE에서 뜻을 갖는 글자. 사람이 친 그대로 찾게 막아둔다. */
 function escapeLike(value: string): string {
   return value.replace(/[\\%_]/g, (ch) => "\\" + ch);
@@ -217,27 +230,44 @@ export interface HistoryPage {
  * 수만 줄이고, 그 정도는 인스턴스로 좁힌 뒤 훑어도 밀리초 단위다. 실제로 느려지면
  * 그때 pg_trgm GIN을 얹는다(지금은 마이그레이션 파일 없이 db push로 운영한다).
  */
-function searchFilter(instanceId: string, query: string): Prisma.Sql {
-  const base = Prisma.sql`"instanceId" = ${instanceId}`;
-  if (!query) return base;
+function searchFilter(
+  instanceId: string,
+  query: string,
+  period: HistoryPeriod,
+): Prisma.Sql {
+  let where = Prisma.sql`"instanceId" = ${instanceId}`;
 
-  const like = `%${escapeLike(query)}%`;
-  const actions = actionsMatching(query);
-  const byAction = actions.length
-    ? Prisma.sql` OR action IN (${Prisma.join(actions)})`
-    : Prisma.empty;
+  const range = periodRange(period);
+  if (range) {
+    where = Prisma.sql`${where} AND "createdAt" >= ${utcStamp(range.from)}`;
+    if (range.to) where = Prisma.sql`${where} AND "createdAt" < ${utcStamp(range.to)}`;
+  }
 
-  return Prisma.sql`${base} AND (detail::text ILIKE ${like} OR "actorLabel" ILIKE ${like}${byAction})`;
+  if (query) {
+    const like = `%${escapeLike(query)}%`;
+    const actions = actionsMatching(query);
+    const byAction = actions.length
+      ? Prisma.sql` OR action IN (${Prisma.join(actions)})`
+      : Prisma.empty;
+    where = Prisma.sql`${where} AND (detail::text ILIKE ${like} OR "actorLabel" ILIKE ${like}${byAction})`;
+  }
+
+  return where;
 }
 
 export async function listHistory(
   instanceId: string,
-  options: { page?: number; query?: string; pageSize?: number } = {},
+  options: {
+    page?: number;
+    query?: string;
+    period?: HistoryPeriod;
+    pageSize?: number;
+  } = {},
 ): Promise<HistoryPage> {
   const pageSize = options.pageSize ?? HISTORY_PAGE_SIZE;
   // 앞뒤 공백은 사람이 친 흔적이지 찾는 말이 아니다.
   const query = (options.query ?? "").trim();
-  const where = searchFilter(instanceId, query);
+  const where = searchFilter(instanceId, query, options.period ?? "all");
 
   const [{ count }] = await prisma.$queryRaw<{ count: number }[]>`
     SELECT COUNT(*)::int AS count FROM "ChangeLog" WHERE ${where}

@@ -4,6 +4,7 @@ import {
   TUESDAY,
   UNDECIDED,
   WEEK_DAYS,
+  addDays,
   addWeeks,
   compareWeekDay,
   currentKstDay,
@@ -15,6 +16,7 @@ import {
   getPlanningWeekStart,
   getWeekStart,
   isCurrentWeek,
+  kstDayStart,
   parseDayParam,
   parseWeekParam,
   previousWeek,
@@ -212,5 +214,27 @@ describe("미정 요일", () => {
 
   it("주소의 day로도 돌아올 수 있다", () => {
     expect(parseDayParam(String(UNDECIDED))).toBe(UNDECIDED);
+  });
+});
+
+describe("KST 하루 경계", () => {
+  it("주차 경계가 아니라 자정으로 자른다", () => {
+    // KST 2026-09-05 08:30 = UTC 2026-09-04 23:30. 그날 00시(KST)는 UTC 전날 15시다.
+    const start = kstDayStart(new Date("2026-09-04T23:30:00.000Z"));
+    expect(start.toISOString()).toBe("2026-09-04T15:00:00.000Z");
+  });
+
+  it("KST 자정 직전과 직후는 다른 날이다", () => {
+    const before = kstDayStart(new Date("2026-09-04T14:59:59.999Z"));
+    const after = kstDayStart(new Date("2026-09-04T15:00:00.000Z"));
+    expect(before.toISOString()).toBe("2026-09-03T15:00:00.000Z");
+    expect(after.toISOString()).toBe("2026-09-04T15:00:00.000Z");
+  });
+
+  it("하루씩 물러난다", () => {
+    const today = kstDayStart(new Date("2026-09-04T23:30:00.000Z"));
+    expect(addDays(today, -1).toISOString()).toBe("2026-09-03T15:00:00.000Z");
+    // "최근 7일"은 오늘을 포함해 일곱 날이므로 여섯 칸만 물러난다.
+    expect(addDays(today, -6).toISOString()).toBe("2026-08-29T15:00:00.000Z");
   });
 });

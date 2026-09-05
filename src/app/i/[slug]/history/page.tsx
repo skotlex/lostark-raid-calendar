@@ -2,7 +2,10 @@ import Form from "next/form";
 import Link from "next/link";
 
 import { HISTORY_PAGE_SIZE, listHistory } from "@/lib/history";
+import { toHistoryPeriod } from "@/lib/historyPeriod";
 import { requireInstance } from "@/lib/instance";
+
+import { PeriodSelect } from "./PeriodSelect";
 
 export const dynamic = "force-dynamic";
 
@@ -37,10 +40,14 @@ export default async function HistoryPage({
   // 범위를 벗어난 값은 listHistory가 안쪽으로 당겨서 돌려준다. 여기서는 숫자로만 만든다.
   const asked = Number(typeof query.page === "string" ? query.page : "1");
   const q = (typeof query.q === "string" ? query.q : "").trim();
+  const period = toHistoryPeriod(typeof query.d === "string" ? query.d : undefined);
   const { entries, page, pageCount, total } = await listHistory(instance.id, {
     page: asked,
     query: q,
+    period,
   });
+  // 무언가 걸려 있을 때만 초기화를 세운다. 아무것도 안 건 화면에서는 누를 것이 없다.
+  const filtered = Boolean(q) || period !== "all";
 
   // 날짜별로 묶는다. 100줄이 한 덩어리로 쏟아지면 언제 일인지 세어야 한다.
   const days = new Map<string, typeof entries>();
@@ -51,9 +58,13 @@ export default async function HistoryPage({
     else days.set(key, [entry]);
   }
 
-  // 쪽을 넘겨도 찾던 말은 그대로 들고 간다. 빠뜨리면 2쪽에서 검색이 풀린다.
-  const href = (p: number) =>
-    `/i/${slug}/history?page=${p}${q ? `&q=${encodeURIComponent(q)}` : ""}`;
+  // 쪽을 넘겨도 찾던 조건은 그대로 들고 간다. 빠뜨리면 2쪽에서 검색이 풀린다.
+  const href = (p: number) => {
+    const params = new URLSearchParams({ page: String(p) });
+    if (q) params.set("q", q);
+    if (period !== "all") params.set("d", period);
+    return `/i/${slug}/history?${params}`;
+  };
 
   // 이 쪽이 전체에서 몇 번째 줄들인지. "3 / 12"만으로는 얼마나 뒤로 온 것인지 모른다.
   const first = (page - 1) * HISTORY_PAGE_SIZE + 1;
@@ -85,6 +96,7 @@ export default async function HistoryPage({
           잃는다. 늘 1쪽부터 본다.
         */}
         <Form action={`/i/${slug}/history`} className="flex flex-wrap items-center gap-2">
+          <PeriodSelect value={period} />
           {/*
             초점 테두리를 직접 그린다. 브라우저 기본 링은 윈도우의 시스템 강조색을
             따라가서, 앱과 상관없는 색(주황 등)이 뜬다. 다른 입력창(.char-input)과
@@ -104,26 +116,26 @@ export default async function HistoryPage({
           >
             검색
           </button>
-          {q && (
+          {filtered && (
             <Link
               href={`/i/${slug}/history`}
-              className="rounded px-2 py-1.5 text-sm text-text-dim hover:underline"
+              className="rounded border border-border bg-surface-2 px-3 py-1.5 text-sm hover:border-border-strong"
             >
-              지우기
+              초기화
             </Link>
           )}
         </Form>
 
-        {q && (
+        {filtered && (
           <p className="text-sm text-text-dim">
-            <span className="text-text">{q}</span> 검색 결과 {total}건
+            {q && <span className="text-text">{q}</span>} 검색 결과 {total}건
           </p>
         )}
       </div>
 
       {entries.length === 0 ? (
         <div className="rounded border border-dashed border-border px-4 py-10 text-center text-sm text-text-dim">
-          {q ? "찾는 기록이 없습니다." : "아직 기록이 없습니다."}
+          {filtered ? "찾는 기록이 없습니다." : "아직 기록이 없습니다."}
         </div>
       ) : (
         <div className="space-y-5">
