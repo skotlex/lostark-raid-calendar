@@ -509,8 +509,19 @@ export async function syncStaleCharacters(instanceId: string, limit = 60): Promi
   }
 }
 
-export async function deleteCharacter(instanceId: string, characterId: string): Promise<void> {
+/** 지운 캐릭터의 이름을 돌려준다. 기록에 남기려면 지우기 전에 알아야 한다. */
+export async function deleteCharacter(
+  instanceId: string,
+  characterId: string,
+): Promise<string | null> {
+  const row = await prisma.character.findFirst({
+    where: { id: characterId, instanceId },
+    select: { name: true },
+  });
+  if (!row) return null;
+
   await prisma.character.deleteMany({ where: { id: characterId, instanceId } });
+  return row.name;
 }
 
 /**

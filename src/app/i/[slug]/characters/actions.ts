@@ -15,6 +15,7 @@ import {
   syncAllBatch,
   syncCharacter,
 } from "@/lib/characters";
+import { logEvent } from "@/lib/history";
 import { findInstance } from "@/lib/instance";
 import { type Session, requireSession } from "@/lib/session";
 
@@ -61,6 +62,12 @@ export async function registerAction(
     // 부캐를 묶는 이름은 들어와 있는 사람의 디스코드 닉네임이다. 물어보지 않는다.
     const { instanceId, session } = await authorize(slug);
     const character = await registerCharacter(instanceId, name, session.label);
+    await logEvent({
+      instanceId,
+      action: "character_add",
+      actorLabel: session.label,
+      detail: { character: character.name },
+    });
     refresh(slug);
     return {
       status: "ok",
@@ -124,6 +131,15 @@ export async function importSiblingsAction(
   try {
     const { instanceId, session } = await authorize(slug);
     const result = await registerCharacters(instanceId, names, session.label);
+    if (result.added.length > 0) {
+      // 원정대 등록은 한 번에 여럿이다. 줄을 여럿 남기면 이력이 그 사람 부캐로 덮인다.
+      await logEvent({
+        instanceId,
+        action: "character_add",
+        actorLabel: session.label,
+        detail: { character: result.added.join(", "), count: result.added.length },
+      });
+    }
     refresh(slug);
 
     const parts = [`${result.added.length}개 등록됨`];
@@ -163,8 +179,16 @@ export async function deleteAction(_prev: RowState, formData: FormData): Promise
   const id = String(formData.get("id") ?? "");
 
   try {
-    const { instanceId } = await authorize(slug);
-    await deleteCharacter(instanceId, id);
+    const { instanceId, session } = await authorize(slug);
+    const name = await deleteCharacter(instanceId, id);
+    if (name) {
+      await logEvent({
+        instanceId,
+        action: "character_delete",
+        actorLabel: session.label,
+        detail: { character: name },
+      });
+    }
     refresh(slug);
     return { status: "ok", message: "삭제됨" };
   } catch (error) {
@@ -185,8 +209,14 @@ export async function deleteMemberAction(
   const label = String(formData.get("label") ?? "");
 
   try {
-    const { instanceId } = await authorize(slug);
+    const { instanceId, session } = await authorize(slug);
     const count = await deleteMemberCharacters(instanceId, label);
+    await logEvent({
+      instanceId,
+      action: "character_delete_many",
+      actorLabel: session.label,
+      detail: { member: label, count },
+    });
     refresh(slug);
     return { status: "ok", message: `${count}개 삭제됨` };
   } catch (error) {

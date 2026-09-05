@@ -1,7 +1,8 @@
 import "server-only";
 
-import { Prisma } from "@/generated/prisma/client";
+import type { Prisma } from "@/generated/prisma/client";
 
+import { logEvent } from "./history";
 import { DEFAULT_PARTY_SIZE, type PartySize, isPartySize } from "./positions";
 import { prisma } from "./prisma";
 import { raidLabel, sizeFor } from "./raids";
@@ -25,16 +26,14 @@ export interface SlotView {
  * 누구나 남의 슬롯을 고치고 내릴 수 있으므로(하드 블로킹을 두지 않는다), 무엇이
  * 어떻게 바뀌었는지는 남아 있어야 한다. 편성 변경과 같은 표에 쌓아 한 줄로 읽는다.
  */
-async function log(
+function log(
   instanceId: string,
   action: string,
   slotId: string | null,
   actorLabel: string | null | undefined,
   detail: Prisma.InputJsonObject,
 ): Promise<void> {
-  await prisma.changeLog.create({
-    data: { instanceId, slotId, actorLabel: actorLabel ?? null, action, detail },
-  });
+  return logEvent({ instanceId, action, slotId, actorLabel, detail });
 }
 
 export class SlotError extends Error {

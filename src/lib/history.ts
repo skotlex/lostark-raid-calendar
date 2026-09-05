@@ -1,5 +1,7 @@
 import "server-only";
 
+import type { Prisma } from "@/generated/prisma/client";
+
 import { positionLabel } from "./positions";
 import { prisma } from "./prisma";
 
@@ -13,6 +15,32 @@ import { prisma } from "./prisma";
  * 기록은 `ChangeLog` 한 표에 모인다. 편성 변경과 요일표 변경이 같은 줄에 섞이는 것이
  * 맞다. 사람은 "어제 저녁에 무슨 일이 있었나"를 시간순으로 보지 화면별로 보지 않는다.
  */
+/**
+ * 기록 한 줄을 남긴다. **바꾸는 코드는 모두 이걸 부른다.**
+ *
+ * 여기저기서 prisma.changeLog.create를 직접 부르면 어떤 동작이 남고 어떤 동작이
+ * 빠졌는지 세어보기 어렵다. 실제로 캐릭터 삭제가 그렇게 빠져 있었다.
+ */
+export async function logEvent(params: {
+  instanceId: string;
+  action: string;
+  actorLabel?: string | null;
+  slotId?: string | null;
+  weekStart?: Date | null;
+  detail: Prisma.InputJsonObject;
+}): Promise<void> {
+  await prisma.changeLog.create({
+    data: {
+      instanceId: params.instanceId,
+      action: params.action,
+      actorLabel: params.actorLabel ?? null,
+      slotId: params.slotId ?? null,
+      weekStart: params.weekStart ?? null,
+      detail: params.detail,
+    },
+  });
+}
+
 export interface HistoryEntry {
   id: string;
   /** 화면에 그대로 뿌릴 문장. 서버에서 만든다 */
@@ -73,6 +101,16 @@ function describe(action: string, detail: Detail): string {
       return `요일표에서 ${raid} 내림`;
     case "slot_keep":
       return `${raid} 전원 고정 ${detail.keepRoster ? "켬" : "끔"}`;
+    case "character_add": {
+      const count = typeof detail.count === "number" ? detail.count : 1;
+      return count > 1 ? `캐릭터 ${count}명 등록 (${character})` : `캐릭터 ${character} 등록`;
+    }
+    case "character_delete":
+      return `캐릭터 ${character} 삭제`;
+    case "character_delete_many": {
+      const who = str(detail, "member") || "소속 미지정";
+      return `${who} 캐릭터 ${detail.count}개 삭제`;
+    }
     default:
       // 옛 기록이나 아직 문장을 안 만든 동작. 무엇인지는 알 수 있게 둔다.
       return join(action, raid, character);
