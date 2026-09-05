@@ -270,7 +270,7 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
                     `-57,280  121,720 G`가 한 덩어리로 읽힌다.
                   */}
                   <span className="ml-auto tabular text-danger">
-                    -{gold.format(character.moreCost)}
+                    -{gold.format(character.moreCost)} G
                   </span>
                   <span className="tabular text-text-dim">
                     {gold.format(character.clearGold - character.moreCost)} G
