@@ -53,15 +53,24 @@ export function RememberDay({ day }: { day: number }) {
  *
  * href는 요일 없는 주소로 둔다. 서버 렌더 결과와 어긋나지 않고, 새 탭으로 열거나
  * 주소를 복사하면 오늘 요일이 열린다.
+ *
+ * 이름은 긴 것과 짧은 것 두 벌을 다 그려두고 CSS가 고른다(globals.css). 폭을 아는
+ * 것은 브라우저뿐이라 여기서 고르면 서버 렌더와 어긋난다.
+ *
+ * 낭독기에 읽히는 이름은 aria-label로 못박는다. 좁아지면 글자가 통째로 사라지는데,
+ * 그때 이름까지 없어지면 무엇을 누르는지 모른 채 지나가게 된다.
  */
 export function TabLink({
   href,
   label,
+  shortLabel,
   icon,
   remember,
 }: {
   href: string;
   label: string;
+  /** 중간 폭에서 쓰는 짧은 이름. 긴 이름의 앞머리라 같은 것을 가리킨다. */
+  shortLabel: string;
   icon: ReactNode;
   /** 편성표 탭만. 마지막으로 보던 요일로 되돌아간다 */
   remember?: boolean;
@@ -76,6 +85,7 @@ export function TabLink({
       href={href}
       className="tab-link"
       title={label}
+      aria-label={label}
       data-active={active ? "" : undefined}
       aria-current={active ? "page" : undefined}
       onClick={(e) => {
@@ -89,7 +99,8 @@ export function TabLink({
       }}
     >
       {icon}
-      <span className="tab-label">{label}</span>
+      <span className="tab-label tab-label--full">{label}</span>
+      <span className="tab-label tab-label--short">{shortLabel}</span>
     </Link>
   );
 }

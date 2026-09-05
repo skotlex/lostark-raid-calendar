@@ -32,15 +32,31 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
   const theme = toThemeChoice((await cookies()).get(THEME_COOKIE)?.value);
 
   // `remember`가 켜진 탭은 마지막으로 보던 요일로 돌아간다(lastDay.tsx 참조).
+  //
+  // `short`는 머리글이 한 줄에 안 들어갈 때 대신 서는 이름이다. 긴 이름의 앞머리를
+  // 그대로 떼어 쓴다 — 다른 말로 줄이면 넓은 화면에서 외운 이름과 짝이 지어지지 않는다.
   const tabs = [
-    { href: `/i/${slug}`, label: "편성표", icon: <BoardIcon />, remember: true },
+    { href: `/i/${slug}`, label: "편성표", short: "편성표", icon: <BoardIcon />, remember: true },
     // 편성표를 보다가 "무엇이 다음 주로 넘어가지?"를 확인하는 흐름이라 바로 옆에 둔다.
-    { href: `/i/${slug}/pinned`, label: "고정 현황", icon: <PinTabIcon />, remember: false },
-    { href: `/i/${slug}/slots`, label: "요일표 편집", icon: <ScheduleIcon />, remember: false },
+    {
+      href: `/i/${slug}/pinned`,
+      label: "고정 현황",
+      short: "고정",
+      icon: <PinTabIcon />,
+      remember: false,
+    },
+    {
+      href: `/i/${slug}/slots`,
+      label: "요일표 편집",
+      short: "요일표",
+      icon: <ScheduleIcon />,
+      remember: false,
+    },
     // 편성은 칸에서 바로 하므로 여기는 정리용 화면이다. 그래서 뒤로 뺐다.
     {
       href: `/i/${slug}/characters`,
       label: "캐릭터 관리",
+      short: "캐릭터",
       icon: <MembersIcon />,
       remember: false,
     },
@@ -48,11 +64,18 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
     {
       href: `/i/${slug}/homework`,
       label: "숙제 관리",
+      short: "숙제",
       icon: <HomeworkIcon />,
       remember: false,
     },
     // 막지 않는 대신 남긴다(CLAUDE.md 3.4). 무엇이 바뀌었는지 보는 곳이다.
-    { href: `/i/${slug}/history`, label: "편집 이력", icon: <HistoryIcon />, remember: false },
+    {
+      href: `/i/${slug}/history`,
+      label: "편집 이력",
+      short: "이력",
+      icon: <HistoryIcon />,
+      remember: false,
+    },
   ];
 
   return (
@@ -81,6 +104,7 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
                 key={tab.href}
                 href={tab.href}
                 label={tab.label}
+                shortLabel={tab.short}
                 icon={tab.icon}
                 remember={tab.remember}
               />
