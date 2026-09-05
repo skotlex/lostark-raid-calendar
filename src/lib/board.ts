@@ -175,16 +175,25 @@ export async function getBoard(
     orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }, { sortOrder: "asc" }],
   });
 
-  // 같은 사람이 같은 레이드를 이 주에 두 번 이상 잡았는지 센다.
-  // 로아는 캐릭터가 아니라 원정대 단위로 주간 클리어가 제한되는 레이드가 있어
-  // 공대장이 가장 자주 놓치는 실수다.
+  // 같은 레이드를 이 주에 두 번 이상 잡았는지 센다. 공대장이 가장 자주 놓치는 실수다.
+  //
+  // 세는 단위가 둘이다.
+  //   캐릭터 — **한 캐릭터는 난이도가 달라도 같은 레이드를 한 주에 한 번만 간다.**
+  //            하드를 갔으면 노말은 못 간다. 그래서 raidName만 보고 난이도는 빼고 센다.
+  //   사람   — 부캐를 바꿔 같은 레이드에 또 가는 것. 원정대 단위로 막히는 레이드가 있다.
+  //            memberId가 있어야 잡히므로 아직은 묶인 캐릭터에서만 걸린다(CLAUDE.md 4장).
+  const characterRaidCount = new Map<string, number>();
   const memberRaidCount = new Map<string, number>();
   for (const slot of slots) {
+    const raid = slot.raidName.trim();
     for (const a of slot.assignments) {
+      const characterKey = `${a.character.id}::${raid}`;
+      characterRaidCount.set(characterKey, (characterRaidCount.get(characterKey) ?? 0) + 1);
+
       const memberId = a.character.memberId;
       if (!memberId) continue;
-      const key = `${memberId}::${slot.raidName}`;
-      memberRaidCount.set(key, (memberRaidCount.get(key) ?? 0) + 1);
+      const memberKey = `${memberId}::${raid}`;
+      memberRaidCount.set(memberKey, (memberRaidCount.get(memberKey) ?? 0) + 1);
     }
   }
 
@@ -222,11 +231,15 @@ export async function getBoard(
         warnings.push("딜러 자리에 서폿 클래스");
       }
 
-      if (character.memberId) {
-        const key = `${character.memberId}::${view.raidName}`;
-        if ((memberRaidCount.get(key) ?? 0) > 1) {
-          warnings.push("같은 사람이 이번 주 같은 레이드에 중복");
-        }
+      const raid = view.raidName.trim();
+      if ((characterRaidCount.get(`${character.id}::${raid}`) ?? 0) > 1) {
+        // 난이도가 달라도 중복이다. 애초에 갈 수 없는 편성이라 사람 단위 경고보다 앞선다.
+        warnings.push("이 캐릭터가 이번 주 같은 레이드에 중복");
+      } else if (
+        character.memberId &&
+        (memberRaidCount.get(`${character.memberId}::${raid}`) ?? 0) > 1
+      ) {
+        warnings.push("같은 사람이 이번 주 같은 레이드에 중복");
       }
 
       // 시너지 트라이포드를 안 찍었다. 막지 않고 알리기만 한다(CLAUDE.md 3.4).
