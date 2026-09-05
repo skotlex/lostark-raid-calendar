@@ -36,7 +36,10 @@ export function PickInput({
     const q = value.trim().toLowerCase();
     // 이미 고른 값이 들어 있으면 좁히지 않는다. 다른 후보로 갈아타는 길을 막지 않는다.
     if (!q || options.some((o) => o.toLowerCase() === q)) return options;
-    return options.filter((o) => o.toLowerCase().includes(q));
+
+    const narrowed = options.filter((o) => o.toLowerCase().includes(q));
+    // 걸리는 후보가 없으면 좁히기를 포기하고 전부 보여준다. 빈 목록은 고를 길을 막는다.
+    return narrowed.length > 0 ? narrowed : options;
   }, [options, value]);
 
   const showing = open && items.length > 0;

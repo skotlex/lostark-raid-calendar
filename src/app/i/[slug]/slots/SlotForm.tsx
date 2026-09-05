@@ -77,6 +77,20 @@ export function SlotForm({
   const [raidName, setRaidName] = useState(slot?.raidName ?? "");
   const [difficulty, setDifficulty] = useState(slot?.difficulty ?? "");
 
+  const difficulties = difficultiesFor(raidName);
+
+  /**
+   * 레이드를 바꾸면 난이도를 손본다.
+   *
+   * 벨가르딘 하드에서 지평의 성당으로 옮기면 "하드"라는 난이도가 없다. 그대로 두면
+   * 없는 난이도가 저장되고, 후보 목록도 "하드"에 걸리는 것이 없어 비어 보인다.
+   * 새 레이드에 있는 난이도면 그대로 두고, 없으면 비운다.
+   */
+  function pickRaid(name: string) {
+    setRaidName(name);
+    if (difficulty && !difficultiesFor(name).includes(difficulty)) setDifficulty("");
+  }
+
   /**
    * 보낼 값은 DOM이 아니라 상태에서 모은다.
    *
@@ -150,7 +164,7 @@ export function SlotForm({
           name="raidName"
           required
           value={raidName}
-          onChange={setRaidName}
+          onChange={pickRaid}
           onInvalid={(e) => e.currentTarget.setCustomValidity("레이드 이름을 입력해 주세요")}
           options={RAID_NAMES}
           placeholder="벨가르딘"
@@ -164,7 +178,7 @@ export function SlotForm({
           name="difficulty"
           value={difficulty}
           onChange={setDifficulty}
-          options={difficultiesFor(raidName)}
+          options={difficulties}
           placeholder="하드"
           wrapClassName="w-24"
           className={`w-full ${CONTROL}`}
