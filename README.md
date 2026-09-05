@@ -86,6 +86,8 @@ Production·Preview 양쪽에 넣는다.
 
 **`NEXT_PUBLIC_` 접두사를 붙이지 않는다.** 붙는 순간 브라우저 번들로 새어 나간다.
 
+지금 돌고 있는 주소는 https://lostark-raid-calendar-liard.vercel.app 이다.
+
 ### 3. 디스코드 리다이렉트 URI
 
 콜백 주소는 요청이 들어온 도메인에서 만들어진다. 그래서 **디스코드 앱 설정에 실제

@@ -471,7 +471,7 @@ Discord OAuth2로 입장부터 막는다. 길드 디스코드 서버의 멤버�
 |---|---|
 | 스택 | Next.js 16 (App Router) + React 19 + Tailwind 4 |
 | DB | Postgres. Prisma 7 + `@prisma/adapter-pg` |
-| 배포 | Vercel + Neon (예정) |
+| 배포 | **Vercel + Neon. 돌고 있다.** https://lostark-raid-calendar-liard.vercel.app |
 | 지역 | **둘 다 싱가포르.** Neon `aws-ap-southeast-1`, Vercel `sin1` |
 | 테스트 | vitest |
 
@@ -564,7 +564,7 @@ Vercel 지역은 `vercel.json`에 박아뒀다. **Neon은 생성 후 지역 변�
 [x] 4인 레이드
 [x] 고정 현황 화면 (/i/[slug]/pinned)
 [x] Member 묶기 (원정대 클레임)
-[ ] Vercel 배포                          ← 여기부터. redirect URI에 실제 도메인을 넣어야 한다
+[x] Vercel 배포
 ```
 
 ---
