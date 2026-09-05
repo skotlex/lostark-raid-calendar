@@ -120,6 +120,18 @@ export function HistoryIcon() {
   );
 }
 
+/** 숙제 관리. 목록에 체크 표시. */
+export function HomeworkIcon() {
+  return (
+    <svg {...TAB_ICON} strokeWidth={1.6}>
+      <rect x="4" y="3.5" width="16" height="17" rx="2" />
+      <path d="M8 8.5h8" />
+      <path d="M8 12.5h5" />
+      <path d="m8.5 16.5 1.6 1.6 3.4-3.4" />
+    </svg>
+  );
+}
+
 /** 고정 현황. 압정을 탭 크기로 다시 그린다. */
 export function PinTabIcon() {
   return (

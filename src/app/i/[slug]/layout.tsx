@@ -9,6 +9,7 @@ import { THEME_COOKIE, toThemeChoice } from "../../theme";
 import {
   BoardIcon,
   HistoryIcon,
+  HomeworkIcon,
   MembersIcon,
   PinTabIcon,
   ScheduleIcon,
@@ -40,6 +41,13 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
       href: `/i/${slug}/characters`,
       label: "캐릭터 관리",
       icon: <MembersIcon />,
+      remember: false,
+    },
+    // 편성표에 넣은 것이 곧 숙제다. 내 캐릭터만 모아 본다.
+    {
+      href: `/i/${slug}/homework`,
+      label: "숙제 관리",
+      icon: <HomeworkIcon />,
       remember: false,
     },
     // 막지 않는 대신 남긴다(CLAUDE.md 3.4). 무엇이 바뀌었는지 보는 곳이다.
