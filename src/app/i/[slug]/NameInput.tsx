@@ -57,6 +57,7 @@ export function NameInput({
   name,
   pending,
   resetOn,
+  error,
   placeholder,
 }: {
   name: string;
@@ -64,6 +65,8 @@ export function NameInput({
   pending?: boolean;
   /** 이 값이 바뀌면 입력을 비운다. 배치가 끝났다는 신호로 쓴다. */
   resetOn?: unknown;
+  /** 실패 사유. 칸 위에 말풍선으로 띄운다. */
+  error?: string | null;
   placeholder?: string;
 }) {
   const names = useContext(KnownNamesContext);
@@ -159,6 +162,16 @@ export function NameInput({
         onFocus={() => setOpen(!pending)}
         className="char-input"
       />
+
+      {/*
+        실패 사유는 칸 위에 띄운다. 아래에 줄로 붙이면 칸이 그만큼 자라 입력창이
+        위로 밀리고, 방금 친 자리에서 손이 한 번 헛돈다.
+      */}
+      {error && !showing && (
+        <p role="alert" className="combo-error">
+          {error}
+        </p>
+      )}
 
       {showing && (
         <ul id={listId} role="listbox" className="combo-list">
