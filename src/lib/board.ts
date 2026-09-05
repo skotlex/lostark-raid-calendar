@@ -6,6 +6,7 @@ import {
   registerCharacter,
   toCharacterView,
 } from "./characters";
+import { SYSTEM_ACTOR, logEvent } from "./history";
 import { prisma } from "./prisma";
 import { raidLabel } from "./raids";
 import { raidMinLevel } from "./raidRewards";
@@ -29,6 +30,7 @@ import {
 import {
   TUESDAY,
   dayName,
+  formatWeekLabel,
   getPlanningWeekStart,
   isUndecided,
   previousWeek,
@@ -161,14 +163,16 @@ async function carryOver(instanceId: string, planningWeek: Date): Promise<void> 
 
   // 화요일 슬롯은 주기가 달라 따로 돈다(week.ts). carriedWeek에는 그 슬롯이 쓰는
   // 주차가 들어가므로 두 무리가 서로의 값을 덮지 않는다.
-  await carryOverGroup(instanceId, planningWeek, { not: TUESDAY });
-  await carryOverGroup(instanceId, tuesdayWeekFor(planningWeek), TUESDAY);
+  await carryOverGroup(instanceId, planningWeek, { not: TUESDAY }, "수~월·미정");
+  await carryOverGroup(instanceId, tuesdayWeekFor(planningWeek), TUESDAY, "화");
 }
 
 async function carryOverGroup(
   instanceId: string,
   weekStart: Date,
   dayOfWeek: number | { not: number },
+  /** 기록에 남길 무리 이름. 두 무리가 서로 다른 날 비워진다(week.ts) */
+  group: string,
 ): Promise<void> {
   const pending = await prisma.raidSlot.findMany({
     where: {
@@ -207,9 +211,41 @@ async function carryOverGroup(
     await prisma.assignment.createMany({ data: rows, skipDuplicates: true });
   }
 
-  await prisma.raidSlot.updateMany({
-    where: { id: { in: pending.map((s) => s.id) } },
+  /*
+   * 표시를 남기는 것과 기록을 남기는 것이 한 묶음이다.
+   *
+   * where에 같은 조건을 한 번 더 건다. 새 주차 첫 조회가 동시에 둘 들어오면 둘 다
+   * pending을 채워 여기까지 오는데, 뒤에 온 쪽은 앞선 갱신이 커밋된 뒤 조건을 다시
+   * 재는 순간 0줄이 되어 기록을 남기지 않는다. 없으면 같은 초기화가 두 줄로 선다.
+   */
+  const marked = await prisma.raidSlot.updateMany({
+    where: {
+      id: { in: pending.map((s) => s.id) },
+      OR: [{ carriedWeek: null }, { carriedWeek: { not: weekStart } }],
+    },
     data: { carriedWeek: weekStart },
+  });
+  if (marked.count === 0) return;
+
+  /*
+   * 주간 초기화를 기록에 남긴다.
+   *
+   * 초기화는 크론도 배치 삭제도 아니라 "새 주차의 배정만 읽는다"는 조회 규칙이다
+   * (CLAUDE.md 2). 그래서 화 00시·수 06시 그 시각에는 아무 일도 일어나지 않고,
+   * **새 주차가 된 뒤 누군가 처음 편성표를 열 때** 승계가 돈다. 이 줄의 시각은 그
+   * 시점이지 경계 시각이 아니다. 어느 주차가 열렸는지는 문장에 적어 둔다.
+   */
+  await logEvent({
+    instanceId,
+    action: "week_reset",
+    actorLabel: SYSTEM_ACTOR,
+    weekStart,
+    detail: {
+      group,
+      week: formatWeekLabel(weekStart),
+      slots: marked.count,
+      carried: rows.length,
+    },
   });
 }
 

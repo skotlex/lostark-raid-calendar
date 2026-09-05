@@ -41,6 +41,14 @@ export async function logEvent(params: {
   });
 }
 
+/**
+ * 사람이 아니라 앱이 남긴 줄의 이름.
+ *
+ * 주간 초기화처럼 아무도 누르지 않았는데 편성이 바뀌는 일이 있다. 그런 줄을
+ * actorLabel 없이 두면 화면이 "누군가"로 적어, 길드원 중 하나가 한 일처럼 읽힌다.
+ */
+export const SYSTEM_ACTOR = "시스템";
+
 export interface HistoryEntry {
   id: string;
   /** 화면에 그대로 뿌릴 문장. 서버에서 만든다 */
@@ -107,6 +115,12 @@ function describe(action: string, detail: Detail): string {
     }
     case "member_claim":
       return `원정대 묶음 (대표 ${str(detail, "searched")}, 캐릭터 ${detail.total}명)`;
+    case "week_reset": {
+      const carried = typeof detail.carried === "number" ? detail.carried : 0;
+      const head = join("주간 초기화", str(detail, "group"), str(detail, "week"));
+      // 승계가 없으면 굳이 "0자리"라고 적지 않는다. 비었다는 것이 기본값이다.
+      return carried > 0 ? `${head} · 고정 ${carried}자리 승계` : head;
+    }
     case "character_delete":
       return `캐릭터 ${character} 삭제`;
     case "character_delete_many": {

@@ -3,7 +3,7 @@ import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
 
 import { logEvent } from "./history";
-import { UNDECIDED, isUndecided, weekStartForDay } from "./week";
+import { UNDECIDED, getPlanningWeekStart, isUndecided, weekStartForDay } from "./week";
 import { DEFAULT_PARTY_SIZE, type PartySize, isPartySize } from "./positions";
 import { prisma } from "./prisma";
 import { MAX_SCORE_CUT, isScoreCut, scoreCutNumber } from "./scoreCut";
@@ -191,6 +191,10 @@ export async function createSlot(
     data: {
       instanceId,
       sortOrder: (last?.sortOrder ?? -1) + 1,
+      // 이번 주는 이미 승계를 마친 것으로 둔다. 지난 주에 이 슬롯은 없었으니 넘어올
+      // 배정도 없고, 비워두면 board.ts의 승계가 이 슬롯 하나 때문에 한 번 더 돌아
+      // "주간 초기화"가 슬롯을 만들 때마다 한 줄씩 남는다.
+      carriedWeek: weekStartForDay(getPlanningWeekStart(), input.dayOfWeek),
       ...normalize(input),
     },
     select: slotSelect,
