@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import Link from "next/link";
 
 import { getBoard } from "@/lib/board";
@@ -17,7 +18,10 @@ import {
 } from "@/lib/week";
 
 import { AutoSync } from "./AutoSync";
+import { CompactSlot } from "./CompactSlot";
 import { KnownNamesProvider } from "./NameInput";
+import { ViewToggle } from "./ViewToggle";
+import { BOARD_VIEW_COOKIE, toBoardView } from "./view";
 import { RememberDay } from "./lastDay";
 import { SlotCard } from "./SlotCard";
 
@@ -44,6 +48,9 @@ export default async function BoardPage({
 
   // 지난 주는 읽기 전용이다. 기록을 나중에 고쳐 쓰지 못하게 한다.
   const editable = isCurrentWeek(weekStart);
+
+  // 보는 사람마다 다르다. 쿠키라 브라우저 안에서만 산다(view.ts).
+  const view = toBoardView((await cookies()).get(BOARD_VIEW_COOKIE)?.value);
 
   const board = await getBoard(instance.id, weekStart, session.label);
 
@@ -115,7 +122,9 @@ export default async function BoardPage({
           })}
         </nav>
 
-        <div className="ml-auto flex items-center gap-1 pb-1.5 text-sm">
+        <div className="ml-auto flex items-center gap-2 pb-1.5 text-sm">
+          <ViewToggle initial={view} />
+
           <Link
             href={href({ week: toWeekParam(addWeeks(weekStart, -1)) })}
             className="week-arrow"
@@ -159,15 +168,26 @@ export default async function BoardPage({
       ) : (
         <KnownNamesProvider names={knownNames}>
           <div className="space-y-4">
-            {slots.map((slot) => (
-              <SlotCard
-                key={slot.id}
-                slug={slug}
-                week={week}
-                slot={slot}
-                editable={editable}
-              />
-            ))}
+            {slots.map((slot) =>
+              // 4인은 카드로도 한 줄에 들어간다. 초상까지 보이는 편이 낫다.
+              view === "compact" && slot.partySize === 8 ? (
+                <CompactSlot
+                  key={slot.id}
+                  slug={slug}
+                  week={week}
+                  slot={slot}
+                  editable={editable}
+                />
+              ) : (
+                <SlotCard
+                  key={slot.id}
+                  slug={slug}
+                  week={week}
+                  slot={slot}
+                  editable={editable}
+                />
+              ),
+            )}
           </div>
         </KnownNamesProvider>
       )}
