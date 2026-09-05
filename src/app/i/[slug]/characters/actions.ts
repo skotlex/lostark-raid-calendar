@@ -141,7 +141,7 @@ export async function previewSiblingsAction(
     const { instanceId, session } = await authorize(slug);
     // 내 원정대를 다시 부르는 것과 남의 것을 부르는 것을 가르려면 내가 누구인지 알아야 한다.
     const mine = await findMyMember(instanceId, session.discordUserId);
-    const { siblings, owner, roster } = await previewSiblings(
+    const { siblings, owner, roster, searched } = await previewSiblings(
       instanceId,
       name,
       mine?.id ?? null,
@@ -153,7 +153,8 @@ export async function previewSiblingsAction(
       message: owner
         ? `${siblings.length}개 캐릭터를 찾았습니다`
         : `${siblings.length}개 캐릭터를 찾았습니다. 등록할 캐릭터를 골라 주세요`,
-      searched: name.trim(),
+      // 사람이 친 것이 아니라 로아가 준 표기다. 이 이름이 그대로 원정대 이름이 된다.
+      searched,
       siblings,
       owner,
       roster,

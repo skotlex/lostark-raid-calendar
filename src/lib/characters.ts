@@ -446,6 +446,16 @@ export interface SiblingsPreview {
    * 새 원정대가 생기면 한 계정이 둘로 갈려 골드 6명이 양쪽에서 따로 계산된다.
    */
   roster: string | null;
+  /**
+   * 조회에 쓴 캐릭터의 **로아 정식 표기.**
+   *
+   * 로아는 대소문자를 가리지 않고 찾아준다. 사람이 친 그대로 두면 새 원정대 이름이
+   * `kafkafelicia`처럼 굳어 목록의 다른 이름들과 표기가 어긋나고, 이미 같은 원정대가
+   * 있어도 라벨이 글자로는 달라 새 원정대가 하나 더 생긴다(`Roster`의 라벨 유니크는
+   * 대소문자를 가린다). 캐릭터 이름을 정식 표기로 굳히는 것과 같은 이유다
+   * (registerCharacter의 canonicalName).
+   */
+  searched: string;
 }
 
 export async function previewSiblings(
@@ -489,9 +499,15 @@ export async function previewSiblings(
     ? existing.find((c) => c.memberId === myMemberId && c.roster)?.roster?.label
     : null;
 
+  // 목록 안에 조회한 캐릭터가 들어 있다. 그 표기를 그대로 쓴다.
+  const canonical = siblings.find(
+    (s) => s.CharacterName.toLowerCase() === name.toLowerCase(),
+  )?.CharacterName;
+
   return {
     owner: other?.member?.label ?? null,
     roster: kept ?? null,
+    searched: canonical ?? name,
     siblings: siblings
       .map((s) => ({
         name: s.CharacterName,
