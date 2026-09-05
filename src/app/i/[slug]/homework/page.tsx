@@ -183,11 +183,16 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
           hint="줄을 끌어 옮기면 골드를 받을 세 개가 바뀝니다"
         />
 
+        {/*
+          카드는 세로 flex다. 레이드 줄 수가 캐릭터마다 달라도 아래 합계가 카드 바닥에
+          나란히 서게 하려는 것이다(EntryList의 flex-1). 칸 높이는 grid가 이미 줄마다
+          맞춰 주므로, 남는 자리를 누가 먹느냐만 정하면 된다.
+        */}
         <ul className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(18rem,1fr))]">
         {homework.characters.map((character) => (
           <li
             key={character.id}
-            className="overflow-hidden rounded border border-border bg-surface"
+            className="flex flex-col overflow-hidden rounded border border-border bg-surface"
           >
             <div
               className="flex items-center gap-2 px-3 py-2 text-white"

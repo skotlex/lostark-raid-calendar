@@ -277,7 +277,13 @@ export function EntryList({
 
   return (
     <>
-      <ul ref={listRef} className="divide-y divide-border">
+      {/*
+        줄 수가 카드마다 다르다. 남는 자리를 이 목록이 먹어 아래 합계를 카드 바닥에
+        붙인다. 그러지 않으면 레이드가 셋인 카드와 넷인 카드의 `남은 숙제`·`더보기`
+        줄이 한 줄씩 어긋나 서서, 카드를 가로로 훑으며 비교할 수가 없다.
+        카드(page.tsx의 li)가 세로 flex라 여기서 늘어나기만 하면 된다.
+      */}
+      <ul ref={listRef} className="flex-1 divide-y divide-border">
         {rows.map((entry, index) => {
           // 골드를 아예 못 받는 캐릭터는 한도와 상관이 없다. 이유가 따로 있다.
           const capped = isGoldCapped(entry.baseGold, index);
