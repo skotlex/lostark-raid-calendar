@@ -1,3 +1,4 @@
+import Form from "next/form";
 import Link from "next/link";
 
 import { HISTORY_PAGE_SIZE, listHistory } from "@/lib/history";
@@ -35,7 +36,11 @@ export default async function HistoryPage({
 
   // 범위를 벗어난 값은 listHistory가 안쪽으로 당겨서 돌려준다. 여기서는 숫자로만 만든다.
   const asked = Number(typeof query.page === "string" ? query.page : "1");
-  const { entries, page, pageCount, total } = await listHistory(instance.id, asked);
+  const q = (typeof query.q === "string" ? query.q : "").trim();
+  const { entries, page, pageCount, total } = await listHistory(instance.id, {
+    page: asked,
+    query: q,
+  });
 
   // 날짜별로 묶는다. 100줄이 한 덩어리로 쏟아지면 언제 일인지 세어야 한다.
   const days = new Map<string, typeof entries>();
@@ -46,7 +51,9 @@ export default async function HistoryPage({
     else days.set(key, [entry]);
   }
 
-  const href = (p: number) => `/i/${slug}/history?page=${p}`;
+  // 쪽을 넘겨도 찾던 말은 그대로 들고 간다. 빠뜨리면 2쪽에서 검색이 풀린다.
+  const href = (p: number) =>
+    `/i/${slug}/history?page=${p}${q ? `&q=${encodeURIComponent(q)}` : ""}`;
 
   // 이 쪽이 전체에서 몇 번째 줄들인지. "3 / 12"만으로는 얼마나 뒤로 온 것인지 모른다.
   const first = (page - 1) * HISTORY_PAGE_SIZE + 1;
@@ -62,9 +69,48 @@ export default async function HistoryPage({
         </p>
       </div>
 
+      {/*
+        검색.
+
+        next/form이라 눌러도 화면 전체가 다시 뜨지 않는다. 평범한 <form method="get">은
+        브라우저 통째 이동이라 머리줄까지 다시 그린다.
+
+        쪽 번호는 넘기지 않는다. 찾는 말이 바뀌면 결과도 달라져 3쪽이라는 값이 뜻을
+        잃는다. 늘 1쪽부터 본다.
+      */}
+      <Form action={`/i/${slug}/history`} className="flex flex-wrap items-center gap-2">
+        <input
+          type="search"
+          name="q"
+          defaultValue={q}
+          placeholder="캐릭터·레이드·사람 이름, 또는 배치·고정 같은 동작"
+          className="min-w-0 flex-1 rounded border border-border bg-surface px-3 py-1.5 text-sm"
+        />
+        <button
+          type="submit"
+          className="rounded border border-border bg-surface-2 px-3 py-1.5 text-sm"
+        >
+          검색
+        </button>
+        {q && (
+          <Link
+            href={`/i/${slug}/history`}
+            className="rounded px-2 py-1.5 text-sm text-text-dim hover:underline"
+          >
+            지우기
+          </Link>
+        )}
+      </Form>
+
+      {q && (
+        <p className="text-sm text-text-dim">
+          <span className="text-text">{q}</span> 검색 결과 {total}건
+        </p>
+      )}
+
       {entries.length === 0 ? (
         <div className="rounded border border-dashed border-border px-4 py-10 text-center text-sm text-text-dim">
-          아직 기록이 없습니다.
+          {q ? "찾는 기록이 없습니다." : "아직 기록이 없습니다."}
         </div>
       ) : (
         <div className="space-y-5">

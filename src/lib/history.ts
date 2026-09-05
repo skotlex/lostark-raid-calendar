@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { Prisma } from "@/generated/prisma/client";
+import { Prisma } from "@/generated/prisma/client";
 
 import { positionLabel } from "./positions";
 import { prisma } from "./prisma";
@@ -136,6 +136,54 @@ function describe(action: string, detail: Detail): string {
 }
 
 /**
+ * describe가 문장을 만들 줄 아는 동작 전부.
+ *
+ * **위 switch에 case를 늘리면 여기에도 넣는다.** 검색이 이 목록을 훑어 "배치",
+ * "고정" 같은 동작 이름을 action 값으로 되돌린다. 빠지면 그 동작만 이름으로
+ * 찾을 수 없다(내용으로는 여전히 찾힌다).
+ */
+const ACTIONS = [
+  "assign",
+  "unassign",
+  "move",
+  "swap",
+  "pin",
+  "slot_create",
+  "slot_update",
+  "slot_archive",
+  "slot_keep",
+  "character_add",
+  "member_claim",
+  "character_delete",
+  "character_delete_many",
+  "week_reset",
+] as const;
+
+/**
+ * 동작 이름으로 찾기.
+ *
+ * 저장된 것은 `assign` 같은 영문 코드인데 사람은 화면에 보이는 "배치"를 친다.
+ * 그래서 빈 detail로 문장을 만들어 보고 거기에 친 말이 들어 있는 동작을 고른다.
+ * 낱말표를 따로 두면 describe와 어긋나므로 describe에게 직접 물어본다.
+ *
+ * 참/거짓으로 문구가 갈리는 동작(고정/고정 해제)은 양쪽을 다 만들어 본다.
+ * 그래서 "해제"를 치면 고정한 줄까지 함께 나온다 — **동작 이름 검색은 문구가
+ * 아니라 동작을 고르는 것**이고, 그 편이 "고정"을 쳤을 때 반만 나오는 것보다 낫다.
+ */
+function actionsMatching(query: string): string[] {
+  const both = { pinned: true, keepRoster: true } as Detail;
+  return ACTIONS.filter(
+    (action) =>
+      describe(action, {}).includes(query) || describe(action, both).includes(query),
+  );
+}
+
+/** ILIKE에서 뜻을 갖는 글자. 사람이 친 그대로 찾게 막아둔다. */
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (ch) => "\\" + ch);
+}
+
+/**
  * 한 쪽에 담는 줄 수.
  *
  * 기록은 지워지지 않고 쌓이기만 하므로 언제가 됐든 한 화면에 다 담기지 않는다.
@@ -152,26 +200,65 @@ export interface HistoryPage {
   total: number;
 }
 
+/**
+ * 검색 조건.
+ *
+ * **detail을 통째로 문자열로 놓고 훑는다.** 캐릭터 이름, 레이드 이름, 자리, 앞으로
+ * 늘어날 필드까지 규칙 하나로 걸린다. 필드마다 조건을 세우면 detail에 무언가
+ * 추가될 때마다 검색에서 조용히 빠진다(난이도가 기록에서 빠져 있던 것과 같은 종류다).
+ *
+ * 저장된 detail은 그때의 형식으로 굳어 있어 필드 이름이 주차마다 다를 수 있다는
+ * 점에서도 이 쪽이 안전하다.
+ *
+ * 대신 JSON의 키(`character`, `raid`)까지 훑는 대상에 든다. 키는 모두 영문이고
+ * 사람이 찾는 것은 한글 이름이라 실제로 걸리는 일이 없어 그대로 둔다.
+ *
+ * 인덱스는 붙이지 않는다. 한 인스턴스의 기록은 주에 수백 줄이라 1년을 모아도
+ * 수만 줄이고, 그 정도는 인스턴스로 좁힌 뒤 훑어도 밀리초 단위다. 실제로 느려지면
+ * 그때 pg_trgm GIN을 얹는다(지금은 마이그레이션 파일 없이 db push로 운영한다).
+ */
+function searchFilter(instanceId: string, query: string): Prisma.Sql {
+  const base = Prisma.sql`"instanceId" = ${instanceId}`;
+  if (!query) return base;
+
+  const like = `%${escapeLike(query)}%`;
+  const actions = actionsMatching(query);
+  const byAction = actions.length
+    ? Prisma.sql` OR action IN (${Prisma.join(actions)})`
+    : Prisma.empty;
+
+  return Prisma.sql`${base} AND (detail::text ILIKE ${like} OR "actorLabel" ILIKE ${like}${byAction})`;
+}
+
 export async function listHistory(
   instanceId: string,
-  page = 1,
-  pageSize = HISTORY_PAGE_SIZE,
+  options: { page?: number; query?: string; pageSize?: number } = {},
 ): Promise<HistoryPage> {
-  const total = await prisma.changeLog.count({ where: { instanceId } });
+  const pageSize = options.pageSize ?? HISTORY_PAGE_SIZE;
+  // 앞뒤 공백은 사람이 친 흔적이지 찾는 말이 아니다.
+  const query = (options.query ?? "").trim();
+  const where = searchFilter(instanceId, query);
+
+  const [{ count }] = await prisma.$queryRaw<{ count: number }[]>`
+    SELECT COUNT(*)::int AS count FROM "ChangeLog" WHERE ${where}
+  `;
+  const total = count;
   // 기록이 하나도 없어도 1쪽은 있다. 0쪽으로 두면 화면에 "1 / 0"이 찍힌다.
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   // 주소에 손으로 친 숫자가 들어올 수 있다. 빈 쪽을 보여주는 대신 끝으로 당긴다.
-  const current = Math.min(Math.max(1, Math.trunc(page) || 1), pageCount);
+  const current = Math.min(Math.max(1, Math.trunc(options.page ?? 1) || 1), pageCount);
 
-  const rows = await prisma.changeLog.findMany({
-    where: { instanceId },
-    select: { id: true, action: true, detail: true, actorLabel: true, createdAt: true },
-    // createdAt만으로는 같은 시각에 들어온 줄들의 순서가 조회마다 달라질 수 있어,
-    // 쪽을 넘길 때 같은 줄이 두 번 나오거나 한 줄이 통째로 빠진다. id로 한 번 더 가른다.
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    skip: (current - 1) * pageSize,
-    take: pageSize,
-  });
+  const rows = await prisma.$queryRaw<
+    { id: string; action: string; detail: unknown; actorLabel: string | null; createdAt: Date }[]
+  >`
+    SELECT id, action, detail, "actorLabel", "createdAt"
+    FROM "ChangeLog"
+    WHERE ${where}
+    -- createdAt만으로는 같은 시각에 들어온 줄들의 순서가 조회마다 달라질 수 있어,
+    -- 쪽을 넘길 때 같은 줄이 두 번 나오거나 한 줄이 통째로 빠진다. id로 한 번 더 가른다.
+    ORDER BY "createdAt" DESC, id DESC
+    LIMIT ${pageSize} OFFSET ${(current - 1) * pageSize}
+  `;
 
   return {
     entries: rows.map((row) => ({
