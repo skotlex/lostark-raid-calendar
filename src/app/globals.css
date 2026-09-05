@@ -1151,14 +1151,11 @@ button:disabled,
 }
 
 /*
- * 키보드로 온 경우에만 테두리를 보여준다.
+ * 테두리는 어떤 경우에도 그리지 않는다.
  *
- * 눌러서 들어온 사람은 어디를 눌렀는지 알지만, 탭으로 옮겨 다니는 사람은 표시가 없으면
- * 지금 어느 칸인지 알 길이 없다. :focus-visible이 그 둘을 갈라준다.
+ * :focus-visible로 "키보드로 온 경우만"을 노려봤지만, 글자를 받는 입력은 마우스로
+ * 눌러도 그 조건이 참이라 상자가 그대로 떴다. 어디를 고치는지는 강조색 커서가 말한다.
  */
-.board-input:focus-visible {
-  box-shadow: inset 0 0 0 1px var(--accent);
-}
 
 .board-warn {
   margin-top: 0.125rem;
