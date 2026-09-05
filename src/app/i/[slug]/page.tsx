@@ -116,8 +116,14 @@ export default async function BoardPage({
       <RememberDay day={day} />
       <AutoSync slug={slug} staleCount={stale.size} />
 
-      {/* 밑줄이 놓일 레일. 이게 없으면 켜진 탭의 밑줄만 허공에 떠 보인다. */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border">
+      {/*
+        밑줄이 놓일 레일. 이게 없으면 켜진 탭의 밑줄만 허공에 떠 보인다.
+
+        머리줄 바로 밑(--header-h)에 붙여 스크롤해도 남는다. 요일과 주차를 보면서
+        아래쪽 공대를 읽는 화면이라 이 줄이 올라가 버리면 지금 무엇을 보고 있는지
+        모른 채 스크롤하게 된다. 밑을 지나가는 카드가 비치지 않게 배경을 깐다.
+      */}
+      <div className="sticky top-[var(--header-h)] z-20 flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border bg-bg pt-2">
         <nav className="flex flex-wrap">
           {days.map((d) => (
             <DayTab

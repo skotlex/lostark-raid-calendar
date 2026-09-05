@@ -15,6 +15,12 @@
 :root {
   color-scheme: light;
 
+  /*
+   * 머리줄 높이. 편성표의 요일 줄이 이만큼 내려와 붙는다.
+   * StickyHeader가 실제로 재서 덮어쓰고, 여기 값은 그 전 첫 화면용이다.
+   */
+  --header-h: 60px;
+
   --bg: #f4f6f8;
   --surface: #ffffff;
   --surface-2: #eaeef3;

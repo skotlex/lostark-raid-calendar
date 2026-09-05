@@ -14,6 +14,7 @@ import {
   PinTabIcon,
   ScheduleIcon,
 } from "./icons";
+import { StickyHeader } from "./StickyHeader";
 import { ThemeToggle } from "../../ThemeToggle";
 import { TabLink } from "./lastDay";
 import { Viewer } from "./Viewer";
@@ -56,7 +57,7 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
 
   return (
     <div className="flex min-h-full flex-col">
-      <header className="border-b border-border bg-surface">
+      <StickyHeader>
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-3 px-5 py-2">
           {/*
             로고는 애니메이션 WebP다. unoptimized가 없으면 Next의 이미지 최적화가
@@ -92,7 +93,7 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
             <ThemeToggle initial={theme} />
           </div>
         </div>
-      </header>
+      </StickyHeader>
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
     </div>
