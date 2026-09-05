@@ -311,6 +311,10 @@ export function EntryList({
 
                 버튼으로 두는 것은 키보드 때문이다. 탭으로 닿아 화살표로 옮긴다.
                 옮길 줄이 하나뿐이면 그리지 않는다. 잡아도 갈 곳이 없다.
+
+                좌우로 음수 여백을 준다. 그림 자체가 상자 안에서 이미 양옆을 비우고 있어
+                줄 여백(px-3)과 칸 간격(gap-x-2)을 그대로 두면 번호 뱃지가 멀찍이 떨어져
+                보인다. 줄 여백을 줄이면 아랫줄까지 딸려 가므로 이 칸만 당긴다.
               */}
               {movable && (
                 <button
@@ -318,7 +322,7 @@ export function EntryList({
                   onKeyDown={(e) => onKeyDown(index, e)}
                   title={`끌어서 순서를 바꿉니다. 앞의 ${RAID_GOLD_LIMIT}개만 골드를 받습니다`}
                   aria-label={`${entry.label} 순서 바꾸기. 위아래 화살표로 옮깁니다`}
-                  className="flex shrink-0 cursor-grab text-text-faint transition-colors group-hover:text-text-dim active:cursor-grabbing"
+                  className="-mr-1 -ml-1.5 flex shrink-0 cursor-grab text-text-faint transition-colors group-hover:text-text-dim active:cursor-grabbing"
                 >
                   <GripIcon />
                 </button>
