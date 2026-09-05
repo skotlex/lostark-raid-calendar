@@ -2,7 +2,7 @@
 
 import { type DragEvent, startTransition, useActionState, useState } from "react";
 
-import type { BoardSlotView, CellView } from "@/lib/board";
+import { MISSING_SYNERGY_WARNING, type BoardSlotView, type CellView } from "@/lib/board";
 import { positionLabel } from "@/lib/positions";
 import { getSynergies } from "@/lib/synergy";
 
@@ -20,6 +20,16 @@ import { ConfirmButton } from "./ConfirmButton";
 import { CloseIcon, GripIcon, PinIcon } from "./icons";
 
 const IDLE: CellState = { status: "idle", message: "" };
+
+/**
+ * 좁은 칸에 맞춰 경고를 줄인다.
+ *
+ * 표는 한 칸이 이름 너비뿐이라 문장이 들어가면 서너 줄로 접힌다. 카드 보기는 자리가
+ * 넉넉하므로 원문 그대로 둔다.
+ */
+function shortWarning(warning: string) {
+  return warning === MISSING_SYNERGY_WARNING ? "시너지 트라이포드 없음" : warning;
+}
 
 /**
  * 간략 보기 — 8인이 한 줄에 들어가는 표.
@@ -332,7 +342,7 @@ function NameCell({
 
       {cell.warnings.map((warning) => (
         <div key={warning} className="board-warn">
-          {warning}
+          {shortWarning(warning)}
         </div>
       ))}
     </td>

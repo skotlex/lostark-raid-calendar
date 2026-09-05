@@ -33,6 +33,14 @@ export class BoardError extends Error {
   }
 }
 
+/**
+ * 시너지 트라이포드를 안 찍은 캐릭터에 붙는 경고 문구.
+ *
+ * 간략 보기는 칸이 좁아 이 문장을 줄여 쓴다(CompactSlot). 두 곳이 문자열을 따로
+ * 적으면 한쪽만 고쳐져 어긋나므로 원문을 여기서 내보낸다.
+ */
+export const MISSING_SYNERGY_WARNING = "시너지 트라이포드를 찍지 않았습니다";
+
 export interface CellView {
   position: string;
   assignmentId: string | null;
@@ -277,7 +285,7 @@ export async function getBoard(
 
       // 시너지 트라이포드를 안 찍었다. 막지 않고 알리기만 한다(CLAUDE.md 3.4).
       if (missingSynergy(character.className, character.role, character.skillSynergies)) {
-        warnings.push("시너지 트라이포드를 찍지 않았습니다");
+        warnings.push(MISSING_SYNERGY_WARNING);
       }
 
       if (character.syncError) warnings.push(character.syncError);
