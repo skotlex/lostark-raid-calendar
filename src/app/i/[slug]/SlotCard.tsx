@@ -21,6 +21,7 @@ const SYNERGY_CLASS: Record<SynergyKind, string> = {
   치적: "syn-crit",
   치피증: "syn-critdmg",
   백헤드: "syn-back",
+  마나: "syn-mana",
   서폿: "syn-sup",
 };
 

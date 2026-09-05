@@ -450,8 +450,8 @@ describe("트라이포드 시너지", () => {
     expect(normalizeSkillSynergies(skills)).toEqual([]);
   });
 
-  it("파티원이 받는 버프라도 시너지 종류가 아니면 세지 않는다", () => {
-    // 서머너 슈르디. 마나 회복은 시너지 표에 없는 종류다.
+  it("마나 — 클래스 표에 없어도 찍고 왔으면 센다", () => {
+    // 서머너 슈르디. 골라 찍는 트라이포드라 클래스 표로는 알 수 없다.
     const skills = [
       {
         Name: "슈르디 소환",
@@ -464,7 +464,9 @@ describe("트라이포드 시너지", () => {
         ],
       },
     ];
-    expect(normalizeSkillSynergies(skills)).toEqual([]);
+    expect(normalizeSkillSynergies(skills)).toEqual([
+      { kind: "마나", value: "40%", source: "슈르디 소환 · 마나 회복" },
+    ]);
   });
 
   it("안 찍은 트라이포드는 세지 않는다", () => {
