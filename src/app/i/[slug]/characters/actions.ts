@@ -305,7 +305,9 @@ export async function syncAllAction(
   if (Number.isNaN(started.getTime())) throw new CharacterError("잘못된 요청입니다");
 
   const progress = await syncAllBatch(instanceId, started);
-  refresh(slug);
+  // 회차마다 부르면 남은 회차가 도는 동안 이 무거운 화면이 그만큼 다시 그려지고,
+  // 그동안 다음 회차가 늦어진다. 화면에 남는 것은 마지막 상태뿐이라 끝에 한 번만 한다.
+  if (progress.remaining === 0) refresh(slug);
   return progress;
 }
 

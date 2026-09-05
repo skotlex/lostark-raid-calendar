@@ -505,6 +505,18 @@ export async function registerCharacters(
   return result;
 }
 
+/**
+ * 한 회차에 조회할 캐릭터 수.
+ *
+ * **진행률은 회차가 끝나야 움직인다.** 실행 시간만 보면 더 크게 잡아도 되지만, 크게
+ * 잡으면 서른몇 개가 한 회차에 다 들어가 버튼이 `0/32`에 멎어 있다가 끝에 한 번에
+ * 바뀐다. 도는 중인지 멎은 것인지 알 수 없어 다시 누르게 된다.
+ *
+ * 캐릭터 하나가 1초 안팎이라 5면 몇 초에 한 번씩 숫자가 오른다. 회차가 늘어난 만큼
+ * 서버 왕복도 늘지만 조회에 걸리는 시간에 비하면 무시할 수 있다.
+ */
+const SYNC_ALL_BATCH = 5;
+
 export interface BulkProgress extends BulkResult {
   /** 이 회차까지 하고도 남은 수. 0이면 끝이다. */
   remaining: number;
@@ -524,7 +536,7 @@ export interface BulkProgress extends BulkResult {
 export async function syncAllBatch(
   instanceId: string,
   startedAt: Date,
-  limit = 50,
+  limit = SYNC_ALL_BATCH,
 ): Promise<BulkProgress> {
   const pending = {
     instanceId,
