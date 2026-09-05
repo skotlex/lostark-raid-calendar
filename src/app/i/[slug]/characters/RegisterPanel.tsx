@@ -24,6 +24,21 @@ const IMPORT_IDLE: ImportState = { status: "idle", message: "", result: null };
 const DEFAULT_MIN_LEVEL = 1730;
 
 /**
+ * 고를 수 있는 캐릭터인지.
+ *
+ * 아직 없는 캐릭터와, 등록은 됐지만 **소속이 빈** 캐릭터를 고를 수 있다. 뒤쪽은 남이
+ * 편성 칸에 대신 넣어 만들어진 것들이라 여기서 집어야 주인과 원정대가 붙는다.
+ * 이미 소속이 붙은 캐릭터는 잠근다. 여기서 소속을 갈아치우면 먼저 클레임한 사람의
+ * 원정대에서 캐릭터가 조용히 빠져나간다.
+ *
+ * 타입은 서버 모듈(lib/characters)이 아니라 액션 결과에서 꺼낸다. `server-only`가
+ * 붙어 있어 클라이언트 파일이 이름을 직접 들고 오면 안 된다.
+ */
+function canPick(sibling: SiblingsState["siblings"][number]): boolean {
+  return !sibling.registered || sibling.unclaimed;
+}
+
+/**
  * 여기서 등록한 캐릭터는 **등록한 사람 소속이 된다.**
  *
  * 캐릭터 관리는 자기 캐릭터를 챙기는 화면이라 그렇게 본다. 남의 캐릭터를 대신 넣는 일은
@@ -132,12 +147,15 @@ function SiblingsForm({ slug }: { slug: string }) {
 
   // 조회 결과가 새로 오면 쓸 만한 것만 미리 골라 둔다. 목록은 이미 레벨 내림차순이다.
   // 25개를 전부 등록하면 API 요청도 그만큼 나가고 목록도 저렙 부캐로 덮인다.
+  //
+  // 소속이 빈 캐릭터도 함께 고른다. 불러오기를 누른 사람이 곧 주인이라 소속을 붙이는
+  // 것이 이 화면의 목적이고, 손으로 다시 체크하게 하면 무엇을 눌러야 하는지 알 수 없다.
   useEffect(() => {
     if (search.status !== "ok") return;
     setSelected(
       new Set(
         search.siblings
-          .filter((s) => !s.registered && (s.itemLevel ?? 0) >= DEFAULT_MIN_LEVEL)
+          .filter((s) => canPick(s) && (s.itemLevel ?? 0) >= DEFAULT_MIN_LEVEL)
           .map((s) => s.name),
       ),
     );
@@ -152,7 +170,7 @@ function SiblingsForm({ slug }: { slug: string }) {
     });
   }
 
-  const selectable = search.siblings.filter((s) => !s.registered);
+  const selectable = search.siblings.filter(canPick);
 
   return (
     <div className="space-y-3">
@@ -210,9 +228,9 @@ function SiblingsForm({ slug }: { slug: string }) {
               <li key={sibling.name}>
                 <label
                   className={`flex items-center gap-2 rounded px-2 py-1 text-sm ${
-                    sibling.registered
-                      ? "text-text-faint"
-                      : "cursor-pointer hover:bg-surface-2"
+                    canPick(sibling)
+                      ? "cursor-pointer hover:bg-surface-2"
+                      : "text-text-faint"
                   }`}
                 >
                   <input
@@ -220,7 +238,7 @@ function SiblingsForm({ slug }: { slug: string }) {
                     name="names"
                     value={sibling.name}
                     checked={selected.has(sibling.name)}
-                    disabled={sibling.registered}
+                    disabled={!canPick(sibling)}
                     onChange={() => toggle(sibling.name)}
                     className="accent-[var(--accent)]"
                   />
@@ -232,7 +250,9 @@ function SiblingsForm({ slug }: { slug: string }) {
                     {sibling.itemLevel?.toFixed(2) ?? "-"}
                   </span>
                   {sibling.registered && (
-                    <span className="shrink-0 text-xs text-text-faint">등록됨</span>
+                    <span className="shrink-0 text-xs text-text-faint">
+                      {sibling.unclaimed ? "소속 없음" : "등록됨"}
+                    </span>
                   )}
                 </label>
               </li>

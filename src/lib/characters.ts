@@ -380,6 +380,14 @@ export interface SiblingPreview {
   itemLevel: number | null;
   /** 이미 등록된 캐릭터인지 */
   registered: boolean;
+  /**
+   * 등록은 돼 있는데 **소속이 비어 있는지.**
+   *
+   * 편성 칸에 남이 대신 쳐 넣어 만들어진 캐릭터다(무소속으로 남긴다, board.ts).
+   * 등록됐다는 이유로 불러오기에서 빼면 주인이 자기 원정대를 불러도 영영 소속이
+   * 안 붙는다. 그래서 이것만 다시 고를 수 있게 열어 둔다.
+   */
+  unclaimed: boolean;
 }
 
 export async function previewSiblings(
@@ -405,9 +413,9 @@ export async function previewSiblings(
 
   const existing = await prisma.character.findMany({
     where: { instanceId, name: { in: siblings.map((s) => s.CharacterName) } },
-    select: { name: true },
+    select: { name: true, memberId: true },
   });
-  const registered = new Set(existing.map((c) => c.name));
+  const registered = new Map(existing.map((c) => [c.name, c.memberId]));
 
   return siblings
     .map((s) => ({
@@ -415,6 +423,7 @@ export async function previewSiblings(
       className: s.CharacterClassName,
       itemLevel: Number(s.ItemAvgLevel.replace(/,/g, "")) || null,
       registered: registered.has(s.CharacterName),
+      unclaimed: registered.get(s.CharacterName) === null,
     }))
     .sort((a, b) => (b.itemLevel ?? 0) - (a.itemLevel ?? 0));
 }
