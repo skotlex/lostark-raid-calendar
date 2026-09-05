@@ -2,6 +2,9 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { DiscordError, exchangeCode, fetchGuildMember } from "@/lib/discord";
+import { readSettings } from "@/lib/settings";
+import { BOARD_VIEW_COOKIE } from "@/app/i/[slug]/view";
+import { THEME_COOKIE } from "@/app/theme";
 import {
   SESSION_COOKIE,
   SESSION_MAX_AGE_SEC,
@@ -17,6 +20,14 @@ import { OAUTH_COOKIE, unpackOAuthCookie } from "../state";
  * 순서가 중요하다. state를 먼저 대조하고, 그다음 코드를 토큰으로 바꾸고,
  * **마지막에 길드 멤버인지 확인한다.** 멤버가 아니면 세션을 굽지 않는다.
  */
+/** 화면 설정 쿠키. 세션과 달리 스크립트가 읽어도 되고, 더 오래 남는다. */
+const PREF_COOKIE = {
+  httpOnly: false,
+  sameSite: "lax" as const,
+  path: "/",
+  maxAge: 60 * 60 * 24 * 365,
+};
+
 export async function GET(request: NextRequest) {
   const origin = request.nextUrl.origin;
   const params = request.nextUrl.searchParams;
@@ -56,6 +67,17 @@ export async function GET(request: NextRequest) {
       sessionCookieOptions(SESSION_MAX_AGE_SEC),
     );
     res.cookies.delete(OAUTH_COOKIE);
+
+    /*
+     * 저장해둔 화면 설정을 쿠키에 붓는다. **기기 간 동기화가 일어나는 유일한 지점이다.**
+     *
+     * 평소에는 쿠키만 읽어 화면을 그린다(서버 렌더에 조회를 더하지 않으려는 것이다).
+     * 그래서 다른 기기에서 바꾼 값은 이 순간에 넘어온다.
+     */
+    const saved = await readSettings(member.discordUserId).catch(() => null);
+    if (saved?.theme) res.cookies.set(THEME_COOKIE, saved.theme, PREF_COOKIE);
+    if (saved?.boardView) res.cookies.set(BOARD_VIEW_COOKIE, saved.boardView, PREF_COOKIE);
+
     return res;
   } catch (error) {
     // 디스코드 쪽 문제와 "길드에 없다"를 같은 화면으로 보여주지 않는다.

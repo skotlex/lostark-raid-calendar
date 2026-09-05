@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { saveBoardViewAction } from "../../settingsActions";
 import { type BoardView, applyBoardView } from "./view";
 
 const OPTIONS: { value: BoardView; label: string; title: string }[] = [
@@ -25,6 +26,8 @@ export function ViewToggle({ initial }: { initial: BoardView }) {
     setView(next);
     applyBoardView(next);
     router.refresh();
+    // 기기가 바뀌어도 따라오도록 사람에게 붙여 둔다. 실패해도 알리지 않는다.
+    void saveBoardViewAction(next).catch(() => {});
   }
 
   return (

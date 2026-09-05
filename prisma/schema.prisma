@@ -35,6 +35,21 @@ model Instance {
   changeLogs ChangeLog[]
 }
 
+/// 사람별 화면 설정.
+///
+/// 인스턴스와 무관하다. 같은 사람이 여러 길드 편성표를 봐도 테마는 하나다.
+/// 쿠키가 있는데도 여기에 두는 이유는 **기기가 바뀌어도 따라오게** 하려는 것이다.
+/// 쿠키는 브라우저 안에서만 살아 PC와 폰이 따로 논다.
+model UserSetting {
+  /// 디스코드 사용자 ID. 세션이 들고 있는 값이라 조회에 추가 비용이 없다.
+  discordUserId String   @id
+  /// "light" | "dark". 없으면 시스템 설정을 따른다.
+  theme         String?
+  /// "compact" | "full". 편성표 보기 방식.
+  boardView     String?
+  updatedAt     DateTime @updatedAt
+}
+
 /// 한 사람. 부캐 여럿이 동일인임을 표현해 중복 참여 경고에 쓴다.
 model Member {
   id         String   @id @default(cuid())

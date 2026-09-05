@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { saveThemeAction } from "./settingsActions";
 import { type ThemeChoice, applyTheme } from "./theme";
 
 const OPTIONS: { value: ThemeChoice; label: string; title: string }[] = [
@@ -22,6 +23,9 @@ export function ThemeToggle({ initial }: { initial: ThemeChoice }) {
   function pick(next: ThemeChoice) {
     setChoice(next);
     applyTheme(next);
+    // 화면은 위에서 이미 바뀌었다. 이건 다음 로그인 때 따라오게 하려는 것뿐이라
+    // 실패해도 알리지 않는다(settings.ts).
+    void saveThemeAction(next).catch(() => {});
   }
 
   return (
