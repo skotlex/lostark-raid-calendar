@@ -633,14 +633,14 @@ button:disabled,
 }
 
 /*
- * 서폿 각인(만개, 절실한 구원 …)은 색을 달리한다.
+ * 서폿 각인(만개, 절실한 구원 …)은 초록으로.
  *
  * 딜과 폿을 가르는 것이 이 각인이다. 금색 하나로 두면 8인 카드를 훑을 때 폿이 몇인지
  * 각인 이름을 하나씩 읽어야 안다. 색이 다르면 세지 않아도 눈에 들어온다.
  */
 .char-chip--engraving-sup {
-  background: rgb(116 177 222 / 16%);
-  color: var(--c-support);
+  background: rgb(14 46 28 / 82%);
+  color: var(--c-ok);
 }
 
 /* 자리 고정. 각인 칩 옆에 붙어 이 자리가 리셋에 남는다는 것을 알린다. */
@@ -656,8 +656,8 @@ button:disabled,
   color: var(--c-dps);
 }
 .char-chip--support {
-  background: rgb(14 46 28 / 82%);
-  color: var(--c-ok);
+  background: rgb(116 177 222 / 16%);
+  color: var(--c-support);
 }
 
 .char-name {
