@@ -220,8 +220,9 @@ export function Cell({
 
       <div className="char-top">
         <div className="min-w-0 flex-1">
-          {/* 직업 각인이 칸에서 가장 먼저 읽히는 정보다. 클래스는 그다음. */}
+          {/* 클래스가 칸에서 가장 먼저 읽히는 정보다. 직업 각인은 그다음. */}
           <div className="char-chip-line">
+            <span className="char-chip char-chip--class">{character.className ?? "?"}</span>
             {character.classEngraving && (
               <span
                 className={`char-chip ${
@@ -233,7 +234,6 @@ export function Cell({
                 {character.classEngraving}
               </span>
             )}
-            <span className="char-chip char-chip--class">{character.className ?? "?"}</span>
             {cell.pinned && (
               <span
                 className="char-chip char-chip--pinned"
