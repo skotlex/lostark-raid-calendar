@@ -46,19 +46,11 @@ function formatShort(value: number | null): string {
  * 칸 폭에 따라 바꾸려면 둘 다 그려두는 수밖에 없다. 화면 낭독기가 같은 값을 두 번
  * 읽지 않도록 숨는 쪽은 display로 지운다(globals.css).
  */
-function Stat({
-  label,
-  value,
-  dim,
-}: {
-  label: string;
-  value: number | null;
-  dim?: boolean;
-}) {
+function Stat({ label, value }: { label: string; value: number | null }) {
   return (
     <div className="char-stat">
       <span className="char-label">{label}</span>
-      <span className={`char-value ${dim ? "char-dim" : ""}`}>
+      <span className="char-value">
         <span className="char-num-full">{format(value)}</span>
         <span className="char-num-short">{formatShort(value)}</span>
       </span>
@@ -292,7 +284,7 @@ export function Cell({
         */}
         <div className="char-stat-line">
           <Stat label="레벨" value={character.itemLevel} />
-          <Stat label="전투력" value={character.combatPower} dim />
+          <Stat label="전투력" value={character.combatPower} />
 
           {character.arkGridSummary && (
             <div className="char-arkgrid char-faint tabular">{character.arkGridSummary}</div>

@@ -70,7 +70,7 @@ export function CharacterCard({
             </div>
             <div>
               <div className="char-label">전투력</div>
-              <div className="char-value char-dim">{formatLevel(character.combatPower)}</div>
+              <div className="char-value">{formatLevel(character.combatPower)}</div>
             </div>
           </div>
 
