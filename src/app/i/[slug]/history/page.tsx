@@ -3,9 +3,15 @@ import { requireInstance } from "@/lib/instance";
 
 export const dynamic = "force-dynamic";
 
-/** 화면에 뿌리는 시각은 언제나 KST다. 레이드 시간이 그 기준이다. */
+/**
+ * 화면에 뿌리는 시각은 언제나 KST다. 레이드 시간이 그 기준이다.
+ *
+ * ko-KR 기본값은 "오후 07:42"라 24시 표기로 못 박는다. 요일표의 시간이 20:00 형식이라
+ * 둘을 나란히 볼 때 머릿속에서 변환하지 않아도 된다.
+ */
 const TIME = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "Asia/Seoul",
+  hourCycle: "h23",
   month: "numeric",
   day: "numeric",
   hour: "2-digit",
