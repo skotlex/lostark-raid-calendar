@@ -185,8 +185,8 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
 
         {/*
           카드는 세로 flex다. 레이드 줄 수가 캐릭터마다 달라도 아래 합계가 카드 바닥에
-          나란히 서게 하려는 것이다(EntryList의 flex-1). 칸 높이는 grid가 이미 줄마다
-          맞춰 주므로, 남는 자리를 누가 먹느냐만 정하면 된다.
+          나란히 서게 하려는 것이다(EntryList의 mt-auto). 칸 높이는 grid가 이미 줄마다
+          맞춰 주므로, 남는 자리를 어디에 둘지만 정하면 된다.
         */}
         <ul className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(18rem,1fr))]">
         {homework.characters.map((character) => (

@@ -278,12 +278,11 @@ export function EntryList({
   return (
     <>
       {/*
-        줄 수가 카드마다 다르다. 남는 자리를 이 목록이 먹어 아래 합계를 카드 바닥에
-        붙인다. 그러지 않으면 레이드가 셋인 카드와 넷인 카드의 `남은 숙제`·`더보기`
-        줄이 한 줄씩 어긋나 서서, 카드를 가로로 훑으며 비교할 수가 없다.
-        카드(page.tsx의 li)가 세로 flex라 여기서 늘어나기만 하면 된다.
+        목록을 닫는 선은 **여기에** 있다. 아래 합계 쪽에 두면 줄이 적은 카드에서
+        선이 합계를 따라 카드 바닥까지 내려가, 마지막 레이드 줄이 열린 채로 남고
+        빈자리 한가운데에 선이 하나 떠 있게 된다.
       */}
-      <ul ref={listRef} className="flex-1 divide-y divide-border">
+      <ul ref={listRef} className="divide-y divide-border border-b border-border">
         {rows.map((entry, index) => {
           // 골드를 아예 못 받는 캐릭터는 한도와 상관이 없다. 이유가 따로 있다.
           const capped = isGoldCapped(entry.baseGold, index);
@@ -404,7 +403,12 @@ export function EntryList({
         한 줄에 "75,000 G 더보기 -24,000"으로만 두면 결국 얼마가 남는지는
         머리로 빼야 한다.
       */}
-      <div className="space-y-0.5 border-t border-border px-3 py-2 text-xs">
+      {/*
+        카드 바닥에 붙인다(`mt-auto`). 레이드 줄 수가 캐릭터마다 달라도 세 줄이 카드
+        사이에서 같은 높이에 서야 가로로 훑으며 골드를 비교할 수 있다. 남는 자리는
+        목록을 닫는 선 아래, 이 덩어리 위에 놓인다.
+      */}
+      <div className="mt-auto space-y-0.5 px-3 py-2 text-xs">
         <div className="flex items-baseline gap-x-2">
           <span className="text-text-dim">
             남은 숙제 <span className="tabular">{remaining}</span>개
