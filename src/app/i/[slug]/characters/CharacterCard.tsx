@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 
 import type { CharacterView } from "@/lib/characters";
+import { classEmblem } from "@/lib/classEmblems";
 import { getSynergies } from "@/lib/synergy";
 
 import { ConfirmButton } from "../ConfirmButton";
@@ -43,6 +44,9 @@ export function CharacterCard({
     character.skillSynergies,
   );
 
+  // 표에 없는 직업이면 null이고, 그때는 글자만 남는다.
+  const emblem = classEmblem(character.className);
+
   const feedback = [deleteState, syncState].find((s) => s.status !== "idle");
 
   return (
@@ -70,16 +74,36 @@ export function CharacterCard({
             </span>
           </div>
 
-          <div className="char-name mt-1 truncate text-base">{character.name}</div>
+          {/*
+            직업 문장은 이름과 수치를 합한 높이만큼 선다. 편성 칸보다 크게 두는 것은
+            이 화면이 캐릭터를 고르는 자리이기 때문이다. 여러 장을 훑을 때 이름을 읽기
+            전에 직업으로 먼저 걸러진다.
 
-          <div className="mt-1.5 flex gap-3">
-            <div>
-              <div className="char-label">레벨</div>
-              <div className="char-value">{formatLevel(character.itemLevel)}</div>
-            </div>
-            <div>
-              <div className="char-label">전투력</div>
-              <div className="char-value">{formatLevel(character.combatPower)}</div>
+            alt는 비운다. 같은 직업을 위의 칩이 글자로 말한다.
+          */}
+          <div className="mt-1 flex items-center gap-2.5">
+            {emblem && (
+              <span className="char-emblem-tall">
+                {/* 게임 자산 SVG라 next/image를 거치지 않는다(숙제 화면과 같은 이유). */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={emblem} alt="" loading="lazy" className="class-emblem" />
+              </span>
+            )}
+
+            <div className="min-w-0 flex-1">
+              <div className="char-name truncate text-base">{character.name}</div>
+
+              {/* 문장이 폭을 가져간 만큼 좁아진다. 넘치면 초상 위로 미끄러지지 않게 접는다. */}
+              <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+                <div>
+                  <div className="char-label">레벨</div>
+                  <div className="char-value">{formatLevel(character.itemLevel)}</div>
+                </div>
+                <div>
+                  <div className="char-label">전투력</div>
+                  <div className="char-value">{formatLevel(character.combatPower)}</div>
+                </div>
+              </div>
             </div>
           </div>
 

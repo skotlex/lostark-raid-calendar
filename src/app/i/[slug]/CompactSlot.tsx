@@ -1,9 +1,16 @@
 "use client";
 
-import { type DragEvent, startTransition, useActionState, useState } from "react";
+import {
+  type DragEvent,
+  type ReactNode,
+  startTransition,
+  useActionState,
+  useState,
+} from "react";
 
 // board.ts는 server-only다. 타입만 가져온다.
 import type { BoardSlotView, CellView } from "@/lib/board";
+import { classEmblem } from "@/lib/classEmblems";
 import { positionLabel } from "@/lib/positions";
 import { MISSING_SYNERGY_WARNING, getSynergies } from "@/lib/synergy";
 
@@ -96,7 +103,7 @@ export function CompactSlot({
               ))}
             </tr>
 
-            <Row label="클래스" cells={cells} render={(c) => c.character?.className ?? ""} />
+            <Row label="클래스" cells={cells} render={(c) => <ClassName cell={c} />} />
             <Row
               label="템레벨"
               cells={cells}
@@ -140,7 +147,8 @@ function Row({
 }: {
   label: string;
   cells: CellView[];
-  render: (cell: CellView) => string;
+  /** 대부분은 글자지만 클래스 줄만 문장 아이콘을 함께 그린다. */
+  render: (cell: CellView) => ReactNode;
   tabular?: boolean;
 }) {
   return (
@@ -152,6 +160,33 @@ function Row({
         </td>
       ))}
     </tr>
+  );
+}
+
+/**
+ * 클래스 줄 — 직업 문장 + 직업명.
+ *
+ * 여덟 칸이 한 줄에 늘어서는 표라 클래스만 훑는 일이 잦은데, 글자는 길이가 제각각이라
+ * 눈이 한 칸씩 읽어야 한다. 문장이 앞에 서면 읽기 전에 모양으로 걸린다.
+ *
+ * **카드와 달리 흰색으로 못 박지 않는다.** 표는 테마를 따라 바탕이 바뀌므로 흰색으로
+ * 두면 라이트 모드에서 사라진다(globals.css의 .board-emblem).
+ */
+function ClassName({ cell }: { cell: CellView }) {
+  const className = cell.character?.className;
+  if (!className) return null;
+
+  const emblem = classEmblem(className);
+
+  return (
+    <span className="board-class">
+      {emblem && (
+        // 게임 자산 SVG라 next/image를 거치지 않는다(숙제 화면과 같은 이유).
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={emblem} alt="" width={16} height={16} loading="lazy" className="board-emblem" />
+      )}
+      <span className="truncate">{className}</span>
+    </span>
   );
 }
 

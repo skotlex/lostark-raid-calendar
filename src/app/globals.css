@@ -415,6 +415,28 @@ button:disabled,
 }
 
 /*
+ * 캐릭터 관리 카드의 직업 문장.
+ *
+ * 이름과 수치를 합한 높이만큼 선다. px으로 박으면 글꼴 크기나 줄 간격을 손볼 때마다
+ * 어긋나므로 stretch로 옆 칸의 키를 그대로 따라간다.
+ *
+ * **폭은 원본 크기(50px)로 두고 그림만 상자에 맞춘다.** 높이를 따라 폭까지 늘리면
+ * 상자 폭이 정해진 뒤에 그림이 커져 몇 px 삐져나온다. 상자는 원본 폭을 쓰고 contain이
+ * 남는 세로를 여백으로 남기는 편이 어긋날 구석이 없다.
+ */
+.char-emblem-tall {
+  display: block;
+  flex: 0 0 auto;
+  align-self: stretch;
+}
+
+.char-emblem-tall img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/*
  * 칭호.
  *
  * 넓은 칸에서만 보인다. 편성에 쓰이는 값이 아니라 누구인지 알아보는 데 보태는 것이라,
@@ -1279,6 +1301,46 @@ button:disabled,
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--text-dim);
+}
+
+/*
+ * 클래스 칸 — 문장과 글자를 한 줄에.
+ *
+ * 칸이 가운데 정렬이라 이 줄도 가운데를 지킨다. 문장을 왼쪽 끝에 붙이면 여덟 칸의
+ * 글자가 저마다 다른 곳에서 시작해 표가 어긋나 보인다.
+ */
+.board-class {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+/*
+ * 표의 직업 문장.
+ *
+ * **카드(.class-emblem)와 달리 흰색으로 못 박지 않는다.** 카드는 테마와 무관하게 늘
+ * 어둡지만 표는 바탕이 테마를 따라간다. 원본이 검정 단색이라 라이트에서는 그대로 쓰고
+ * 다크에서만 뒤집는다.
+ *
+ * 크기는 칸의 줄 높이(1.25rem) 안에 든다. 넘기면 클래스 줄만 키가 커져 표가 어긋난다.
+ */
+.board-emblem {
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+  opacity: 0.75;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .board-emblem {
+    filter: brightness(0) invert(1);
+  }
+}
+
+:root[data-theme="dark"] .board-emblem {
+  filter: brightness(0) invert(1);
 }
 
 /* 닉네임은 이 표에서 가장 먼저 읽는 값이다. 입력창도 여기 들어간다. */
