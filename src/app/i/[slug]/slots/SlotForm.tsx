@@ -18,15 +18,9 @@ const IDLE: SlotState = { status: "idle", message: "" };
  * 높이를 직접 못 박아 맞춘다.
  */
 const CONTROL =
-  "h-9 w-full rounded border border-border bg-bg px-2 text-sm focus:border-accent focus:outline-none";
+  "h-9 rounded border border-border bg-bg px-2 text-sm focus:border-accent focus:outline-none";
 
 const RAID_NAMES = RAID_PRESETS.map((preset) => preset.name);
-
-/** 30분 간격의 시간 후보. 목록에서 고르지 않고 직접 쳐 넣어도 된다. */
-const TIME_PRESETS = Array.from({ length: 48 }, (_, i) => {
-  const h = String(Math.floor(i / 2)).padStart(2, "0");
-  return `${h}:${i % 2 ? "30" : "00"}`;
-});
 
 /**
  * 24시간 표기로 고정한다.
@@ -98,7 +92,7 @@ export function SlotForm({
       </Field>
 
       <Field label="시간">
-        <PickInput
+        <input
           name="startTime"
           required
           inputMode="numeric"
@@ -106,12 +100,9 @@ export function SlotForm({
           title="20:00 형식으로 입력해 주세요"
           maxLength={5}
           value={startTime}
-          onChange={setStartTime}
-          format={formatTime}
-          options={TIME_PRESETS}
+          onChange={(e) => setStartTime(formatTime(e.target.value))}
           placeholder="20:00"
-          wrapClassName="w-24"
-          className={`tabular ${CONTROL}`}
+          className={`w-24 tabular ${CONTROL}`}
         />
       </Field>
 
@@ -124,7 +115,7 @@ export function SlotForm({
           options={RAID_NAMES}
           placeholder="벨가르딘"
           wrapClassName="w-32"
-          className={CONTROL}
+          className={`w-full ${CONTROL}`}
         />
       </Field>
 
@@ -136,7 +127,7 @@ export function SlotForm({
           options={difficultiesFor(raidName)}
           placeholder="하드"
           wrapClassName="w-24"
-          className={CONTROL}
+          className={`w-full ${CONTROL}`}
         />
       </Field>
 
