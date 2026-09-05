@@ -86,7 +86,11 @@ export default async function CharactersPage({ params }: PageProps<"/i/[slug]/ch
         </p>
       </div>
 
-      <RegisterPanel slug={slug} mine={myMember?.characterCount ?? 0} />
+      <RegisterPanel
+        slug={slug}
+        mine={myMember?.characterCount ?? 0}
+        rosters={rosterList}
+      />
 
       {goldRosters.length > 0 && <GoldPanel slug={slug} rosters={goldRosters} />}
 

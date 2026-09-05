@@ -48,7 +48,16 @@ function canPick(sibling: SiblingsState["siblings"][number]): boolean {
  * 여기서 한 번 불러두면 나중에 남이 편성 칸에 대신 넣어줘도 소속이 잡힌다
  * (lib/members.ts의 claimedNames).
  */
-export function RegisterPanel({ slug, mine }: { slug: string; mine: number }) {
+export function RegisterPanel({
+  slug,
+  mine,
+  rosters,
+}: {
+  slug: string;
+  mine: number;
+  /** 내 원정대. 한 명씩 등록할 때 어디로 넣을지 고르는 데 쓴다. */
+  rosters: { id: string; label: string }[];
+}) {
   const [mode, setMode] = useState<"single" | "siblings">("siblings");
 
   return (
@@ -78,7 +87,11 @@ export function RegisterPanel({ slug, mine }: { slug: string; mine: number }) {
         넣는 것은 소속에 영향을 주지 않습니다.
       </p>
 
-      {mode === "siblings" ? <SiblingsForm slug={slug} /> : <SingleForm slug={slug} />}
+      {mode === "siblings" ? (
+        <SiblingsForm slug={slug} />
+      ) : (
+        <SingleForm slug={slug} rosters={rosters} />
+      )}
     </section>
   );
 }
@@ -107,7 +120,23 @@ function ModeButton({
   );
 }
 
-function SingleForm({ slug }: { slug: string }) {
+/**
+ * 한 명씩 등록.
+ *
+ * **어느 원정대인지는 사람이 고른다.** 캐릭터 하나만 받는 자리라 어느 계정 것인지 알
+ * 방법이 없고, 로아 API에도 캐릭터를 계정에 잇는 값이 없다. 원정대를 물어보지 않으면
+ * 여기서 넣은 캐릭터만 `원정대 미지정`에 쌓여, 골드 6명이 원정대 단위로 갈린다.
+ *
+ * 원정대를 아직 하나도 안 만들었으면 고를 것이 없으니 칸을 숨긴다. 원정대는 불러오기
+ * 한 번이 하나씩 만든다(lib/members.ts).
+ */
+function SingleForm({
+  slug,
+  rosters,
+}: {
+  slug: string;
+  rosters: { id: string; label: string }[];
+}) {
   const [state, submit, pending] = useActionState(registerAction, REGISTER_IDLE);
 
   return (
@@ -120,6 +149,22 @@ function SingleForm({ slug }: { slug: string }) {
           className="w-full rounded border border-border bg-bg px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
         />
       </Field>
+      {rosters.length > 0 && (
+        <Field label="원정대" className="w-40">
+          <select
+            name="roster"
+            defaultValue={rosters[0].id}
+            className="w-full rounded border border-border bg-bg px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
+          >
+            {rosters.map((roster) => (
+              <option key={roster.id} value={roster.id}>
+                {roster.label}
+              </option>
+            ))}
+            <option value="">지정 안 함</option>
+          </select>
+        </Field>
+      )}
       <input type="hidden" name="slug" value={slug} />
       <button
         type="submit"

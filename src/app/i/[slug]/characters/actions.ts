@@ -59,6 +59,8 @@ export async function registerAction(
 ): Promise<RegisterState> {
   const slug = String(formData.get("slug") ?? "");
   const name = String(formData.get("name") ?? "");
+  // 화면에서 고른 내 원정대. 비어 있으면 원정대 없이 등록된다(members.ts).
+  const rosterId = String(formData.get("roster") ?? "");
 
   try {
     /*
@@ -74,6 +76,7 @@ export async function registerAction(
       discordUserId: session.discordUserId,
       label: session.label,
       names: [character.name],
+      rosterId,
     });
     await logEvent({
       instanceId,

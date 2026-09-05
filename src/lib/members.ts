@@ -105,9 +105,17 @@ export async function claimNames(params: {
    *
    * **불러오기 한 번이 원정대 하나다.** 골드 6명 제한이 원정대 단위라 경계가 필요한데,
    * 로아 API에 계정을 잇는 값이 없어서 사람이 계정마다 한 번씩 부르는 것이 곧 경계가
-   * 된다(goldEarners.ts). 한 명씩 등록하는 경로는 어느 원정대인지 알 수 없어 비운다.
+   * 된다(goldEarners.ts). 한 명씩 등록하는 경로는 이름을 모르므로 `rosterId`를 쓴다.
    */
   rosterLabel?: string;
+  /**
+   * 이미 있는 내 원정대. 한 명씩 등록에서 고른 값이다.
+   *
+   * 그 경로는 캐릭터 하나만 받아 어느 계정인지 알 수 없다. 그래서 사람이 직접 고르고,
+   * 여기서는 **원정대를 만들지 않는다** — 만들 수 있게 하면 오타 하나가 유령 원정대가
+   * 되고 골드 6명 계산이 그만큼 갈라진다. 만드는 곳은 불러오기 한 곳뿐이다.
+   */
+  rosterId?: string;
 }): Promise<ClaimResult> {
   const wanted = params.names.map((n) => n.trim()).filter(Boolean);
   if (wanted.length === 0) return { added: 0, linked: 0, total: 0 };
@@ -130,15 +138,8 @@ export async function claimNames(params: {
     data: { memberId: member.id },
   });
 
-  const rosterLabel = params.rosterLabel?.trim();
-  if (rosterLabel) {
-    const roster = await prisma.roster.upsert({
-      where: { instanceId_label: { instanceId: params.instanceId, label: rosterLabel } },
-      create: { instanceId: params.instanceId, memberId: member.id, label: rosterLabel },
-      update: { memberId: member.id },
-      select: { id: true },
-    });
-
+  const rosterId = await resolveRoster(params.instanceId, member.id, params);
+  if (rosterId) {
     /*
      * 이번에 부른 이름들만 이 원정대로 옮긴다.
      *
@@ -146,10 +147,14 @@ export async function claimNames(params: {
      * 원정대를 부를 때 이미 붙어 있던 캐릭터를 빼앗지는 않는다 — 이름이 겹칠 수 없으니
      * 넘어올 일 자체가 없고, 혹시 사람이 원정대를 잘못 불렀더라도 앞의 지정이 통째로
      * 흔들리는 편이 더 나쁘다.
+     *
+     * **내 캐릭터만 옮긴다.** 바로 위에서 주인 없는 것들에 소속을 붙였으니, 그러고도
+     * 남의 것이면 이름을 잘못 친 것이다. 그대로 옮기면 원정대는 내 것인데 소속은 남인
+     * 캐릭터가 생겨 주인의 골드 묶음에서 조용히 빠진다.
      */
     await prisma.character.updateMany({
-      where: { instanceId: params.instanceId, name: { in: wanted } },
-      data: { rosterId: roster.id },
+      where: { instanceId: params.instanceId, name: { in: wanted }, memberId: member.id },
+      data: { rosterId },
     });
   }
 
@@ -158,6 +163,40 @@ export async function claimNames(params: {
     linked: linked.count,
     total: claimedNames.length,
   };
+}
+
+/**
+ * 이번 클레임이 어느 원정대로 가는지 정한다. 없으면 null이고 캐릭터는 원정대 없이 남는다.
+ *
+ * 이름(`rosterLabel`)은 불러오기가 준다. 그 한 번이 원정대 하나라 없으면 만든다.
+ * 아이디(`rosterId`)는 한 명씩 등록에서 사람이 고른 것이다. **내 원정대인지 확인한다** —
+ * 서버 액션은 UI를 거치지 않고 불릴 수 있어 화면이 보여준 목록을 그대로 믿으면 안 된다
+ * (setGoldEarners와 같은 이유).
+ */
+async function resolveRoster(
+  instanceId: string,
+  memberId: string,
+  params: { rosterLabel?: string; rosterId?: string },
+): Promise<string | null> {
+  const label = params.rosterLabel?.trim();
+  if (label) {
+    const roster = await prisma.roster.upsert({
+      where: { instanceId_label: { instanceId, label } },
+      create: { instanceId, memberId, label },
+      update: { memberId },
+      select: { id: true },
+    });
+    return roster.id;
+  }
+
+  const id = params.rosterId?.trim();
+  if (!id) return null;
+
+  const roster = await prisma.roster.findFirst({
+    where: { id, instanceId, memberId },
+    select: { id: true },
+  });
+  return roster?.id ?? null;
 }
 
 /**
