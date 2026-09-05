@@ -23,6 +23,19 @@ const CONTROL =
 const RAID_NAMES = RAID_PRESETS.map((preset) => preset.name);
 
 /**
+ * 브라우저 기본 문구를 우리 문구로 갈아 끼운다.
+ *
+ * 그냥 두면 "Please match the requested format."처럼 영어가 먼저 나오고 title이
+ * 그 아래 붙는다. setCustomValidity를 넣으면 이 문구만 뜬다.
+ *
+ * 값이 바뀔 때 반드시 빈 문자열로 지워야 한다. 남겨두면 브라우저가 계속 잘못된 값으로
+ * 보고 다음 제출을 막는다.
+ */
+function invalidMessage(input: HTMLInputElement, missing: string, wrong: string) {
+  input.setCustomValidity(input.validity.valueMissing ? missing : wrong);
+}
+
+/**
  * 24시간 표기로 고정한다.
  *
  * `type="time"`은 형식을 브라우저 로케일이 정해서 "08:00 PM"으로 나온다.
@@ -100,10 +113,19 @@ export function SlotForm({
           required
           inputMode="numeric"
           pattern="([01][0-9]|2[0-3]):[0-5][0-9]"
-          title="20:00 형식으로 입력해 주세요"
           maxLength={5}
           value={startTime}
-          onChange={(e) => setStartTime(formatTime(e.target.value))}
+          onInvalid={(e) =>
+            invalidMessage(
+              e.currentTarget,
+              "시간을 입력해 주세요",
+              "시간은 20:00 형식으로 입력해 주세요",
+            )
+          }
+          onChange={(e) => {
+            e.target.setCustomValidity("");
+            setStartTime(formatTime(e.target.value));
+          }}
           placeholder="20:00"
           className={`w-24 tabular ${CONTROL}`}
         />
@@ -115,6 +137,7 @@ export function SlotForm({
           required
           value={raidName}
           onChange={setRaidName}
+          onInvalid={(e) => e.currentTarget.setCustomValidity("레이드 이름을 입력해 주세요")}
           options={RAID_NAMES}
           placeholder="벨가르딘"
           wrapClassName="w-32"

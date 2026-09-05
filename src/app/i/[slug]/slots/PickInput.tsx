@@ -29,6 +29,7 @@ export function PickInput({
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const listId = useId();
 
   const items = useMemo(() => {
@@ -41,6 +42,8 @@ export function PickInput({
   const showing = open && items.length > 0;
 
   function choose(picked: string) {
+    // 목록에서 고르면 input 이벤트가 없어 앞선 오류 문구가 그대로 남는다.
+    inputRef.current?.setCustomValidity("");
     onChange(picked);
     setOpen(false);
     setActive(-1);
@@ -75,6 +78,7 @@ export function PickInput({
     <div className={`combo ${wrapClassName ?? ""}`}>
       <input
         {...rest}
+        ref={inputRef}
         value={value}
         autoComplete="off"
         role="combobox"
@@ -82,6 +86,8 @@ export function PickInput({
         aria-controls={listId}
         aria-autocomplete="list"
         onChange={(e) => {
+          // 앞선 검사에서 붙은 문구를 지운다. 남으면 고쳐 넣어도 계속 막힌다.
+          e.target.setCustomValidity("");
           onChange(format ? format(e.target.value) : e.target.value);
           setOpen(true);
           setActive(-1);
