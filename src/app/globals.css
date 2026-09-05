@@ -694,11 +694,17 @@ button:disabled,
 
 /* 초상 위에 얹히는 버튼이라 배경 없이는 글자가 묻힌다. */
 .char-icon-btn {
+  /* 안에 글자(✕)와 아이콘(압정)이 섞여 있다. 가운데로 모아 둘의 높이를 맞춘다. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
   border-radius: 0.25rem;
   background: rgb(10 14 20 / 55%);
   padding: 0 0.25rem;
   font-size: 11px;
-  line-height: 1.25rem;
+  line-height: 1;
   color: var(--c-faint);
   transition: color 120ms;
 }

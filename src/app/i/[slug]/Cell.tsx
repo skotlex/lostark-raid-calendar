@@ -246,7 +246,7 @@ export function Cell({
                 aria-label={cell.pinned ? "고정 해제" : "자리 고정"}
                 className={`char-icon-btn ${cell.pinned ? "char-accent" : ""}`}
               >
-                📌
+                <PinIcon pinned={cell.pinned} />
               </button>
             </form>
             <form
@@ -307,6 +307,34 @@ export function Cell({
         </ul>
       )}
     </div>
+  );
+}
+
+/**
+ * 자리 고정 압정.
+ *
+ * 이모지(📌)는 글꼴에 딸린 그림이라 OS마다 모양도 색도 다르고, 옆의 ✕과 크기·굵기가
+ * 맞지 않는다. 직접 그리면 currentColor를 따라가므로 고정된 자리에서 금색으로 물든다.
+ *
+ * 11px 근처에서 읽혀야 해서 머리·몸통·바늘 세 획으로 줄였다. 꽂힌 상태는 몸통을 채워
+ * 색만으로 구분하지 않게 한다. 색약이거나 화면이 밝을 때 색 하나로는 잘 안 보인다.
+ */
+function PinIcon({ pinned }: { pinned: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="size-3.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.7}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M9 3.5h6" />
+      <path d="M10 3.5v5L7.3 12.5h9.4L14 8.5v-5z" fill={pinned ? "currentColor" : "none"} />
+      <path d="M12 12.5v8" />
+    </svg>
   );
 }
 
