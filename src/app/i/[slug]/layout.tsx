@@ -14,7 +14,7 @@ import {
   PinTabIcon,
   ScheduleIcon,
 } from "./icons";
-import { StickyHeader } from "./StickyHeader";
+import { MainScroll } from "./MainScroll";
 import { ThemeToggle } from "../../ThemeToggle";
 import { TabLink } from "./lastDay";
 import { Viewer } from "./Viewer";
@@ -79,8 +79,15 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
   ];
 
   return (
-    <div className="flex min-h-full flex-col">
-      <StickyHeader>
+    /*
+      머리줄은 스크롤 밖에 세우고 본문만 안에서 굴린다. 스크롤바가 머리줄 폭을
+      건드리지 않아 메뉴를 옮겨도 로고와 탭이 제자리에 있다(MainScroll).
+
+      화면 높이를 dvh로 못박는다. 화면이 스크롤되지 않으므로 모바일 주소창이
+      접혔다 펴지는 일이 없어 이 값은 그 자리에서 변하지 않는다.
+    */
+    <div className="flex h-dvh flex-col overflow-hidden">
+      <header className="relative z-30 shrink-0 border-b border-border bg-surface">
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-3 px-5 py-2">
           {/*
             로고는 애니메이션 WebP다. unoptimized가 없으면 Next의 이미지 최적화가
@@ -117,9 +124,9 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
             <ThemeToggle initial={theme} />
           </div>
         </div>
-      </StickyHeader>
+      </header>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
+      <MainScroll>{children}</MainScroll>
     </div>
   );
 }

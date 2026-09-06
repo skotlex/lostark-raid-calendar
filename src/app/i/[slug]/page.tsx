@@ -121,11 +121,12 @@ export default async function BoardPage({
       {/*
         밑줄이 놓일 레일. 이게 없으면 켜진 탭의 밑줄만 허공에 떠 보인다.
 
-        머리줄 바로 밑(--header-h)에 붙여 스크롤해도 남는다. 요일과 주차를 보면서
-        아래쪽 공대를 읽는 화면이라 이 줄이 올라가 버리면 지금 무엇을 보고 있는지
-        모른 채 스크롤하게 된다. 밑을 지나가는 카드가 비치지 않게 배경을 깐다.
+        본문 스크롤 영역의 맨 위(top-0)에 붙여 스크롤해도 남는다. 그 영역이 이미
+        머리줄 밑에서 시작하므로 따로 내려 잡을 것이 없다(MainScroll). 요일과 주차를
+        보면서 아래쪽 공대를 읽는 화면이라 이 줄이 올라가 버리면 지금 무엇을 보고
+        있는지 모른 채 스크롤하게 된다. 밑을 지나가는 카드가 비치지 않게 배경을 깐다.
       */}
-      <div className="sticky top-[var(--header-h)] z-20 flex flex-wrap items-center justify-end gap-x-3 gap-y-2 border-b border-border bg-bg pt-2">
+      <div className="sticky top-0 z-20 flex flex-wrap items-center justify-end gap-x-3 gap-y-2 border-b border-border bg-bg pt-2">
         {/*
           요일 줄만 왼쪽에 남기고(mr-auto) 나머지는 오른쪽으로 몬다. 줄이 넘칠 때가
           이유다. ml-auto로 밀면 남는 자리가 있는 줄에서만 먹어서, 미정과 보기 토글이
