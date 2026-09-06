@@ -157,6 +157,15 @@ export function AccountMenu({
 
   return (
     <div className="relative" ref={boxRef}>
+      {/*
+        얼굴이 둥그니 담는 것도 둥글게 한다. 각진 상자에 넣으면 안에서 한 번 더 잘린
+        것처럼 보인다.
+
+        평소에는 테두리를 두지 않는다. 머리줄에서 색이 있는 것은 얼굴 하나뿐이라 그것만으로
+        이미 눈에 띄고, 선을 더하면 옆의 탭들보다 무겁게 선다. 대신 올리거나 열었을 때
+        배경을 깔아 누를 수 있는 것임을 알린다. 탭이 자기 자리를 알리는 방식과 같다
+        (globals.css의 .tab-link).
+      */}
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
@@ -164,7 +173,9 @@ export function AccountMenu({
         aria-label={`내 계정 ${label}`}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex items-center gap-1 rounded border border-border py-1 pl-1 pr-1.5 text-text-faint transition-colors hover:text-text"
+        className={`flex items-center gap-1.5 rounded-full py-0.5 pl-0.5 pr-1.5 transition-colors hover:bg-surface-2 hover:text-text focus-visible:bg-surface-2 focus-visible:text-text ${
+          open ? "bg-surface-2 text-text" : "text-text-dim"
+        }`}
       >
         <Face label={label} avatarUrl={avatarUrl} />
         {/*
@@ -180,7 +191,7 @@ export function AccountMenu({
         <div
           role="menu"
           aria-label="내 계정"
-          className="absolute right-0 top-full z-40 mt-1 min-w-max overflow-hidden rounded border border-border bg-surface py-1 shadow-lg"
+          className="absolute right-0 top-full z-40 mt-1 min-w-max overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-lg"
         >
           <div className="flex items-center gap-2 px-3 py-1.5">
             <Face label={label} avatarUrl={avatarUrl} />
