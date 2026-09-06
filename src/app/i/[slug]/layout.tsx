@@ -6,6 +6,7 @@ import { requireInstance } from "@/lib/instance";
 import { requireSession } from "@/lib/session";
 
 import { THEME_COOKIE, toThemeChoice } from "../../theme";
+import { AccountMenu } from "./AccountMenu";
 import {
   BoardIcon,
   HistoryIcon,
@@ -15,9 +16,7 @@ import {
   ScheduleIcon,
 } from "./icons";
 import { MainScroll } from "./MainScroll";
-import { ThemeToggle } from "../../ThemeToggle";
 import { TabLink } from "./lastDay";
-import { Viewer } from "./Viewer";
 
 // Prisma로 DB를 읽으므로 빌드 시점에 미리 굽지 않는다.
 export const dynamic = "force-dynamic";
@@ -88,7 +87,12 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
     */
     <div className="flex h-dvh flex-col overflow-hidden">
       <header className="relative z-30 shrink-0 border-b border-border bg-surface">
-        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-3 px-5 py-2">
+        {/*
+          접지 않는다(flex-nowrap). 접히면 머리줄 키가 두 배가 되고 본문이 그만큼
+          아래로 밀린다. 좁아지면 여백부터 줄이고, 그래도 모자라면 탭 줄이 옆으로
+          흐른다(nav의 overflow-x). 로고와 계정은 양 끝에 그대로 남는다.
+        */}
+        <div className="mx-auto flex w-full max-w-6xl items-center gap-x-2 px-3 py-2 min-[54rem]:gap-x-4 min-[54rem]:px-5">
           {/*
             로고는 애니메이션 WebP다. unoptimized가 없으면 Next의 이미지 최적화가
             첫 프레임만 남긴 정지 이미지로 바꿔버린다.
@@ -105,7 +109,7 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
             />
           </Link>
 
-          <nav className="flex gap-1">
+          <nav className="header-nav flex min-w-0 gap-1">
             {tabs.map((tab) => (
               <TabLink
                 key={tab.href}
@@ -118,10 +122,8 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
             ))}
           </nav>
 
-          {/* 나가기와 테마는 둘 다 작은 버튼이라 Viewer 안쪽 간격(gap-2)에 맞춘다. */}
-          <div className="ml-auto flex items-center gap-2">
-            <Viewer session={session} />
-            <ThemeToggle initial={theme} />
+          <div className="ml-auto shrink-0">
+            <AccountMenu label={session.label} avatarUrl={session.avatarUrl} theme={theme} />
           </div>
         </div>
       </header>
