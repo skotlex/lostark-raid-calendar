@@ -11,9 +11,15 @@ import { prisma } from "./prisma";
  *
  * **WebSocket을 쓰지 않는다.** Vercel 서버리스 함수는 연결을 업그레이드받지 못하고,
  * SSE는 연결이 열려 있는 내내 함수가 도는 데다 인스턴스가 여럿이라 브로드캐스트에
- * 공유 pub/sub이 따로 필요하다. Neon 풀러(PgBouncer)로는 LISTEN/NOTIFY도 못 쓴다.
+ * 공유 pub/sub이 따로 필요하다. 풀러(Supavisor·PgBouncer)로는 LISTEN/NOTIFY도 못 쓴다.
  * 길드원 열 명 남짓한 규모에 그 장치를 들이는 대신 **폴링 한 갈래**로 둔다
  * (api/presence). 발자국을 남기고 남의 발자국과 편성표 버전을 함께 받아온다.
+ *
+ * Supabase로 옮긴 뒤로는 **Realtime이라는 길이 하나 열려 있다.** 별도 호스팅
+ * WebSocket이라 위의 두 제약을 다 비켜 가고 Presence가 내장 기능이다. 다만 폴링이
+ * 이미 돌고 있고 지연 3초가 이 규모에서 문제가 된 적이 없어 갈아타지 않았다.
+ * 바꾼다면 의존성(`@supabase/supabase-js`)이 하나 늘고 이 파일과 Presence.tsx가
+ * 통째로 다시 쓰인다. 지연이 실제로 거슬릴 때 꺼내 볼 선택지로만 적어 둔다.
  */
 
 /**
@@ -68,7 +74,7 @@ export interface PresenceResult {
  * 내 발자국을 남기고 남의 발자국과 편성표 버전을 받아온다.
  *
  * 세 쿼리를 한꺼번에 낸다. 순서에 의미가 없어서다 — 내 줄은 어차피 결과에서 빼고,
- * 버전은 발자국과 상관이 없다. 순차로 내면 싱가포르 왕복이 세 번이 된다(CLAUDE.md 5장).
+ * 버전은 발자국과 상관이 없다. 순차로 내면 DB 왕복이 세 번이 된다(CLAUDE.md 5장).
  */
 export async function touchPresence(input: PresenceInput): Promise<PresenceResult> {
   const now = new Date();

@@ -19,10 +19,12 @@ for (const file of [".env.local", ".env"]) {
   }
 }
 
-// Neon은 풀링/직결 두 가지 접속 문자열을 준다.
-// prisma db push / migrate 같은 스키마 작업은 풀러(PgBouncer)를 통과할 수 없어
+// Supabase는 풀링(Supavisor, 6543)/직결(5432) 두 가지 접속 문자열을 준다.
+// prisma db push / migrate 같은 스키마 작업은 트랜잭션 풀러를 통과할 수 없어
 // 직결 URL이 필요하다. 앱 런타임은 반대로 풀링을 쓴다(src/lib/prisma.ts).
-// 이름은 Neon의 Vercel 연동이 자동으로 넣어주는 것과 맞췄다.
+//
+// `_UNPOOLED`라는 이름은 Neon을 쓰던 때 그 Vercel 연동이 넣어주던 것을 그대로
+// 물려받았다. Supabase는 이 이름을 쓰지 않지만 배포에 이미 박혀 있는 값이라 두었다.
 const url = process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL;
 
 export default defineConfig({
