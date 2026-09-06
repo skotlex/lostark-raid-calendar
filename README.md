@@ -50,12 +50,16 @@
 
 ### 3. Postgres
 
-[Neon](https://neon.tech) 무료 프로젝트면 충분합니다. 지역은 **싱가포르
-(`aws-ap-southeast-1`)** 를 고르세요. Neon은 한국·일본에 지역이 없고, 만든 뒤에는 지역을
-바꿀 수 없습니다.
+[Supabase](https://supabase.com) 무료 프로젝트면 충분합니다. 지역은 **서울
+(`ap-northeast-2`)** 을 고르세요. Vercel 함수도 서울(`icn1`)에 두므로 둘이 같은 지역에
+있어야 합니다. **만든 뒤에는 지역을 바꿀 수 없습니다.**
 
-콘솔의 Connect 화면에서 **접속 문자열 두 개**를 모두 복사합니다. 호스트에 `-pooler`가
-붙은 것이 앱용, 붙지 않은 것이 스키마 작업용입니다.
+대시보드의 Connect 화면에서 **접속 문자열 두 개**를 모두 복사합니다. 포트 `6543`
+(Transaction pooler)이 앱용, `5432`(Direct connection)가 스키마 작업용입니다.
+
+무료 프로젝트는 **일주일간 활동이 없으면 정지**되고, 그때는 대시보드에서 직접
+`Resume project`를 눌러야 합니다. 배포하면 하루 한 번 도는 크론이 이를 막아 줍니다
+(아래 배포 항목).
 
 ### 4. 환경변수
 
@@ -67,13 +71,14 @@ cp .env.example .env.local
 
 | 이름 | 값 |
 |---|---|
-| `DATABASE_URL` | Neon 풀링 문자열 (`-pooler` 붙은 쪽) |
-| `DATABASE_URL_UNPOOLED` | Neon 직결 문자열 |
+| `DATABASE_URL` | Supabase 풀링 문자열 (포트 `6543`) |
+| `DATABASE_URL_UNPOOLED` | Supabase 직결 문자열 (포트 `5432`) |
 | `LOSTARK_API_KEY` | 로아 OpenAPI JWT |
 | `INSTANCE_SESSION_SECRET` | 세션 쿠키 서명용 랜덤 문자열 |
 | `DISCORD_CLIENT_ID` | 디스코드 앱 ID |
 | `DISCORD_CLIENT_SECRET` | 디스코드 앱 시크릿 |
 | `DISCORD_GUILD_ID` | 길드(서버) ID |
+| `CRON_SECRET` | keep-alive 크론 보호용. **Vercel에만** 넣으면 됩니다 |
 
 **어느 것에도 `NEXT_PUBLIC_` 접두사를 붙이지 마세요.** 붙는 순간 브라우저 번들로 새어
 나갑니다.
@@ -106,8 +111,12 @@ npm run dev
 
 ## 배포 (Vercel)
 
-지역은 `vercel.json`에 **싱가포르(`sin1`)** 로 고정해 두었습니다. Neon과 같은 지역이어야
-페이지마다 나가는 여러 번의 쿼리가 태평양을 왕복하지 않습니다.
+지역은 `vercel.json`에 **서울(`icn1`)** 로 고정해 두었습니다. DB와 같은 지역이어야
+페이지마다 나가는 여러 번의 쿼리가 국제 구간을 왕복하지 않습니다. **DB를 다른 지역에
+만드셨다면 이 값도 함께 바꾸셔야 합니다.** 한쪽만 옮기면 오히려 느려집니다.
+
+같은 파일에 하루 한 번 도는 크론(`/api/keep-alive`)도 들어 있습니다. Supabase 무료
+프로젝트가 일주일 미사용으로 정지되는 것을 막습니다.
 
 ### 1. 프로젝트 연결
 
@@ -135,7 +144,7 @@ Preview 배포는 도메인이 매번 바뀌어 로그인이 되지 않습니다
 
 ### 4. 스키마와 기본 데이터
 
-쓰던 Neon DB를 그대로 가리키면 할 일이 없습니다. 새 DB라면 로컬에서 한 번 돌립니다.
+쓰던 DB를 그대로 가리키면 할 일이 없습니다. 새 DB라면 로컬에서 한 번 돌립니다.
 
 ```bash
 npm run db:push
