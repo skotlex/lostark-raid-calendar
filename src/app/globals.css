@@ -586,10 +586,16 @@ button:disabled,
  *
  * 좁은 칸에서는 이름과 템레벨이 먼저다. 시너지는 파티 요약이 이미 말하고 있어
  * 여기서 빠져도 없어지는 정보가 아니다.
+ *
+ * **접지 않고 잘라낸다.** 칩 하나가 다음 줄로 넘어가면 그 칸만 키가 커지는데,
+ * 격자라 같은 줄 여덟 칸이 전부 따라 늘어난다. 경고 줄을 흐름에서 뺀 것과 같은 이유다.
+ * 잘린 칩은 파티 요약이 받쳐주고, 순서상 뒤에 서는 서폿 버프부터 잘린다 —
+ * 그건 자리와 각인 칩이 이미 말하고 있다.
  */
 .char-syn-line {
   display: none;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow: hidden;
   gap: 0.25rem;
   width: 100%;
   margin-top: 0.125rem;
@@ -601,9 +607,14 @@ button:disabled,
  * 편성 칸에서 시너지를 접는 이유는 파티 요약이 같은 말을 이미 하고 있어서인데,
  * 관리 화면에는 그 요약이 없다. 여기서 접으면 어디에도 안 남는다.
  * 아래 컨테이너 규칙이 display를 다시 잡으므로 선택자를 겹쳐 이긴다.
+ *
+ * **여기서는 접는다.** 잘라내는 것도 같은 이유로 안 된다. 요약이 없으니 잘린 칩은
+ * 어디에도 안 남는다. 카드가 한 줄만큼 커지는 편이 낫다.
  */
 .char-syn-line.char-syn-line--open {
   display: flex;
+  flex-wrap: wrap;
+  overflow: visible;
 }
 
 /*
@@ -617,6 +628,8 @@ button:disabled,
  * 읽히고, 섞인 색이 종류를 알려준다. 테두리도 같은 색에서 뽑아 상자를 닫는다.
  */
 .char-syn {
+  /* 줄이 잘라내는 쪽이라 칩은 제 크기를 지킨다. 줄어들면 글자가 상자 밖으로 삐져나온다. */
+  flex: 0 0 auto;
   border-radius: 0.25rem;
   background: color-mix(in srgb, currentcolor 20%, rgb(6 9 14 / 74%));
   box-shadow: inset 0 0 0 1px color-mix(in srgb, currentcolor 45%, transparent);
@@ -780,9 +793,24 @@ button:disabled,
   }
 
   .char-bottom {
-    /* 숫자가 인물 위로 넘치지 않게 오른쪽을 비워 둔다. */
-    padding-right: 42%;
     padding-bottom: 0.5rem;
+  }
+
+  /*
+   * 인물 자리는 이 둘만 비운다.
+   *
+   * 예전에는 아래 띠 전체(.char-bottom)의 오른쪽을 비웠는데, 그러면 시너지 줄까지
+   * 폭이 절반으로 줄어 칩 셋(받피증·공이속·서폿)이 한 줄에 못 들어갔다. 시너지 칩은
+   * 제 바탕과 테두리를 갖고 있어(.char-syn) 인물 위로 지나가도 읽힌다. 경고 줄이
+   * 이미 같은 이유로 폭을 다 쓴다.
+   *
+   * 이름과 숫자는 그럴 수 없다. 바탕이 띠 하나뿐이라 인물에 닿으면 글자가 묻는다.
+   * 여백이 아니라 최대 폭으로 막는다. 여백은 줄어들 수 있는 상자(.char-id)에서
+   * 백분율 해석이 브라우저마다 갈리는데, 최대 폭은 어느 쪽이든 같은 값이 된다.
+   */
+  .char-id,
+  .char-stat-line {
+    max-width: 58%;
   }
 
   .char-title {
