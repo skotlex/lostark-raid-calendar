@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { DiscordError, exchangeCode, fetchGuildMember } from "@/lib/discord";
+import { rememberGuildMember } from "@/lib/guildAccess";
 import { readSettings } from "@/lib/settings";
 import { BOARD_VIEW_COOKIE } from "@/app/i/[slug]/view";
 import { THEME_COOKIE } from "@/app/theme";
@@ -53,6 +54,9 @@ export async function GET(request: NextRequest) {
     const token = await exchangeCode(origin, code);
     const member = await fetchGuildMember(token);
     if (!member) return fail("not_member");
+
+    // 방금 확인한 참이다. 첫 페이지에서 봇으로 같은 것을 또 묻지 않게 넣어 둔다.
+    rememberGuildMember(member.discordUserId);
 
     const exp = Math.floor(Date.now() / 1000) + SESSION_MAX_AGE_SEC;
     const res = NextResponse.redirect(new URL(pending.next, origin));

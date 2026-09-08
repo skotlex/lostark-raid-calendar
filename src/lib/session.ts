@@ -4,6 +4,8 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { isStillGuildMember } from "./guildAccess";
+
 /**
  * 입장 세션.
  *
@@ -13,6 +15,10 @@ import { redirect } from "next/navigation";
  *
  * **쿠키는 위조는 못 해도 훔칠 수는 있다.** 그래서 담는 값은 신원 표시용뿐이고,
  * 권한이랄 것이 애초에 없다(입장한 사람은 누구나 편집한다).
+ *
+ * **쿠키가 곧 입장 자격은 아니다.** 서명이 맞는다는 것은 "한때 길드원이었다"까지만
+ * 말해준다. 30일 동안 그 말을 그대로 믿으면 길드를 나간 사람이 한 달 내내 들어오므로,
+ * 길드에 아직 있는지는 guildAccess.ts가 따로 확인한다.
  */
 
 const COOKIE = "loa_session";
@@ -83,13 +89,26 @@ export const SESSION_MAX_AGE_SEC = MAX_AGE_SEC;
 /**
  * 입장한 사람만 지나간다. 아니면 로그인 화면으로 보낸다.
  *
+ * 보는 것이 둘이다. **쿠키의 서명**(위조가 아닌가)과 **길드 멤버십**(아직 길드원인가).
+ * 앞은 이 파일이, 뒤는 guildAccess.ts가 답한다.
+ *
  * **여기가 실제 관문이다.** proxy로 막지 않는 이유는 Next 문서가 proxy를
  * "완전한 세션 관리·인가 수단이 아니다"라고 못 박기 때문이다. 서버 컴포넌트와
  * 서버 액션에서 각각 확인해야 우회가 없다.
  */
 export async function requireSession(next?: string): Promise<Session> {
   const session = await readSession();
-  if (session) return session;
+  if (session) {
+    if (await isStillGuildMember(session.discordUserId)) return session;
+    /*
+     * 길드를 나갔다. **쿠키를 지울 수 있는 자리로 보낸다.**
+     *
+     * 여기서 곧장 /login으로 보내면 안 된다. 쿠키가 그대로 남아 있어 로그인 화면이
+     * "이미 들어와 있다"고 판단해 되돌려 보내면 왕복이 끝나지 않는다. 서버 컴포넌트는
+     * 쿠키를 지울 수 없으므로(Next 제약) 라우트 핸들러에 맡긴다.
+     */
+    redirect("/api/auth/left");
+  }
   redirect(next ? `/login?next=${encodeURIComponent(next)}` : "/login");
 }
 

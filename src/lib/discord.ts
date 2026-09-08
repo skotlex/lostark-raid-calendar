@@ -9,6 +9,12 @@ import "server-only";
  * 그쪽은 목록만 주고 길드 닉네임을 주지 않는다.
  *
  * 길드 닉네임이 필요한 이유는 그것이 곧 캐릭터명이기 때문이다.
+ *
+ * **멤버십을 읽는 길이 둘이다.** 로그인할 때는 방금 받은 사용자 토큰으로 묻고
+ * (`fetchGuildMember`), 그 뒤의 재검사는 봇 토큰으로 묻는다(`fetchGuildMemberByBot`).
+ * 재검사에 사용자 토큰을 쓸 수 없는 이유는 그것이 로그인 그 순간에만 손에 있기
+ * 때문이다. 갱신 토큰을 저장해 두는 길도 있지만 사람마다 비밀을 하나씩 DB에
+ * 쌓아두게 되고, 봇 토큰은 하나로 끝난다.
  */
 
 const API = "https://discord.com/api/v10";
@@ -26,6 +32,16 @@ export function clientId(): string {
 
 export function guildId(): string {
   return env("DISCORD_GUILD_ID");
+}
+
+/**
+ * 봇 토큰. **없으면 null이다.**
+ *
+ * 다른 비밀과 달리 없다고 던지지 않는다. 봇을 아직 안 만든 상태에서도 로그인은
+ * 그대로 돌아야 하고(재검사만 쉰다), 그걸 던지게 두면 로컬 개발이 통째로 막힌다.
+ */
+export function botToken(): string | null {
+  return process.env.DISCORD_BOT_TOKEN || null;
 }
 
 /** 콜백 주소. 개발과 배포가 다르므로 요청 origin에서 만든다. */
@@ -77,6 +93,23 @@ export interface GuildMember {
   avatarUrl: string | null;
 }
 
+/** 두 경로가 같은 모양의 길드 멤버 객체를 준다. 읽는 자리를 하나로 둔다. */
+interface RawMember {
+  nick?: string | null;
+  user?: { id: string; username: string; global_name?: string | null; avatar?: string | null };
+}
+
+function parseMember(body: RawMember): GuildMember {
+  const user = body.user;
+  if (!user?.id) throw new DiscordError("사용자 정보가 오지 않았다");
+
+  return {
+    discordUserId: user.id,
+    label: body.nick || user.global_name || user.username,
+    avatarUrl: avatarUrl(user.id, user.avatar ?? null),
+  };
+}
+
 /**
  * 길드 멤버 정보. **길드에 없으면 null이다.** 이것이 입장 판정이다.
  *
@@ -92,20 +125,43 @@ export async function fetchGuildMember(accessToken: string): Promise<GuildMember
   if (res.status === 404) return null;
   if (!res.ok) throw new DiscordError(`길드 정보를 읽지 못했다 (${res.status})`);
 
-  const body = (await res.json()) as {
-    nick?: string | null;
-    avatar?: string | null;
-    user?: { id: string; username: string; global_name?: string | null; avatar?: string | null };
-  };
+  return parseMember((await res.json()) as RawMember);
+}
 
-  const user = body.user;
-  if (!user?.id) throw new DiscordError("사용자 정보가 오지 않았다");
+/** 디스코드 오류 코드. "그런 멤버 없다"와 "그런 길드 없다"는 전혀 다른 뜻이다. */
+const UNKNOWN_MEMBER = 10007;
 
-  return {
-    discordUserId: user.id,
-    label: body.nick || user.global_name || user.username,
-    avatarUrl: avatarUrl(user.id, user.avatar ?? null),
-  };
+/**
+ * 봇 토큰으로 읽는 길드 멤버. **길드에 없으면 null, 못 읽었으면 던진다.**
+ *
+ * 사용자 토큰이 필요 없어 로그인 뒤 아무 때나 물어볼 수 있다. 이 경로가 재검사의
+ * 유일한 수단이다(CLAUDE.md 4장).
+ *
+ * **404를 그대로 "탈퇴"로 읽으면 안 된다.** 봇이 길드에 초대되지 않았거나 길드 ID가
+ * 틀려도 404가 오는데, 그걸 탈퇴로 읽으면 설정 실수 한 번에 길드원 전원이 쫓겨난다.
+ * 본문의 오류 코드가 둘을 갈라주므로 `10007`(Unknown Member)일 때만 없다고 답한다.
+ *
+ * 단건 조회는 `GUILD_MEMBERS` 특권 인텐트가 필요 없다(목록 조회 쪽만 요구한다).
+ * 그래서 봇을 초대하기만 하면 되고 포털에서 켤 것이 없다.
+ */
+export async function fetchGuildMemberByBot(userId: string): Promise<GuildMember | null> {
+  const token = botToken();
+  if (!token) throw new DiscordError("DISCORD_BOT_TOKEN이 없다");
+
+  const res = await fetch(`${API}/guilds/${guildId()}/members/${userId}`, {
+    headers: { Authorization: `Bot ${token}` },
+    cache: "no-store",
+  });
+
+  if (res.ok) return parseMember((await res.json()) as RawMember);
+
+  if (res.status === 404) {
+    const body = (await res.json().catch(() => null)) as { code?: number } | null;
+    if (body?.code === UNKNOWN_MEMBER) return null;
+    throw new DiscordError(`길드를 찾지 못했다 (code ${body?.code ?? "?"}). 봇이 길드에 있는지 확인한다`);
+  }
+
+  throw new DiscordError(`멤버십을 읽지 못했다 (${res.status})`);
 }
 
 function avatarUrl(userId: string, avatar: string | null): string | null {

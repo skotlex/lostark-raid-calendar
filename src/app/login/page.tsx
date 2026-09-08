@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { isStillGuildMember } from "@/lib/guildAccess";
 import { readSession } from "@/lib/session";
 import { safeNext } from "../api/auth/discord/state";
 
@@ -23,8 +24,14 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const query = await searchParams;
   const next = safeNext(typeof query.next === "string" ? query.next : null);
 
-  // 이미 들어와 있으면 로그인 화면을 보여줄 이유가 없다.
-  if (await readSession()) redirect(next);
+  /*
+   * 이미 들어와 있으면 로그인 화면을 보여줄 이유가 없다.
+   *
+   * **쿠키만 보고 되돌려 보내면 안 된다.** 길드를 나간 사람은 편성표에서 여기로
+   * 튕겨 오는데, 여기서 다시 편성표로 보내면 왕복이 끝나지 않는다.
+   */
+  const session = await readSession();
+  if (session && (await isStillGuildMember(session.discordUserId))) redirect(next);
 
   const error = typeof query.error === "string" ? MESSAGES[query.error] : undefined;
 
