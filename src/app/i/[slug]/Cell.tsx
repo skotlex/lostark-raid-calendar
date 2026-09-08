@@ -271,7 +271,7 @@ export function Cell({
         </div>
 
         {editable && (
-          <div className="flex shrink-0 items-center gap-0.5">
+          <div className="char-top-actions flex shrink-0 items-center">
             <form action={pin}>
               {hidden}
               <input type="hidden" name="pinned" value={cell.pinned ? "false" : "true"} />
