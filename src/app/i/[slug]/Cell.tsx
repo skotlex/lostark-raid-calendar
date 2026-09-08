@@ -244,7 +244,7 @@ export function Cell({
       <PortraitCard src={character.imageUrl} className={character.className} />
 
       <div className="char-top">
-        <div className="min-w-0 flex-1">
+        <div className="char-top-info min-w-0 flex-1">
           {/* 클래스가 칸에서 가장 먼저 읽히는 정보다. 직업 각인은 그다음. */}
           <div className="char-chip-line">
             <span className="char-chip char-chip--class">{character.className ?? "?"}</span>
@@ -280,7 +280,7 @@ export function Cell({
                 disabled={busy}
                 title={cell.pinned ? "고정 해제" : "이 자리 고정 (리셋에서 제외)"}
                 aria-label={cell.pinned ? "고정 해제" : "자리 고정"}
-                className={`char-icon-btn ${cell.pinned ? "char-accent" : ""}`}
+                className={`char-icon-btn ${cell.pinned ? "char-pin-on" : ""}`}
               >
                 <PinIcon pinned={cell.pinned} />
               </button>

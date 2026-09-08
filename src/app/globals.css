@@ -182,6 +182,14 @@ button:disabled,
   --c-dim: #a3b0bf;
   --c-faint: #74818f;
   --c-accent: #e2b354;
+  /*
+   * 자리 고정. 각인의 금색(--c-accent)보다 한 걸음 더 노랑 쪽이다.
+   *
+   * 둘을 같은 값으로 두면 각인 칩과 고정 칩이 나란히 설 때 한 덩어리로 읽힌다.
+   * 각인은 "이 캐릭터가 무엇인가"이고 고정은 "이 자리가 다음 주에 남는가"라
+   * 성격이 아예 다르다. 압정 아이콘도 같은 값을 쓴다(.char-pin-on).
+   */
+  --c-pin: #f6d251;
   --c-danger: #f0867a;
   --c-ok: #6fca8c;
   --c-dps: #dc9070;
@@ -689,12 +697,48 @@ button:disabled,
 
 /*
  * 좁아질 때 버리는 순서.
- * 남길 것부터 정한다. 이름 > 템렙 > 직업 각인 > 클래스 > 아크그리드.
+ * 남길 것부터 정한다. 이름 > 템렙 > 고정 > 클래스 > 직업 각인 > 아크그리드.
+ *
+ * **칩 중에서는 고정이 가장 오래 남는다.** 클래스와 직업 각인은 칸을 넓히거나 캐릭터
+ * 관리에서 다시 볼 수 있지만, 이 자리가 다음 주에 남는지는 여기서만 말한다. 폰에서
+ * 4열이 되면 칩 하나가 겨우 설 폭인데 그 하나가 각인이면 "아…"처럼 잘린 글자만 남아
+ * 아무것도 알려주지 못한다.
+ *
+ * 각인을 클래스보다 먼저 버리는 것도 길이 때문이다. `아르데타인의 기술`은 클래스
+ * 이름의 두 배가 넘어, 좁은 칸에서 살아남아 봐야 말줄임으로 잘린다.
  */
-@container (max-width: 170px) {
+@container (max-width: 200px) {
   /* .char-chip이 아래에서 display를 다시 잡으므로 선택자를 겹쳐 이긴다. */
+  .char-chip.char-chip--engraving,
+  .char-chip.char-chip--engraving-sup {
+    display: none;
+  }
+}
+
+@container (max-width: 140px) {
   .char-chip.char-chip--class {
     display: none;
+  }
+}
+
+/*
+ * 폰에서 4열이 되면 칸이 80px 남짓까지 줄어든다. 압정과 ✕가 40px, 양쪽 여백이
+ * 12px이라 칩에 남는 폭이 고정 칩보다도 좁다. 칩을 지우는 대신 **버튼 아래로
+ * 내린다** — 그러면 칸 폭을 통째로 쓴다.
+ *
+ * 줄이 하나 늘어도 카드는 높아지지 않는다. 좁은 칸은 가운데(.char-gap)가 인물을
+ * 드러내려고 늘어나 있어서, 남는 그 자리를 이 줄이 가져갈 뿐이다.
+ */
+@container (max-width: 100px) {
+  .char-top {
+    flex-wrap: wrap;
+    /* 버튼만 남은 첫 줄이다. 왼쪽에 붙으면 칸 한가운데에 뜬 것처럼 보인다. */
+    justify-content: flex-end;
+  }
+
+  .char-top-info {
+    order: 1;
+    flex-basis: 100%;
   }
 }
 
@@ -751,6 +795,14 @@ button:disabled,
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/*
+ * 고정 칩만은 줄어들지 않는다. 두 글자라 한 번만 잘려도 `고…`가 되어 뜻이 사라진다.
+ * 위 컨테이너 규칙이 아직 안 걸리는 어중간한 폭에서는 앞의 칩들이 대신 줄어든다.
+ */
+.char-chip-line > .char-chip--pinned {
+  flex: 0 0 auto;
 }
 
 /*
@@ -1039,8 +1091,13 @@ button:disabled,
 /* 자리 고정. 각인 칩 옆에 붙어 이 자리가 리셋에 남는다는 것을 알린다. */
 .char-chip--pinned {
   background: rgb(6 9 14 / 66%);
-  box-shadow: inset 0 0 0 1px rgb(226 179 84 / 45%);
-  color: var(--c-accent);
+  box-shadow: inset 0 0 0 1px rgb(246 210 81 / 50%);
+  color: var(--c-pin);
+}
+
+/* 눌러서 켜진 압정. 칩과 같은 노랑이라 둘이 한 상태를 가리키는 것으로 읽힌다. */
+.char-pin-on {
+  color: var(--c-pin);
 }
 
 /* 딜/서폿. 판정이 데이터에서 나오므로 표시만 한다. */
