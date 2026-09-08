@@ -107,11 +107,15 @@ export function isTuesdayCarryWindow(now: Date = new Date()): boolean {
  * 그 요일의 편성이 **지금 진행 중인 주차**. 화요일만 30시간 늦게 넘어간다(위 표).
  *
  * **저장 키가 아니다.** 배정은 화면이 보고 있는 주차에 그대로 저장된다. 이 값은
- * "지금 살아 있는 편성이 어느 주차에 있는가"를 묻는 자리에서만 쓴다 — 숙제(homework.ts),
- * 고정 현황과 승계 대상(board.ts), 새 슬롯의 승계 표시(slots.ts).
+ * "지금 살아 있는 **편성**이 어느 주차에 있는가"를 묻는 자리에서만 쓴다 — 고정 현황과
+ * 승계 대상(board.ts), 새 슬롯의 승계 표시(slots.ts).
  *
  * 화면 주차를 써야 할 자리에 이 값을 쓰면 창 안에서 엉뚱한 주차를 건드리고, 반대로
  * 이 값을 써야 할 자리에 화면 주차를 쓰면 오늘 밤 화요일이 통째로 빠진다.
+ *
+ * **숙제는 이 값을 쓰지 않는다**(homework.ts). 숙제와 골드 한도가 풀리는 시각은
+ * 게임 주차 경계(수 06시) 그대로라 `getWeekStart` 하나면 된다. 요일마다 주차를 갈라
+ * 놓으면 30시간 창 안에서 미정 레이드와 진행률이 시작도 안 한 주차로 넘어간다.
  */
 export function liveWeekForDay(dayOfWeek: number, now: Date = new Date()): Date {
   return dayOfWeek === TUESDAY ? getWeekStart(now) : getPlanningWeekStart(now);
