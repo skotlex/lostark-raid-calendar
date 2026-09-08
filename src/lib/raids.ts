@@ -54,14 +54,19 @@ export function raidLabel(raidName: string, difficulty: string | null | undefine
  * 정하지 않고 그대로 따른다. 요일 하나에 슬롯이 여럿 늘어서는 화면이라 글자를 읽기
  * 전에 색으로 먼저 갈리는 편이 훑기 좋다.
  *
- * **모든 난이도에 색이 있는 것은 아니다.** 지평의 성당의 `1단계`처럼 등급이 아닌
- * 값도 있고, 옛 슬롯에는 프리셋에 없는 값이 들어 있을 수 있다. 모르는 값은 색 없이
- * 회색 뱃지로 둔다. 아무 색이나 붙이면 같은 파랑이 두 가지 뜻을 갖는다.
+ * **부르는 이름이 레이드마다 다르다.** 지평의 성당은 노말·하드 대신 단계로 부르는데
+ * 같은 자리의 난이도이므로 색도 같이 간다. 낮은 쪽부터 파랑·주황·보라다.
+ *
+ * 옛 슬롯이나 자유 입력으로 들어온 모르는 값은 색 없이 회색 뱃지로 둔다. 아무 색이나
+ * 붙이면 같은 파랑이 두 가지 뜻을 갖는다.
  */
 const DIFFICULTY_TONES: Record<string, string> = {
   노말: "normal",
   하드: "hard",
   나이트메어: "nightmare",
+  "1단계": "normal",
+  "2단계": "hard",
+  "3단계": "nightmare",
 };
 
 export function difficultyTone(difficulty: string | null | undefined): string | undefined {

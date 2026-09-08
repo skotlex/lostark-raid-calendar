@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 
-import { raidLabel } from "@/lib/raids";
+import { difficultyTone, raidLabel } from "@/lib/raids";
 import { formatScoreCut } from "@/lib/scoreCut";
 import type { SlotView } from "@/lib/slots";
 import { dayName, isUndecided } from "@/lib/week";
@@ -41,7 +41,19 @@ export function SlotRow({ slug, slot }: { slug: string; slot: SlotView }) {
       <span className="w-14 shrink-0 text-sm tabular">
         {isUndecided(slot.dayOfWeek) ? NO_VALUE : slot.startTime}
       </span>
-      <span className="font-medium">{raidLabel(slot.raidName, slot.difficulty)}</span>
+      {/*
+        편성표 머리글과 같은 뱃지다. 저장한 값이 저기서 어떻게 서는지 여기서 그대로 보인다.
+        이름과 한 덩어리로 묶는 이유는 아래 점수컷과 같다 — 줄이 접힐 때 난이도만
+        다음 줄로 떨어지면 어느 레이드의 난이도인지 알 수 없다.
+      */}
+      <span className="flex items-center gap-x-2">
+        <span className="font-medium">{slot.raidName}</span>
+        {slot.difficulty && (
+          <span className="slot-badge" data-diff={difficultyTone(slot.difficulty)}>
+            {slot.difficulty}
+          </span>
+        )}
+      </span>
       {slot.partySize === 4 && (
         <span className="rounded bg-surface-2 px-1.5 py-0.5 text-xs text-text-dim">4인</span>
       )}

@@ -35,20 +35,24 @@ export function SlotHeader({
   return (
     <>
       <header className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-border px-3 py-2">
-        <h3 className="font-semibold">{slot.raidName}</h3>
-
         {/*
           난이도는 이름에서 떼어 뱃지로 세운다.
 
           "벨가르딘 하드"처럼 붙여 두면 이름의 일부로 읽혀, 같은 레이드가 난이도만
           다르게 두 줄 서 있을 때 뒷글자를 읽어야 갈린다. 색을 입히면 훑는 것만으로
-          걸린다. 프리셋에 없는 난이도는 색 없이 회색으로 선다(raids.ts).
+          걸린다. 모르는 난이도는 색 없이 회색으로 선다(raids.ts).
+
+          이름과 한 덩어리로 묶는다. 아래 점수컷과 같은 이유로, 줄이 접힐 때 난이도만
+          떨어져 나가면 어느 레이드의 난이도인지 알 수 없다.
         */}
-        {slot.difficulty && (
-          <span className="slot-badge" data-diff={difficultyTone(slot.difficulty)}>
-            {slot.difficulty}
-          </span>
-        )}
+        <span className="flex items-center gap-x-2">
+          <h3 className="font-semibold">{slot.raidName}</h3>
+          {slot.difficulty && (
+            <span className="slot-badge" data-diff={difficultyTone(slot.difficulty)}>
+              {slot.difficulty}
+            </span>
+          )}
+        </span>
 
         {/* 미정 칸에는 시각이 없다. 채워 넣은 값을 보여주면 약속처럼 읽힌다. */}
         {!isUndecided(slot.dayOfWeek) && (

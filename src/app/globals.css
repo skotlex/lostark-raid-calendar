@@ -1682,7 +1682,8 @@ button:disabled,
  * --support 파랑)과 색상은 가깝지만 뜻이 섞이지 않는다. 점수컷과 달리 이 뱃지는
  * 레이드 이름에 바로 붙어 서고 `하드`라는 글자를 달고 있어 제목의 일부로 읽힌다.
  *
- * 프리셋에 없는 난이도(지평의 성당 `1단계` 등)는 data-diff가 비어 회색으로 선다.
+ * 지평의 성당의 `1·2·3단계`도 같은 세 색을 낮은 쪽부터 쓴다. 부르는 이름만 다를 뿐
+ * 같은 자리의 난이도다. 모르는 값은 data-diff가 비어 회색으로 선다.
  */
 .slot-badge[data-diff="normal"] {
   background: color-mix(in srgb, var(--diff-normal) 14%, transparent);
