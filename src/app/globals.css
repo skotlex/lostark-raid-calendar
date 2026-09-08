@@ -192,6 +192,13 @@ button:disabled,
   --c-pin: #f6d251;
   /* 켜진 압정에 손을 올렸을 때. 회색이나 흰색으로 가면 꺼지는 것처럼 읽힌다. */
   --c-pin-strong: #ffd633;
+  /*
+   * 고정된 상태의 테두리. 고정 칩과 켜진 압정이 함께 쓴다.
+   *
+   * 머리줄의 다른 상자(✕, 꺼진 압정)는 회색 테두리다. 회색은 상자를 닫는 선일 뿐이고,
+   * 노랑은 그 상자가 켜져 있다는 말이다. 그래서 둘의 색이 갈린다.
+   */
+  --c-pin-edge: rgb(246 210 81 / 50%);
   --c-danger: #f0867a;
   --c-ok: #6fca8c;
   --c-dps: #dc9070;
@@ -753,16 +760,11 @@ button:disabled,
   }
 
   /*
-   * 고정 칩을 버튼과 같은 상자로 맞춘다.
-   *
-   * 기본 줄 높이(1.5rem)면 칩만 4px 높아 셋이 나란히 선 줄이 어긋나 보인다. 이 폭에서는
-   * 머리줄에 이 셋뿐이라 어긋남이 그대로 눈에 걸린다. 좌우 여백은 버튼에서 아낀 만큼
-   * 되돌려준다 — 글자가 테두리에 붙으면 뱃지가 아니라 잘린 조각으로 읽힌다.
+   * 좌우 여백은 버튼에서 아낀 만큼 되돌려준다. 글자가 테두리에 붙으면 뱃지가 아니라
+   * 잘린 조각으로 읽힌다. 높이는 폭과 무관하게 이미 맞춰져 있다(.char-chip-line).
    */
   .char-card .char-chip--pinned {
-    height: 1.25rem;
     padding-inline: 0.25rem;
-    line-height: 1.25rem;
   }
 }
 
@@ -819,6 +821,20 @@ button:disabled,
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/*
+ * 칩 높이를 압정·✕ 버튼(1.25rem)에 맞춘다.
+ *
+ * .char-chip의 기본 줄 높이는 1.5rem이라 칩만 4px 높다. 머리줄은 칩과 버튼이 한 줄에
+ * 나란히 서는 자리라 그 4px이 두 종류를 서로 어긋난 것으로 보이게 한다.
+ *
+ * .char-chip이 아니라 이 줄 안에서만 건다. 캐릭터 관리 카드의 칩 줄에는 옆에 설 버튼이
+ * 없어 맞출 대상이 없고, 거기서는 기본 줄 높이가 글자를 더 편하게 받친다.
+ */
+.char-chip-line > .char-chip {
+  height: 1.25rem;
+  line-height: 1.25rem;
 }
 
 /*
@@ -1115,7 +1131,7 @@ button:disabled,
 /* 자리 고정. 각인 칩 옆에 붙어 이 자리가 리셋에 남는다는 것을 알린다. */
 .char-chip--pinned {
   background: rgb(6 9 14 / 66%);
-  box-shadow: inset 0 0 0 1px rgb(163 176 191 / 32%);
+  box-shadow: inset 0 0 0 1px var(--c-pin-edge);
   color: var(--c-pin);
 }
 
@@ -1126,6 +1142,7 @@ button:disabled,
  * 잡으므로 클래스 하나로는 순서에 밀려 회색으로 남는다.
  */
 .char-icon-btn.char-pin-on {
+  box-shadow: inset 0 0 0 1px var(--c-pin-edge);
   color: var(--c-pin);
 }
 .char-icon-btn.char-pin-on:hover {
@@ -1202,9 +1219,10 @@ button:disabled,
    */
   background: rgb(10 14 20 / 72%);
   /*
-   * 고정 칩과 같은 굵기의 테두리. 머리줄에 이 셋이 나란히 서므로 하나만 상자가 닫혀
-   * 있으면 칩이 버튼과 다른 종류로 읽힌다. 색은 칩의 노랑과 달리 회색이다 — 테두리는
-   * 상자를 닫는 선이고, 무엇이 켜져 있는지는 안의 색이 말한다.
+   * 고정 칩과 같은 굵기의 테두리. 머리줄에 칩과 버튼이 나란히 서므로 한쪽만 상자가
+   * 닫혀 있으면 둘이 다른 종류로 읽힌다.
+   *
+   * 회색인 것은 이 상자가 꺼져 있다는 뜻이다. 켜지면 노랑으로 간다(--c-pin-edge).
    */
   box-shadow: inset 0 0 0 1px rgb(163 176 191 / 32%);
   padding: 0 0.25rem;
