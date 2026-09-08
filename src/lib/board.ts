@@ -738,7 +738,14 @@ export async function setPinned(params: {
 /** 고정 현황 화면에서 쓰는 목록. 핀이 방치되는 것을 막는 유일한 수단이다. */
 export interface PinnedEntry {
   slotId: string;
-  slotLabel: string;
+  /**
+   * 이름과 난이도를 붙이지 않고 따로 준다.
+   *
+   * 화면이 난이도를 색 뱃지로 세우기 때문이다(raids.ts). 붙여 놓으면 화면에서 다시
+   * 갈라야 하는데, 자유 입력이라 이름에 공백이 들어 있어 되돌릴 방법이 없다.
+   */
+  raidName: string;
+  difficulty: string | null;
   dayOfWeek: number;
   startTime: string;
   keepRoster: boolean;
@@ -793,13 +800,13 @@ export async function listPinned(instanceId: string): Promise<PinnedEntry[]> {
 
   const entries: PinnedEntry[] = [];
   for (const slot of slots) {
-    const label = raidLabel(slot.raidName, slot.difficulty);
     const mine = slot.dayOfWeek === TUESDAY ? tuesdayWeek : planningWeek;
     const week = toWeekParam(mine);
     if (slot.keepRoster) {
       entries.push({
         slotId: slot.id,
-        slotLabel: label,
+        raidName: slot.raidName,
+        difficulty: slot.difficulty,
         dayOfWeek: slot.dayOfWeek,
         startTime: slot.startTime,
         keepRoster: true,
@@ -812,7 +819,8 @@ export async function listPinned(instanceId: string): Promise<PinnedEntry[]> {
       if (a.weekStart.getTime() !== mine.getTime()) continue;
       entries.push({
         slotId: slot.id,
-        slotLabel: label,
+        raidName: slot.raidName,
+        difficulty: slot.difficulty,
         dayOfWeek: slot.dayOfWeek,
         startTime: slot.startTime,
         keepRoster: false,

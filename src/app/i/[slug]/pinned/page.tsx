@@ -3,6 +3,7 @@ import Link from "next/link";
 import { listPinned } from "@/lib/board";
 import { requireInstance } from "@/lib/instance";
 import { positionLabel } from "@/lib/positions";
+import { difficultyTone } from "@/lib/raids";
 import { dayNameFull, isUndecided } from "@/lib/week";
 
 import { KeepRosterOffButton, UnpinButton } from "./PinnedControls";
@@ -30,7 +31,8 @@ export default async function PinnedPage({ params }: PageProps<"/i/[slug]/pinned
     string,
     {
       slotId: string;
-      slotLabel: string;
+      raidName: string;
+      difficulty: string | null;
       dayOfWeek: number;
       startTime: string;
       keepRoster: boolean;
@@ -42,7 +44,8 @@ export default async function PinnedPage({ params }: PageProps<"/i/[slug]/pinned
   for (const entry of entries) {
     const slot = slots.get(entry.slotId) ?? {
       slotId: entry.slotId,
-      slotLabel: entry.slotLabel,
+      raidName: entry.raidName,
+      difficulty: entry.difficulty,
       dayOfWeek: entry.dayOfWeek,
       startTime: entry.startTime,
       keepRoster: false,
@@ -94,7 +97,19 @@ export default async function PinnedPage({ params }: PageProps<"/i/[slug]/pinned
           {list.map((slot) => (
             <li key={slot.slotId} className="rounded border border-border bg-surface">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-border px-3 py-2">
-                <h2 className="font-semibold">{slot.slotLabel}</h2>
+                {/*
+                  난이도는 편성표·요일표와 같은 색 뱃지다. 세 화면이 같은 레이드를
+                  다르게 그리면 어느 줄이 어느 슬롯인지 눈으로 맞춰봐야 한다.
+                  이름과 묶는 이유도 같다 — 접힐 때 난이도만 떨어져 나가지 않게.
+                */}
+                <span className="flex items-center gap-x-2">
+                  <h2 className="font-semibold">{slot.raidName}</h2>
+                  {slot.difficulty && (
+                    <span className="slot-badge" data-diff={difficultyTone(slot.difficulty)}>
+                      {slot.difficulty}
+                    </span>
+                  )}
+                </span>
                 <span className="slot-badge">{dayNameFull(slot.dayOfWeek)}</span>
                 {/* 미정 칸에는 시각이 없다. 채워 넣은 값을 보여주면 약속처럼 읽힌다. */}
                 {!isUndecided(slot.dayOfWeek) && (
