@@ -304,6 +304,23 @@ button:disabled,
 }
 
 /*
+ * 지금 채우는 주차가 마지막이라 앞으로 가는 화살표가 꺼진다.
+ *
+ * 지우지 않고 흐려만 둔다. 사라지면 옆의 주차 라벨이 좌우로 흔들려, 주차를 옮길
+ * 때마다 눈이 화살표를 다시 찾아야 한다. hover도 함께 끊어 눌러도 되는 것처럼
+ * 보이지 않게 한다.
+ */
+.week-arrow[data-disabled] {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.week-arrow[data-disabled]:hover {
+  border-color: var(--border);
+  color: var(--text-dim);
+}
+
+/*
  * 요일 이름은 두 벌이다 — `수요일` / `수`.
  *
  * 폰 폭에서는 일곱 요일에 뱃지까지 붙어 한 줄에 들어가지 않는다. 줄이 접히면 주차

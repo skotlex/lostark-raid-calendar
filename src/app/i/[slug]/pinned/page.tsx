@@ -3,7 +3,7 @@ import Link from "next/link";
 import { listPinned } from "@/lib/board";
 import { requireInstance } from "@/lib/instance";
 import { positionLabel } from "@/lib/positions";
-import { dayNameFull, getPlanningWeekStart, isUndecided, toWeekParam } from "@/lib/week";
+import { dayNameFull, isUndecided } from "@/lib/week";
 
 import { KeepRosterOffButton, UnpinButton } from "./PinnedControls";
 
@@ -16,15 +16,14 @@ export const dynamic = "force-dynamic";
  * 어디에 몇 개가 걸려 있는지 알 방법이 없다. **핀이 방치되는 것을 막는 유일한 수단이
  * 이 화면이다.**
  *
- * 지금 채우는 주차 기준이다. 여기 있는 자리가 다음 주로 그대로 넘어간다.
+ * 진행 중인 편성 기준이다. 여기 있는 자리가 다음 초기화에서 그대로 넘어간다.
+ * 주차는 요일마다 다를 수 있어 슬롯이 각자 들고 온다(PinnedEntry.week).
  */
 export default async function PinnedPage({ params }: PageProps<"/i/[slug]/pinned">) {
   const { slug } = await params;
   const instance = await requireInstance(slug);
 
-  const weekStart = getPlanningWeekStart();
-  const week = toWeekParam(weekStart);
-  const entries = await listPinned(instance.id, weekStart);
+  const entries = await listPinned(instance.id);
 
   // 슬롯 단위로 묶는다. 한 슬롯에 자리가 여럿 걸려 있는 것이 보통이다.
   const slots = new Map<
@@ -35,6 +34,7 @@ export default async function PinnedPage({ params }: PageProps<"/i/[slug]/pinned
       dayOfWeek: number;
       startTime: string;
       keepRoster: boolean;
+      week: string;
       seats: { position: string; characterName: string | null }[];
     }
   >();
@@ -46,6 +46,7 @@ export default async function PinnedPage({ params }: PageProps<"/i/[slug]/pinned
       dayOfWeek: entry.dayOfWeek,
       startTime: entry.startTime,
       keepRoster: false,
+      week: entry.week,
       seats: [],
     };
 
@@ -102,7 +103,7 @@ export default async function PinnedPage({ params }: PageProps<"/i/[slug]/pinned
 
                 {slot.keepRoster && (
                   <span className="ml-auto">
-                    <KeepRosterOffButton slug={slug} week={week} slotId={slot.slotId} />
+                    <KeepRosterOffButton slug={slug} week={slot.week} slotId={slot.slotId} />
                   </span>
                 )}
               </div>
@@ -130,7 +131,7 @@ export default async function PinnedPage({ params }: PageProps<"/i/[slug]/pinned
                       <span className="ml-auto">
                         <UnpinButton
                           slug={slug}
-                          week={week}
+                          week={slot.week}
                           slotId={slot.slotId}
                           position={seat.position}
                           characterName={seat.characterName}

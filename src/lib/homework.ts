@@ -5,14 +5,7 @@ import { compareHomeworkRows, goldAt } from "./homeworkOrder";
 import { prisma } from "./prisma";
 import { raidReward } from "./raidRewards";
 import { raidLabel } from "./raids";
-import {
-  TUESDAY,
-  dayOffsetInWeek,
-  getPlanningWeekStart,
-  isUndecided,
-  tuesdayWeekFor,
-  weekStartForDay,
-} from "./week";
+import { TUESDAY, dayOffsetInWeek, isUndecided, liveWeekForDay } from "./week";
 
 /**
  * 숙제 현황.
@@ -177,8 +170,10 @@ export async function getHomework(
     };
   }
 
-  const planningWeek = getPlanningWeekStart();
-  const tuesdayWeek = tuesdayWeekFor(planningWeek);
+  // 숙제는 편성표와 달리 **진행 중인 편성**을 본다(week.ts). 화 00시에 화면이 다음
+  // 주차로 넘어가도 그날 저녁 화요일 레이드는 아직 남은 숙제다.
+  const planningWeek = liveWeekForDay(0);
+  const tuesdayWeek = liveWeekForDay(TUESDAY);
 
   const characters = await prisma.character.findMany({
     where: { instanceId, memberId },
@@ -268,7 +263,7 @@ export async function getHomework(
       if (slot.archivedAt) continue;
 
       // 화요일 슬롯은 주차가 다르다. 자기 주차의 배정만 이번 주 숙제다(week.ts).
-      const mine = weekStartForDay(planningWeek, slot.dayOfWeek);
+      const mine = liveWeekForDay(slot.dayOfWeek);
       if (assignment.weekStart.getTime() !== mine.getTime()) continue;
 
       const reward = raidReward(slot.raidName, slot.difficulty);
@@ -408,8 +403,10 @@ export async function setHomeworkOrder(
   });
   if (!character) throw new HomeworkError("내 캐릭터가 아닙니다");
 
-  const planningWeek = getPlanningWeekStart();
-  const tuesdayWeek = tuesdayWeekFor(planningWeek);
+  // 숙제는 편성표와 달리 **진행 중인 편성**을 본다(week.ts). 화 00시에 화면이 다음
+  // 주차로 넘어가도 그날 저녁 화요일 레이드는 아직 남은 숙제다.
+  const planningWeek = liveWeekForDay(0);
+  const tuesdayWeek = liveWeekForDay(TUESDAY);
 
   const rows = await prisma.assignment.findMany({
     where: { characterId, weekStart: { in: [planningWeek, tuesdayWeek] } },
@@ -426,8 +423,7 @@ export async function setHomeworkOrder(
   const mine = rows.filter(
     (row) =>
       !row.slot.archivedAt &&
-      row.weekStart.getTime() ===
-        weekStartForDay(planningWeek, row.slot.dayOfWeek).getTime(),
+      row.weekStart.getTime() === liveWeekForDay(row.slot.dayOfWeek).getTime(),
   );
 
   const rank = new Map(slotIds.map((slotId, index) => [slotId, index]));
@@ -472,14 +468,16 @@ export async function setHomeworkDone(
   });
   if (!character) throw new HomeworkError("내 캐릭터가 아닙니다");
 
-  const planningWeek = getPlanningWeekStart();
-  const tuesdayWeek = tuesdayWeekFor(planningWeek);
+  // 숙제는 편성표와 달리 **진행 중인 편성**을 본다(week.ts). 화 00시에 화면이 다음
+  // 주차로 넘어가도 그날 저녁 화요일 레이드는 아직 남은 숙제다.
+  const planningWeek = liveWeekForDay(0);
+  const tuesdayWeek = liveWeekForDay(TUESDAY);
 
   /*
    * 두 주차를 함께 읽고 제 것만 고른다. `setHomeworkOrder`와 같은 모양이다.
    *
    * 미정은 수~월 무리라 `planningWeek`가 답이지만 그것을 여기서 단정하지 않는다.
-   * 요일에서 주차를 구하는 길은 `weekStartForDay` 하나로 모아 둔다(week.ts).
+   * 요일에서 주차를 구하는 길은 `liveWeekForDay` 하나로 모아 둔다(week.ts).
    */
   const assignment = await prisma.assignment.findFirst({
     where: {
@@ -498,8 +496,7 @@ export async function setHomeworkDone(
   // 지난 주차이거나 요일표에서 내린 슬롯이면 여기서 걸린다. 과거는 읽기 전용이다.
   if (
     !assignment ||
-    assignment.weekStart.getTime() !==
-      weekStartForDay(planningWeek, assignment.slot.dayOfWeek).getTime()
+    assignment.weekStart.getTime() !== liveWeekForDay(assignment.slot.dayOfWeek).getTime()
   ) {
     throw new HomeworkError("이번 주 편성이 아닙니다");
   }

@@ -3,7 +3,7 @@ import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
 
 import { logEvent } from "./history";
-import { UNDECIDED, getPlanningWeekStart, isUndecided, weekStartForDay } from "./week";
+import { UNDECIDED, isEditableWeek, isUndecided, liveWeekForDay } from "./week";
 import { DEFAULT_PARTY_SIZE, type PartySize, isPartySize } from "./positions";
 import { prisma } from "./prisma";
 import { MAX_SCORE_CUT, isScoreCut, scoreCutNumber } from "./scoreCut";
@@ -194,7 +194,7 @@ export async function createSlot(
       // 이번 주는 이미 승계를 마친 것으로 둔다. 지난 주에 이 슬롯은 없었으니 넘어올
       // 배정도 없고, 비워두면 board.ts의 승계가 이 슬롯 하나 때문에 한 번 더 돌아
       // "주간 초기화"가 슬롯을 만들 때마다 한 줄씩 남는다.
-      carriedWeek: weekStartForDay(getPlanningWeekStart(), input.dayOfWeek),
+      carriedWeek: liveWeekForDay(input.dayOfWeek),
       ...normalize(input),
     },
     select: slotSelect,
@@ -259,14 +259,23 @@ export async function setKeepRoster(
   });
   if (result.count === 0) throw new SlotError("슬롯을 찾을 수 없습니다");
 
-  // 화요일 슬롯은 저장되는 주차가 다르다(week.ts).
+  /*
+   * 자리 핀을 함께 움직인다. 대상은 **부르는 쪽이 넘긴 주차 그대로**다.
+   *
+   * 편성표에서는 보고 있는 주차, 고정 현황에서는 그 자리가 실제로 놓인 주차가 온다
+   * (PinnedEntry.week). 여기서 다시 계산하면 30시간 창 안에 화요일 자리가 엉뚱한
+   * 주차에서 뒤집힌다.
+   */
   const slot = await prisma.raidSlot.findUnique({
     where: { id: slotId },
     select: { dayOfWeek: true },
   });
+  if (!isEditableWeek(weekStart, slot?.dayOfWeek ?? 0)) {
+    throw new SlotError("지난 주 편성은 고칠 수 없습니다");
+  }
 
   await prisma.assignment.updateMany({
-    where: { slotId, weekStart: weekStartForDay(weekStart, slot?.dayOfWeek ?? 0) },
+    where: { slotId, weekStart },
     data: { pinned: keepRoster },
   });
 

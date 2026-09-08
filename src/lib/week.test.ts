@@ -11,18 +11,18 @@ import {
   dayName,
   dayNameFull,
   dayOffsetInWeek,
+  isEditableWeek,
+  isTuesdayCarryWindow,
   isUndecided,
   formatWeekLabel,
   getPlanningWeekStart,
   getWeekStart,
-  isCurrentWeek,
   kstDayStart,
+  liveWeekForDay,
   parseDayParam,
   parseWeekParam,
   previousWeek,
   toWeekParam,
-  tuesdayWeekFor,
-  weekStartForDay,
 } from "./week";
 
 /** KST 벽시계로 시각을 만든다. 테스트를 읽기 쉽게 하려는 도우미다. */
@@ -75,40 +75,72 @@ describe("getWeekStart", () => {
  * 수~월은 화요일 00시에 다음 주차로 넘어가고(30시간 이르다), 화요일 슬롯은 주차 경계인
  * 수요일 06시까지 그대로 남는다. 화요일 저녁 공대가 몇 시간 전에 지워지지 않게 하려는
  * 것이다.
+ *
+ * **저장 키가 아니라 편집 권한이 갈린다.** 배정은 화면이 보고 있는 주차에 그대로
+ * 들어가고, 창 안에서만 두 주차가 함께 열린다.
  */
-describe("요일에 따라 갈리는 주차", () => {
-  it("월요일 밤에는 둘이 같은 주차를 본다", () => {
-    const now = kst("2026-09-07T23:00:00");
-    expect(getPlanningWeekStart(now)).toEqual(WEEK_2026_09_02);
-    expect(tuesdayWeekFor(getPlanningWeekStart(now), now)).toEqual(WEEK_2026_09_02);
+describe("30시간 창", () => {
+  const MONDAY_NIGHT = kst("2026-09-07T23:00:00");
+  const IN_WINDOW = kst("2026-09-08T00:30:00");
+  const AFTER_RESET = kst("2026-09-09T06:30:00");
+
+  it("화 00시에 열리고 수 06시에 닫힌다", () => {
+    expect(isTuesdayCarryWindow(MONDAY_NIGHT)).toBe(false);
+    expect(isTuesdayCarryWindow(kst("2026-09-07T23:59:59"))).toBe(false);
+    expect(isTuesdayCarryWindow(IN_WINDOW)).toBe(true);
+    expect(isTuesdayCarryWindow(kst("2026-09-09T05:59:59"))).toBe(true);
+    expect(isTuesdayCarryWindow(AFTER_RESET)).toBe(false);
   });
 
-  it("화요일 00시가 지나면 수~월만 다음 주차로 넘어간다", () => {
-    const now = kst("2026-09-08T00:30:00");
-    // 수~월 칸은 비워지고 다음 주 편성을 짜기 시작한다.
-    expect(getPlanningWeekStart(now)).toEqual(WEEK_2026_09_09);
-    // 화요일 칸은 그날 저녁 공대라 아직 이번 주차에 남아 있다.
-    expect(tuesdayWeekFor(getPlanningWeekStart(now), now)).toEqual(WEEK_2026_09_02);
+  it("창 밖에서는 모든 요일이 같은 주차를 산다", () => {
+    expect(liveWeekForDay(3, MONDAY_NIGHT)).toEqual(WEEK_2026_09_02);
+    expect(liveWeekForDay(TUESDAY, MONDAY_NIGHT)).toEqual(WEEK_2026_09_02);
+    expect(liveWeekForDay(UNDECIDED, MONDAY_NIGHT)).toEqual(WEEK_2026_09_02);
   });
 
-  it("수요일 06시를 넘기면 화요일 칸도 넘어간다", () => {
-    const now = kst("2026-09-09T06:30:00");
-    expect(getPlanningWeekStart(now)).toEqual(WEEK_2026_09_09);
-    expect(tuesdayWeekFor(getPlanningWeekStart(now), now)).toEqual(WEEK_2026_09_09);
+  it("창 안에서는 화요일만 지난 주차에 남는다", () => {
+    // 수~월과 미정은 이미 다음 주 편성을 짜고 있다.
+    expect(liveWeekForDay(3, IN_WINDOW)).toEqual(WEEK_2026_09_09);
+    expect(liveWeekForDay(1, IN_WINDOW)).toEqual(WEEK_2026_09_09);
+    expect(liveWeekForDay(UNDECIDED, IN_WINDOW)).toEqual(WEEK_2026_09_09);
+    // 화요일 칸은 그날 저녁 공대라 아직 이번 주차다.
+    expect(liveWeekForDay(TUESDAY, IN_WINDOW)).toEqual(WEEK_2026_09_02);
   });
 
-  it("지난 주를 볼 때도 두 주차의 간격이 유지된다", () => {
-    const now = kst("2026-09-08T00:30:00");
-    const previous = previousWeek(getPlanningWeekStart(now));
-    expect(tuesdayWeekFor(previous, now)).toEqual(WEEK_2026_08_26);
+  it("수요일 06시를 넘기면 화요일도 넘어간다", () => {
+    expect(liveWeekForDay(TUESDAY, AFTER_RESET)).toEqual(WEEK_2026_09_09);
+  });
+});
+
+describe("isEditableWeek", () => {
+  const MONDAY_NIGHT = kst("2026-09-07T23:00:00");
+  const IN_WINDOW = kst("2026-09-08T00:30:00");
+
+  it("창 밖에서는 지금 채우는 주차 하나만 열린다", () => {
+    expect(isEditableWeek(WEEK_2026_09_02, 3, MONDAY_NIGHT)).toBe(true);
+    expect(isEditableWeek(WEEK_2026_09_02, TUESDAY, MONDAY_NIGHT)).toBe(true);
+    expect(isEditableWeek(WEEK_2026_08_26, 3, MONDAY_NIGHT)).toBe(false);
+    expect(isEditableWeek(WEEK_2026_08_26, TUESDAY, MONDAY_NIGHT)).toBe(false);
   });
 
-  it("weekStartForDay는 화요일만 다른 값을 준다", () => {
-    const now = kst("2026-09-08T00:30:00");
-    const planning = getPlanningWeekStart(now);
-    expect(weekStartForDay(planning, 3, now)).toEqual(WEEK_2026_09_09);
-    expect(weekStartForDay(planning, 1, now)).toEqual(WEEK_2026_09_09);
-    expect(weekStartForDay(planning, TUESDAY, now)).toEqual(WEEK_2026_09_02);
+  it("창 안에서는 화요일만 두 주차에서 열린다", () => {
+    // 다음 주차: 수~월도 화요일도 모두 열린다. 화요일은 엿새 뒤 공대라 비어 있다.
+    expect(isEditableWeek(WEEK_2026_09_09, 3, IN_WINDOW)).toBe(true);
+    expect(isEditableWeek(WEEK_2026_09_09, TUESDAY, IN_WINDOW)).toBe(true);
+    // 지난 주차: 수~월은 굳었고 화요일만 오늘 밤 공대라 아직 열려 있다.
+    expect(isEditableWeek(WEEK_2026_09_02, 3, IN_WINDOW)).toBe(false);
+    expect(isEditableWeek(WEEK_2026_09_02, UNDECIDED, IN_WINDOW)).toBe(false);
+    expect(isEditableWeek(WEEK_2026_09_02, TUESDAY, IN_WINDOW)).toBe(true);
+  });
+
+  it("두 주차보다 더 지난 화요일은 열리지 않는다", () => {
+    expect(isEditableWeek(WEEK_2026_08_26, TUESDAY, IN_WINDOW)).toBe(false);
+  });
+
+  it("아직 열리지 않은 다음 주차는 어느 요일도 열리지 않는다", () => {
+    const beyond = addWeeks(WEEK_2026_09_09, 1);
+    expect(isEditableWeek(beyond, 3, IN_WINDOW)).toBe(false);
+    expect(isEditableWeek(beyond, TUESDAY, IN_WINDOW)).toBe(false);
   });
 });
 
@@ -122,10 +154,8 @@ describe("주차 이동", () => {
     expect(addWeeks(WEEK_2026_09_02, -1)).toEqual(WEEK_2026_08_26);
   });
 
-  it("isCurrentWeek은 기준 시각의 주차와 비교한다", () => {
-    const now = kst("2026-09-04T21:00:00");
-    expect(isCurrentWeek(WEEK_2026_09_02, now)).toBe(true);
-    expect(isCurrentWeek(WEEK_2026_08_26, now)).toBe(false);
+  it("previousWeek은 화면이 보는 지난 주차를 준다", () => {
+    expect(previousWeek(WEEK_2026_09_09)).toEqual(WEEK_2026_09_02);
   });
 });
 
@@ -201,8 +231,8 @@ describe("미정 요일", () => {
     const now = new Date("2026-09-01T15:30:00.000Z");
     const planning = getPlanningWeekStart(now);
 
-    expect(weekStartForDay(planning, UNDECIDED, now).getTime()).toBe(planning.getTime());
-    expect(weekStartForDay(planning, TUESDAY, now).getTime()).not.toBe(planning.getTime());
+    expect(liveWeekForDay(UNDECIDED, now).getTime()).toBe(planning.getTime());
+    expect(liveWeekForDay(TUESDAY, now).getTime()).not.toBe(planning.getTime());
   });
 
   it("주 안에 놓일 자리가 없어 거리가 -1이다", () => {

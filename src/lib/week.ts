@@ -14,6 +14,11 @@
  * 그날 저녁 공대가 몇 시간 전에 지워진다. 반대로 수~월을 주차 경계까지 들고 있으면
  * 다음 주 편성을 짤 시간이 없다. 그래서 앞의 여섯 요일만 30시간 먼저 비운다.
  *
+ * **갈리는 것은 저장 키가 아니라 편집 권한이다.** 배정은 언제나 화면이 보고 있는
+ * 주차에 그대로 저장되고, 한 주차 화면은 수요일부터 화요일까지 한 게임 주차를 통째로
+ * 담는다. 화 00시부터 수 06시까지 30시간 동안만 **두 주차가 함께 열린다** — 다음 주차의
+ * 수~월과 지난 주차의 화요일이다. `isEditableWeek`가 그 판정이다.
+ *
  * KST는 서머타임이 없어 UTC+9 고정이다. 그래서 UTC 시각에 9시간을 더해
  * "KST 벽시계"를 만든 뒤 UTC 계산기로 다루는 방식이 안전하다.
  * 서버 타임존에 의존하지 않는다.
@@ -39,7 +44,7 @@ export const TUESDAY = 2;
  * 나온다 — homework.ts). 그래서 요일 자리에 미정을 하나 더 둔다.
  *
  * 0~6 다음인 7이라 DB의 `dayOfWeek`(Int)에 그대로 들어가고, 화요일이 아니므로
- * `weekStartForDay`가 수~월과 같은 주차를 준다. 화요일 00시에 함께 비워진다.
+ * `liveWeekForDay`가 수~월과 같은 주차를 준다. 화요일 00시에 함께 비워진다.
  */
 export const UNDECIDED = 7;
 
@@ -89,24 +94,53 @@ export function getPlanningWeekStart(now: Date = new Date()): Date {
 }
 
 /**
- * 화면이 보고 있는 주차(수~월 기준)에 대응하는 **화요일 슬롯의 주차**.
+ * 화요일 칸이 두 주차에 걸쳐 열려 있는 **30시간 창** 안인가. 화 00시 ~ 수 06시.
  *
- * 둘은 화요일 00시부터 수요일 06시까지 30시간 동안만 어긋난다. 그 사이에는 화요일
- * 저녁 공대가 아직 살아 있어야 하고, 수~월은 이미 다음 주를 짜고 있어야 한다.
- * 지난 주를 볼 때도 같은 간격을 유지해야 하므로 주차 수 차이만큼 함께 민다.
+ * 이 동안에는 화면이 이미 다음 주차를 펴고 있는데 그날 저녁 화요일 공대는 아직
+ * 지난 주차에 살아 있다. 창 밖에서는 두 값이 같아 이 함수가 거짓이다.
  */
-export function tuesdayWeekFor(planningWeek: Date, now: Date = new Date()): Date {
-  const shift = Math.round((planningWeek.getTime() - getPlanningWeekStart(now).getTime()) / WEEK_MS);
-  return addWeeks(getWeekStart(now), shift);
+export function isTuesdayCarryWindow(now: Date = new Date()): boolean {
+  return getPlanningWeekStart(now).getTime() !== getWeekStart(now).getTime();
 }
 
-/** 슬롯 요일에 맞는 배정 주차. 화요일만 따로 간다. 미정은 수~월과 함께 간다. */
-export function weekStartForDay(
-  planningWeek: Date,
+/**
+ * 그 요일의 편성이 **지금 진행 중인 주차**. 화요일만 30시간 늦게 넘어간다(위 표).
+ *
+ * **저장 키가 아니다.** 배정은 화면이 보고 있는 주차에 그대로 저장된다. 이 값은
+ * "지금 살아 있는 편성이 어느 주차에 있는가"를 묻는 자리에서만 쓴다 — 숙제(homework.ts),
+ * 고정 현황과 승계 대상(board.ts), 새 슬롯의 승계 표시(slots.ts).
+ *
+ * 화면 주차를 써야 할 자리에 이 값을 쓰면 창 안에서 엉뚱한 주차를 건드리고, 반대로
+ * 이 값을 써야 할 자리에 화면 주차를 쓰면 오늘 밤 화요일이 통째로 빠진다.
+ */
+export function liveWeekForDay(dayOfWeek: number, now: Date = new Date()): Date {
+  return dayOfWeek === TUESDAY ? getWeekStart(now) : getPlanningWeekStart(now);
+}
+
+/**
+ * 그 주차의 그 요일 칸을 지금 고칠 수 있는가.
+ *
+ * **주차 하나가 통째로 열리거나 닫히지 않는다.** 화 00시가 지나면 화면은 다음 주차를
+ * 펴고(수~월을 미리 짜라고 30시간 먼저 넘긴다), 그 순간 지난 주차의 수~월은 굳는다.
+ * 그런데 그날 저녁 화요일 공대는 아직 남아 있어야 하므로 화요일만 두 주차에서 열린다.
+ *
+ * | 요일 | 열리는 주차 |
+ * |---|---|
+ * | 수~월·미정 | 지금 채우는 주차 하나 |
+ * | 화 | 지금 채우는 주차 + 진행 중인 주차 (창 밖에서는 같은 값이다) |
+ *
+ * 창 안에 지난 주 화면으로 가면 화요일 탭만 열려 있고, 이번 주 화면의 화요일 탭은
+ * 엿새 뒤 공대라 비어 있다. 둘 다 고칠 수 있어야 한다 — 오늘 밤 인원을 마저 채우는
+ * 것과 다음 주 화요일을 미리 잡아 두는 것은 서로 다른 일이다.
+ */
+export function isEditableWeek(
+  weekStart: Date,
   dayOfWeek: number,
   now: Date = new Date(),
-): Date {
-  return dayOfWeek === TUESDAY ? tuesdayWeekFor(planningWeek, now) : planningWeek;
+): boolean {
+  const at = weekStart.getTime();
+  if (at === getPlanningWeekStart(now).getTime()) return true;
+  return dayOfWeek === TUESDAY && at === getWeekStart(now).getTime();
 }
 
 /**
@@ -135,11 +169,6 @@ export function addWeeks(weekStart: Date, n: number): Date {
 /** 직전 주차의 시작. 인원 승계에서 복사 원본을 찾을 때 쓴다. */
 export function previousWeek(weekStart: Date): Date {
   return addWeeks(weekStart, -1);
-}
-
-/** 해당 주차가 지금 진행 중인 주차인가. 과거 주차는 읽기 전용으로 다룬다. */
-export function isCurrentWeek(weekStart: Date, now: Date = new Date()): boolean {
-  return weekStart.getTime() === getWeekStart(now).getTime();
 }
 
 /**
