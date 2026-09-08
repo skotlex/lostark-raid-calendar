@@ -29,6 +29,11 @@
   --ok: #2b7d4a;
   --dps: #a8502c;
   --support: #2a6690;
+
+  /* 난이도. 게임 밖에서 굳은 관행을 따른다 — 노말 파랑, 하드 주황, 나이트메어 보라 */
+  --diff-normal: #1d6ba8;
+  --diff-hard: #a85f18;
+  --diff-nightmare: #6f42c1;
 }
 
 /* 시스템이 다크일 때. 사용자가 라이트를 명시적으로 고르면 적용하지 않는다. */
@@ -50,6 +55,10 @@
     --ok: #5fbf7f;
     --dps: #d98b6a;
     --support: #6aa9d9;
+
+    --diff-normal: #5aa8e6;
+    --diff-hard: #e8993f;
+    --diff-nightmare: #b18bea;
   }
 }
 
@@ -71,6 +80,10 @@
   --ok: #5fbf7f;
   --dps: #d98b6a;
   --support: #6aa9d9;
+
+  --diff-normal: #5aa8e6;
+  --diff-hard: #e8993f;
+  --diff-nightmare: #b18bea;
 }
 
 @theme inline {
@@ -1660,6 +1673,30 @@ button:disabled,
   padding: 0.05rem 0.35rem;
   font-size: 11px;
   color: var(--text-dim);
+}
+
+/*
+ * 난이도 뱃지 — 노말 파랑, 하드 주황, 나이트메어 보라.
+ *
+ * 색은 게임 밖에서 이미 굳은 관행이라 그대로 따른다(raids.ts). 자리 색(--dps 주황 /
+ * --support 파랑)과 색상은 가깝지만 뜻이 섞이지 않는다. 점수컷과 달리 이 뱃지는
+ * 레이드 이름에 바로 붙어 서고 `하드`라는 글자를 달고 있어 제목의 일부로 읽힌다.
+ *
+ * 프리셋에 없는 난이도(지평의 성당 `1단계` 등)는 data-diff가 비어 회색으로 선다.
+ */
+.slot-badge[data-diff="normal"] {
+  background: color-mix(in srgb, var(--diff-normal) 14%, transparent);
+  color: var(--diff-normal);
+}
+
+.slot-badge[data-diff="hard"] {
+  background: color-mix(in srgb, var(--diff-hard) 14%, transparent);
+  color: var(--diff-hard);
+}
+
+.slot-badge[data-diff="nightmare"] {
+  background: color-mix(in srgb, var(--diff-nightmare) 14%, transparent);
+  color: var(--diff-nightmare);
 }
 
 /* 자리가 다 찼다. 요일 하나에 슬롯이 여럿 늘어서므로 색으로 갈라야 눈에 걸린다. */

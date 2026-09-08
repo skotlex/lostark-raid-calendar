@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 
 import type { BoardSlotView } from "@/lib/board";
-import { raidLabel } from "@/lib/raids";
+import { difficultyTone } from "@/lib/raids";
 import { formatScoreCut, scoreCutNumber } from "@/lib/scoreCut";
 import { isUndecided } from "@/lib/week";
 
@@ -15,7 +15,7 @@ const IDLE: CellState = { status: "idle", message: "" };
 /**
  * 슬롯 머리글. 카드 보기와 간략 보기가 함께 쓴다.
  *
- * 시간과 인원 수는 뱃지로 둘러 레이드 이름과 갈라 놓는다. 글자만 나란히 두면
+ * 난이도·시간·인원 수는 뱃지로 둘러 레이드 이름과 갈라 놓는다. 글자만 나란히 두면
  * "벨가르딘 나이트메어 20:00 1/8"이 한 덩어리로 읽혀 어디까지가 이름인지 흐려진다.
  */
 export function SlotHeader({
@@ -35,7 +35,20 @@ export function SlotHeader({
   return (
     <>
       <header className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-border px-3 py-2">
-        <h3 className="font-semibold">{raidLabel(slot.raidName, slot.difficulty)}</h3>
+        <h3 className="font-semibold">{slot.raidName}</h3>
+
+        {/*
+          난이도는 이름에서 떼어 뱃지로 세운다.
+
+          "벨가르딘 하드"처럼 붙여 두면 이름의 일부로 읽혀, 같은 레이드가 난이도만
+          다르게 두 줄 서 있을 때 뒷글자를 읽어야 갈린다. 색을 입히면 훑는 것만으로
+          걸린다. 프리셋에 없는 난이도는 색 없이 회색으로 선다(raids.ts).
+        */}
+        {slot.difficulty && (
+          <span className="slot-badge" data-diff={difficultyTone(slot.difficulty)}>
+            {slot.difficulty}
+          </span>
+        )}
 
         {/* 미정 칸에는 시각이 없다. 채워 넣은 값을 보여주면 약속처럼 읽힌다. */}
         {!isUndecided(slot.dayOfWeek) && (

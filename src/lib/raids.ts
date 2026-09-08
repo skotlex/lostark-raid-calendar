@@ -46,3 +46,24 @@ export function sizeFor(raidName: string): PartySize {
 export function raidLabel(raidName: string, difficulty: string | null | undefined): string {
   return difficulty ? `${raidName} ${difficulty}` : raidName;
 }
+
+/**
+ * 난이도 → 뱃지 색 이름.
+ *
+ * 노말 파랑, 하드 주황, 나이트메어 보라. 게임 밖에서 이미 굳은 관행이라 앱이 새로
+ * 정하지 않고 그대로 따른다. 요일 하나에 슬롯이 여럿 늘어서는 화면이라 글자를 읽기
+ * 전에 색으로 먼저 갈리는 편이 훑기 좋다.
+ *
+ * **모든 난이도에 색이 있는 것은 아니다.** 지평의 성당의 `1단계`처럼 등급이 아닌
+ * 값도 있고, 옛 슬롯에는 프리셋에 없는 값이 들어 있을 수 있다. 모르는 값은 색 없이
+ * 회색 뱃지로 둔다. 아무 색이나 붙이면 같은 파랑이 두 가지 뜻을 갖는다.
+ */
+const DIFFICULTY_TONES: Record<string, string> = {
+  노말: "normal",
+  하드: "hard",
+  나이트메어: "nightmare",
+};
+
+export function difficultyTone(difficulty: string | null | undefined): string | undefined {
+  return DIFFICULTY_TONES[difficulty?.trim() ?? ""];
+}
