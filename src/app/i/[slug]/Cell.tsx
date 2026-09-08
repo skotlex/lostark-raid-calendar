@@ -244,7 +244,7 @@ export function Cell({
       <PortraitCard src={character.imageUrl} className={character.className} />
 
       <div className="char-top">
-        <div className="char-top-info min-w-0 flex-1">
+        <div className="min-w-0 flex-1">
           {/* 클래스가 칸에서 가장 먼저 읽히는 정보다. 직업 각인은 그다음. */}
           <div className="char-chip-line">
             <span className="char-chip char-chip--class">{character.className ?? "?"}</span>
