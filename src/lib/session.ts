@@ -4,7 +4,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { isStillGuildMember } from "./guildAccess";
+import { guildProfile, isStillGuildMember } from "./guildAccess";
 
 /**
  * 입장 세션.
@@ -28,7 +28,13 @@ const MAX_AGE_SEC = 30 * 24 * 60 * 60;
 export interface Session {
   /** 디스코드 사용자 ID. Member와 잇는 키다. */
   discordUserId: string;
-  /** 화면과 기록에 남길 이름. 길드 닉네임을 우선한다. */
+  /**
+   * 화면과 기록에 남길 이름. 길드 닉네임을 우선한다.
+   *
+   * **쿠키에 굳어 있는 값이라 그대로 쓰지 않는다.** 로그인 그 순간의 이름이라,
+   * 디코 닉을 바꿔도 쿠키가 만료되는 30일까지 옛 이름이 남는다. 읽는 쪽은
+   * `withGuildProfile`을 거쳐 재검사가 받아 둔 지금 이름으로 덮는다.
+   */
   label: string;
   /** 디스코드 아바타 URL. 없을 수 있다. */
   avatarUrl: string | null;
@@ -99,7 +105,7 @@ export const SESSION_MAX_AGE_SEC = MAX_AGE_SEC;
 export async function requireSession(next?: string): Promise<Session> {
   const session = await readSession();
   if (session) {
-    if (await isStillGuildMember(session.discordUserId)) return session;
+    if (await isStillGuildMember(session.discordUserId)) return withGuildProfile(session);
     /*
      * 길드를 나갔다. **쿠키를 지울 수 있는 자리로 보낸다.**
      *
@@ -110,6 +116,26 @@ export async function requireSession(next?: string): Promise<Session> {
     redirect("/api/auth/left");
   }
   redirect(next ? `/login?next=${encodeURIComponent(next)}` : "/login");
+}
+
+/**
+ * 쿠키에 굳은 이름·얼굴을 **방금 확인한 길드 프로필로 덮는다.**
+ *
+ * 멤버십 재검사가 이미 지금 닉네임을 받아 왔으므로(guildAccess.ts) 왕복이 늘지
+ * 않는다. 아직 물어본 적이 없으면 쿠키 값을 그대로 둔다.
+ *
+ * **쿠키를 다시 굽지 않는다.** 서버 컴포넌트는 쿠키를 쓸 수 없어(Next 제약) 라우트
+ * 핸들러로 한 번 튕겼다 와야 하는데, 그러면 보고 있던 경로와 쿼리를 잃는다.
+ * 재검사 결과를 메모리에 둔 것과 같은 이유다. 쿠키는 다음 로그인에 알아서 새로 굳는다.
+ *
+ * `requireSession`이 이미 거치므로 대부분의 화면은 이 함수를 따로 부를 일이 없다.
+ * 쿠키만 읽는 자리(api/presence)가 직접 부른다.
+ */
+export function withGuildProfile(session: Session): Session {
+  const fresh = guildProfile(session.discordUserId);
+  if (!fresh) return session;
+  if (fresh.label === session.label && fresh.avatarUrl === session.avatarUrl) return session;
+  return { ...session, label: fresh.label, avatarUrl: fresh.avatarUrl };
 }
 
 /** 쿠키에 실을 옵션. 로그인·로그아웃 라우트가 함께 쓴다. */

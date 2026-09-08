@@ -32,7 +32,7 @@ export async function reorderHomeworkAction(
     const instance = await findInstance(slug);
     if (!instance) throw new HomeworkError("인스턴스를 찾을 수 없습니다");
 
-    const member = await findMyMember(instance.id, session.discordUserId);
+    const member = await findMyMember(instance.id, session.discordUserId, session.label);
     await setHomeworkOrder(
       instance.id,
       member?.id ?? null,
@@ -72,7 +72,7 @@ export async function claimHomeworkAction(
     const instance = await findInstance(slug);
     if (!instance) throw new HomeworkError("인스턴스를 찾을 수 없습니다");
 
-    const member = await findMyMember(instance.id, session.discordUserId);
+    const member = await findMyMember(instance.id, session.discordUserId, session.label);
     await setHomeworkDone(
       instance.id,
       member?.id ?? null,

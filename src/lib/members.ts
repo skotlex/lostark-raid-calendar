@@ -33,10 +33,46 @@ export interface MyMember {
   characterCount: number;
 }
 
-/** 내 Member. 아직 클레임하지 않았으면 null. */
+/**
+ * 디코 닉이 바뀌었으면 `Member.label`을 따라 고친다. 고친(또는 그대로인) 이름을 준다.
+ *
+ * **이 이름이 캐릭터 관리의 사람 묶음 제목이고 편성 칸의 주인 표시다.** 첫 클레임 때
+ * 한 번 박고 마는 구조였는데, 그러면 닉을 바꾼 사람이 화면 어디에서는 새 이름으로,
+ * 여기서는 옛 이름으로 갈려 보인다.
+ *
+ * 지나간 기록(`ChangeLog.actorLabel`, `Assignment.createdByLabel`)은 고치지 않는다.
+ * 그건 지금 누구인가가 아니라 **그때 그 이름으로 한 일**이라는 기록이다.
+ *
+ * **실패하면 그냥 옛 이름을 준다.** 같은 이름을 쓰는 사람이 이미 있는 경우가
+ * (`@@unique([instanceId, label])`) 대표적이고, DB가 잠깐 흔들린 경우도 마찬가지다.
+ * 이름 하나가 옛것으로 남는 편이 화면이 통째로 실패하는 것보다 가볍다. 원정대 이름을
+ * 정식 표기로 고칠 때와 같은 태도다(CLAUDE.md 4장).
+ *
+ * 이름이 겹쳐 못 고치는 동안에는 화면을 그릴 때마다 이 쓰기가 한 번씩 나가 실패한다.
+ * 길드원 열 명 남짓에 이름이 정말 겹치는 일이라 그냥 두지만, 흔해지면 실패를 잠시
+ * 기억해 두는 편이 낫다.
+ */
+async function renameIfDrifted(id: string, current: string, wanted: string): Promise<string> {
+  if (!wanted || wanted === current) return current;
+
+  try {
+    await prisma.member.update({ where: { id }, data: { label: wanted } });
+    return wanted;
+  } catch {
+    return current;
+  }
+}
+
+/**
+ * 내 Member. 아직 클레임하지 않았으면 null.
+ *
+ * **찾기만 하지 않는다.** 디코 닉이 바뀌었으면 이 김에 `label`을 따라 고친다
+ * (`renameIfDrifted`). 이름이 실제로 달라졌을 때만 쓰기가 나간다.
+ */
 export async function findMyMember(
   instanceId: string,
   discordUserId: string,
+  label: string,
 ): Promise<MyMember | null> {
   const member = await prisma.member.findFirst({
     where: { instanceId, discordUserId },
@@ -51,7 +87,7 @@ export async function findMyMember(
 
   return {
     id: member.id,
-    label: member.label,
+    label: await renameIfDrifted(member.id, member.label, label),
     claimedNames: member.claimedNames,
     characterCount: member._count.characters,
   };
@@ -70,9 +106,13 @@ async function upsertMyMember(
 ): Promise<{ id: string; claimedNames: string[] }> {
   const mine = await prisma.member.findFirst({
     where: { instanceId, discordUserId },
-    select: { id: true, claimedNames: true },
+    select: { id: true, label: true, claimedNames: true },
   });
-  if (mine) return mine;
+  if (mine) {
+    // 여기도 닉 변경을 따라간다. 클레임할 때마다 지나는 자리다.
+    await renameIfDrifted(mine.id, mine.label, label);
+    return { id: mine.id, claimedNames: mine.claimedNames };
+  }
 
   return prisma.member.upsert({
     where: { instanceId_label: { instanceId, label } },

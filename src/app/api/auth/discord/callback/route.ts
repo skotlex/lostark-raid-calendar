@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     if (!member) return fail("not_member");
 
     // 방금 확인한 참이다. 첫 페이지에서 봇으로 같은 것을 또 묻지 않게 넣어 둔다.
-    rememberGuildMember(member.discordUserId);
+    rememberGuildMember(member.discordUserId, member);
 
     const exp = Math.floor(Date.now() / 1000) + SESSION_MAX_AGE_SEC;
     const res = NextResponse.redirect(new URL(pending.next, origin));

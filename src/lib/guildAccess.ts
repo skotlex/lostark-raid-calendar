@@ -20,7 +20,17 @@ import { DiscordError, botToken, fetchGuildMemberByBot } from "./discord";
  *
  * 인스턴스마다 따로 들고 있어 실제 확인 횟수는 이 값보다 잦지만, 길드원 열 명
  * 남짓이라 어차피 시간당 몇 번이다. 디스코드 한도(초당 50회)와는 무관하다.
+ *
+ * **묻는 김에 이름과 얼굴도 받아 둔다**(`guildProfile`). 세션 쿠키의 이름은 로그인
+ * 그 순간의 값이라, 디코 닉을 바꿔도 쿠키가 만료되는 30일까지 옛 이름이 남는다.
+ * 재검사 응답에 이미 지금 닉네임이 들어 있어 왕복이 하나도 늘지 않는다.
  */
+
+/** 재검사가 받아 온 지금의 이름과 얼굴. `GuildMember`에서 쓰는 부분만 뗐다. */
+export interface GuildProfile {
+  label: string;
+  avatarUrl: string | null;
+}
 
 /** 확인한 결과를 들고 있는 시간. 길드를 나가면 최대 이만큼 늦게 막힌다. */
 const OK_TTL_MS = 60 * 60 * 1000;
@@ -33,8 +43,15 @@ const OK_TTL_MS = 60 * 60 * 1000;
  */
 const ERROR_TTL_MS = 5 * 60 * 1000;
 
-/** 디스코드 ID → 이때까지는 다시 묻지 않는다(epoch ms). */
-const checkedUntil = new Map<string, number>();
+interface Checked {
+  /** 이때까지는 다시 묻지 않는다(epoch ms). */
+  until: number;
+  /** 마지막으로 받아 온 이름과 얼굴. 봇 토큰이 없으면 끝까지 null이다. */
+  profile: GuildProfile | null;
+}
+
+/** 디스코드 ID → 마지막 확인 결과. */
+const checked = new Map<string, Checked>();
 
 /**
  * 길드에 남아 있으면 true. **false는 "확실히 나갔다"일 때만 준다.**
@@ -42,12 +59,12 @@ const checkedUntil = new Map<string, number>();
  * 못 읽은 경우를 false로 뭉뚱그리면 디스코드 장애가 곧 전원 차단이 된다.
  */
 export async function isStillGuildMember(discordUserId: string): Promise<boolean> {
-  const until = checkedUntil.get(discordUserId);
-  if (until !== undefined && until > Date.now()) return true;
+  const cached = checked.get(discordUserId);
+  if (cached && cached.until > Date.now()) return true;
 
   // 봇 토큰이 없으면 재검사 수단 자체가 없다. 로그인 때의 판정만 남는다.
   if (!botToken()) {
-    checkedUntil.set(discordUserId, Date.now() + OK_TTL_MS);
+    checked.set(discordUserId, { until: Date.now() + OK_TTL_MS, profile: cached?.profile ?? null });
     return true;
   }
 
@@ -55,10 +72,13 @@ export async function isStillGuildMember(discordUserId: string): Promise<boolean
     const member = await fetchGuildMemberByBot(discordUserId);
     if (!member) {
       // 다시 들어오면 로그인부터 하므로 남겨둘 것이 없다.
-      checkedUntil.delete(discordUserId);
+      checked.delete(discordUserId);
       return false;
     }
-    checkedUntil.set(discordUserId, Date.now() + OK_TTL_MS);
+    checked.set(discordUserId, {
+      until: Date.now() + OK_TTL_MS,
+      profile: { label: member.label, avatarUrl: member.avatarUrl },
+    });
     return true;
   } catch (error) {
     // 설정이 틀린 경우(봇 미초대, 길드 ID 오타)도 여기로 온다. 조용히 넘기면
@@ -67,9 +87,28 @@ export async function isStillGuildMember(discordUserId: string): Promise<boolean
       "[guildAccess] 멤버십 재검사 실패:",
       error instanceof DiscordError ? error.message : error,
     );
-    checkedUntil.set(discordUserId, Date.now() + ERROR_TTL_MS);
+    // 이름도 못 받았다. 못 받았다고 지우면 잘 받아 뒀던 새 이름이 옛 쿠키 값으로
+    // 되돌아간다. 통과시키는 것과 같은 태도다.
+    checked.set(discordUserId, {
+      until: Date.now() + ERROR_TTL_MS,
+      profile: cached?.profile ?? null,
+    });
     return true;
   }
+}
+
+/**
+ * 마지막으로 받아 온 이름과 얼굴. **아직 물어본 적이 없으면 null이다.**
+ *
+ * null이면 부르는 쪽이 세션 쿠키의 값을 그대로 쓴다(session.ts). 봇 토큰이 없거나
+ * 디스코드가 답을 못 준 경우가 그렇고, 그때는 옛 이름이 남는 편이 맞다 —
+ * 이름 하나가 늦게 따라오는 것과 화면에서 사람이 사라지는 것은 무게가 다르다.
+ *
+ * **만료를 보지 않는다.** 이 함수는 언제나 `isStillGuildMember` 바로 뒤에 불려
+ * 방금 채워진 값을 읽는다. 설령 낡았더라도 30일짜리 쿠키보다는 새 값이다.
+ */
+export function guildProfile(discordUserId: string): GuildProfile | null {
+  return checked.get(discordUserId)?.profile ?? null;
 }
 
 /**
@@ -78,11 +117,11 @@ export async function isStillGuildMember(discordUserId: string): Promise<boolean
  * 거기서는 사용자 토큰으로 이미 멤버십을 확인한 참이라, 이걸 넣지 않으면 로그인
  * 직후 첫 페이지에서 봇으로 같은 것을 한 번 더 묻는다.
  */
-export function rememberGuildMember(discordUserId: string): void {
-  checkedUntil.set(discordUserId, Date.now() + OK_TTL_MS);
+export function rememberGuildMember(discordUserId: string, profile: GuildProfile): void {
+  checked.set(discordUserId, { until: Date.now() + OK_TTL_MS, profile });
 }
 
 /** 테스트용. 모듈 수준 캐시라 케이스 사이에 비워야 한다. */
 export function __clearGuildAccessCache(): void {
-  checkedUntil.clear();
+  checked.clear();
 }

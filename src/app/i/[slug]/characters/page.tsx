@@ -50,7 +50,7 @@ export default async function CharactersPage({ params }: PageProps<"/i/[slug]/ch
   const instance = await requireInstance(slug);
   const session = await requireSession(`/i/${slug}/characters`);
   const characters = await listCharacters(instance.id);
-  const myMember = await findMyMember(instance.id, session.discordUserId);
+  const myMember = await findMyMember(instance.id, session.discordUserId, session.label);
 
   // 사람 단위로 묶어 보여준다. 부캐가 흩어져 있으면 누가 누군지 알 수 없다.
   const grouped = new Map<string, typeof characters>();

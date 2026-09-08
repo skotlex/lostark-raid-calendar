@@ -84,7 +84,7 @@ export async function registerAction(
      * 등록 자체를 실패로 돌리지는 않는다. 이름을 치기 전에는 남의 것인지 알 수 없고
      * API 호출은 이미 나간 뒤다. 스펙이 최신이 되는 것은 누구에게도 해가 없다.
      */
-    const mine = await findMyMember(instanceId, session.discordUserId);
+    const mine = await findMyMember(instanceId, session.discordUserId, session.label);
     const others = character.memberId !== null && character.memberId !== mine?.id;
 
     if (!others) {
@@ -140,7 +140,7 @@ export async function previewSiblingsAction(
   try {
     const { instanceId, session } = await authorize(slug);
     // 내 원정대를 다시 부르는 것과 남의 것을 부르는 것을 가르려면 내가 누구인지 알아야 한다.
-    const mine = await findMyMember(instanceId, session.discordUserId);
+    const mine = await findMyMember(instanceId, session.discordUserId, session.label);
     const { siblings, owner, roster, searched } = await previewSiblings(
       instanceId,
       name,
@@ -390,7 +390,7 @@ export async function setGoldEarnersAction(
 
   try {
     const { instanceId, session } = await authorize(slug);
-    const member = await findMyMember(instanceId, session.discordUserId);
+    const member = await findMyMember(instanceId, session.discordUserId, session.label);
     if (!member) {
       throw new CharacterError("먼저 캐릭터 관리에서 내 원정대를 불러와 주세요");
     }

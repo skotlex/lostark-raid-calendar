@@ -26,7 +26,7 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
   const { slug } = await params;
   const instance = await requireInstance(slug);
   const session = await requireSession(`/i/${slug}/homework`);
-  const member = await findMyMember(instance.id, session.discordUserId);
+  const member = await findMyMember(instance.id, session.discordUserId, session.label);
   const homework = await getHomework(instance.id, member?.id ?? null);
 
   if (homework.characters.length === 0) {

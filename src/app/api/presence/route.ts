@@ -4,7 +4,7 @@ import { z } from "zod";
 import { findInstance } from "@/lib/instance";
 import { touchPresence } from "@/lib/presence";
 import { isStillGuildMember } from "@/lib/guildAccess";
-import { readSession } from "@/lib/session";
+import { readSession, withGuildProfile } from "@/lib/session";
 
 /**
  * 발자국 하나를 남기고 남의 발자국과 편성표 버전을 돌려준다.
@@ -29,17 +29,21 @@ const bodySchema = z.object({
 const EMPTY = { version: null, viewers: [] };
 
 export async function POST(request: NextRequest) {
-  const session = await readSession();
-  if (!session) return NextResponse.json(EMPTY, { status: 401 });
+  const raw = await readSession();
+  if (!raw) return NextResponse.json(EMPTY, { status: 401 });
 
   /*
    * 여기도 멤버십을 본다(§4). 페이지는 다음 이동에서 걸리지만, 열어둔 탭은 그대로
    * 몇 초마다 발자국을 남긴다. 길드를 나간 사람이 남의 화면에 "보고 있는 사람"으로
    * 계속 서 있을 이유가 없다. 캐시가 답하므로 이 왕복에 비용이 붙지 않는다.
    */
-  if (!(await isStillGuildMember(session.discordUserId))) {
+  if (!(await isStillGuildMember(raw.discordUserId))) {
     return NextResponse.json(EMPTY, { status: 401 });
   }
+
+  // 재검사가 방금 받아 온 이름·얼굴로 덮는다. 쿠키 값은 로그인 그 순간의 것이라
+  // 닉을 바꾼 사람이 남의 화면에 옛 이름으로 서 있는다(session.ts).
+  const session = withGuildProfile(raw);
 
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json(EMPTY, { status: 400 });

@@ -114,7 +114,7 @@ export default async function BoardPage({
 
   // 칸 입력의 자동완성 목록. 이미 등록된 캐릭터는 API를 다시 부르지 않는다.
   // 컨텍스트로 한 번만 실어 보낸다. 칸마다 넘기면 같은 목록이 칸 수만큼 직렬화된다.
-  const myMember = await findMyMember(instance.id, session.discordUserId);
+  const myMember = await findMyMember(instance.id, session.discordUserId, session.label);
   const known = await prisma.character.findMany({
     where: { instanceId: instance.id },
     select: { name: true, memberId: true, className: true, itemLevel: true },
