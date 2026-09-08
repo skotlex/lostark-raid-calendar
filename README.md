@@ -119,12 +119,28 @@ cp .env.example .env.local
 npm install
 npm run db:generate    # Prisma 클라이언트 생성 (커밋되지 않으므로 필요합니다)
 npm run db:push        # 스키마를 DB에 반영
+npm run db:lock        # 공개 API 통로 차단 (설명은 바로 아래)
 npm run db:seed        # 기본 인스턴스 생성
 npm run dev
 ```
 
 `http://localhost:3100`으로 열립니다. 디스코드 앱의 Redirects에
 `http://localhost:3100/api/auth/discord/callback`을 등록해야 로그인이 됩니다.
+
+#### `db:lock`을 건너뛰지 마세요
+
+Supabase는 프로젝트를 만들 때부터 **public 스키마에 만드는 표를 공개 API로 내보내도록**
+설정해 둡니다. `prisma db push`로 세운 표에도 그대로 걸려서, 아무것도 하지 않으면
+`https://<프로젝트>.supabase.co/rest/v1/Character` 같은 주소로 길드원 데이터를 읽고
+쓰고 지울 수 있는 상태가 됩니다. 여기에 쓰이는 `anon` 키는 **브라우저에 넣으라고 만든
+키라 비밀이 아닙니다.**
+
+이 앱은 `supabase-js`를 쓰지 않고 Prisma로만 DB에 붙으므로 그 통로가 아예 필요 없습니다.
+`npm run db:lock`이 표마다 RLS를 켜고 공개 롤의 권한을 회수해 통로를 막습니다.
+접속은 `postgres` 롤로 하고 이 롤은 RLS를 통과하므로 **앱 동작에는 영향이 없습니다.**
+
+여러 번 돌려도 안전합니다. `npm run db:lock -- --check`로 지금 상태만 볼 수 있습니다.
+**표를 새로 만든 뒤에는 한 번 더 돌려 주세요.**
 
 ## 명령어
 
@@ -136,6 +152,7 @@ npm run dev
 | `npm run probe -- 캐릭터명` | 로아 API 응답 구조 확인 (각인·아크그리드 필드 파악용) |
 | `npm run db:generate` | Prisma 클라이언트 생성 |
 | `npm run db:push` | 스키마를 DB에 반영 |
+| `npm run db:lock` | 공개 API 통로 차단 (`-- --check`로 현재 상태만 확인) |
 | `npm run db:seed` | 기본 인스턴스 생성 (`-- --with-samples`로 예시 슬롯까지) |
 | `npm run db:studio` | Prisma Studio로 데이터 직접 확인 |
 
@@ -178,6 +195,7 @@ Preview 배포는 도메인이 매번 바뀌어 로그인이 되지 않습니다
 
 ```bash
 npm run db:push
+npm run db:lock
 npm run db:seed
 ```
 

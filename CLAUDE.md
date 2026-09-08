@@ -1074,6 +1074,44 @@ Vercel 지역은 `vercel.json`에 박아뒀다. **DB는 생성 후 지역 변경
 | Turso·D1 | SQLite다. Prisma provider 교체 + Postgres 포기 |
 | Oracle Always Free VM | 영구 무료에 서울도 있지만 백업·업그레이드·보안을 직접 진다 |
 
+### public 스키마는 잠가 둔다 (2026-09-09)
+
+Supabase가 `rls_disabled_in_public`을 **CRITICAL**로 알려 왔다. 실제 노출이 맞았다.
+확인한 값이다(추측이 아니다).
+
+| | 옮기기 전 상태 |
+|---|---|
+| 표 아홉 개 전부 | RLS 꺼짐, 정책 0개 |
+| `anon`·`authenticated` | 아홉 개 전부에 `SELECT INSERT UPDATE DELETE TRUNCATE` |
+| 기본 권한 | `postgres`가 public에 만드는 표에 그 권한을 **자동으로 얹는다** |
+
+**아무도 그렇게 설정하지 않았다.** Supabase 프로젝트에 처음부터 걸려 있는
+default privileges라 `prisma db push`로 표를 세우는 것만으로 PostgREST
+(`/rest/v1/…`)와 GraphQL에 그대로 나온다. `anon` 키는 브라우저에 박으라고 만든 키라
+**비밀로 칠 수 없다.**
+
+이 앱은 `supabase-js`를 쓰지 않는다. DB에 닿는 길이 Prisma 하나뿐이라 그 통로는
+**필요가 없어서 통째로 막는다.** 정책을 짜서 열어 두는 방향으로 가지 않는다 —
+인가는 이미 `requireSession`이 지고 있고(§4), 정책을 두면 같은 판단이 두 곳으로 갈린다.
+
+`scripts/lock-public-schema.mts`(`npm run db:lock`)가 두 겹으로 막는다.
+
+1. 표마다 **RLS를 켠다.** 정책이 없으므로 `anon`은 아무것도 못 한다
+2. 공개 롤의 표 권한을 회수하고 **기본 권한 자체를 끈다**
+
+**2번이 재발을 막는 줄이다.** 마이그레이션 파일 없이 `db push`로 스키마를 반영하므로
+(§6), 이걸 끄지 않으면 다음에 만드는 표가 또 권한을 달고 태어난다. 새 표는 RLS가 꺼진
+채 생기니 **표를 늘린 뒤에는 `npm run db:lock`을 한 번 더 돌린다.** 여러 번 돌려도
+안전하고 `-- --check`로 상태만 볼 수 있다.
+
+**앱은 영향을 받지 않는다.** Supabase의 `postgres` 롤은 `BYPASSRLS`를 갖고 있고 표의
+소유자이기도 해서 두 가지 이유로 RLS를 통과한다. 런타임(트랜잭션 풀러)과 스키마
+작업(세션 풀러) **양쪽 모두 이 롤로 붙는 것을 확인했다.** 이 사실이 깨지는 순간
+— 예를 들어 앱을 `anon` 키로 붙이는 길을 열면 — 위 결정이 통째로 흔들린다.
+
+나중에 Supabase Realtime으로 갈아타도(2-4) 이 잠금은 그대로 둔다. Realtime이 보는
+것은 `realtime` 스키마이지 `public`의 표 권한이 아니다.
+
 ### 완료
 
 - 저장소 정리(Gmail 코드 전부 삭제) 및 Next.js 스캐폴드
@@ -1179,6 +1217,7 @@ Vercel 지역은 `vercel.json`에 박아뒀다. **DB는 생성 후 지역 변경
 [x] Neon → Supabase 서울 이전 (+ Vercel icn1, keep-alive 크론)
 [x] 편집 잠금을 (주차, 요일) 단위로 — 한 화면이 한 게임 주차
 [x] 길드 탈퇴 시 자동 차단 (봇 토큰으로 멤버십 재검사)
+[x] Supabase public 스키마 잠금 (RLS + 공개 롤 권한 회수)
 ```
 
 ---
@@ -1192,6 +1231,8 @@ Vercel 지역은 `vercel.json`에 박아뒀다. **DB는 생성 후 지역 변경
   또 이 스크립트가 닿는 모듈은 확장자 없는 런타임 import를 하면 안 된다
   (`import type`은 지워지므로 괜찮다)
 - `src/lib/week.ts`를 고치면 반드시 `npm test`를 돌린다. 주차 경계는 눈으로 검증이 어렵다
+- **스키마에 표를 새로 만들면 `npm run db:push` 다음에 `npm run db:lock`을 돌린다.**
+  새 표는 RLS가 꺼진 채로 태어난다(섹션 5)
 - 사용자에게 터미널 출력 공유를 요청할 때 **API 키를 지우고 붙여넣도록 안내**한다
 - 칸에 보여줄 각인은 **직업 각인**이다(`Character.classEngraving`). 전투 각인은 상세로 민다
 - **정규화 형식을 바꾸면 저장된 데이터는 그대로다.** 저장 값은 조회 시점 형식으로 굳어 있어
