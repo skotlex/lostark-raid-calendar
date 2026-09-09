@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 
@@ -20,7 +21,24 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className="h-full antialiased"
       data-theme={theme === "system" ? undefined : theme}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+
+        {/*
+          Vercel 웹 애널리틱스.
+
+          **Supabase 무료 한도와 상관이 없다**(CLAUDE.md 2-4). 여기서 나가는 요청은
+          Vercel로 가고 우리 DB나 함수를 거치지 않아, egress를 지키려고 둔 장치들
+          (`IDLE_STOP_MS` 등)과 겹치지 않는다.
+
+          쿠키를 쓰지 않으므로 로그인 게이트(4장) 앞뒤 어디서든 그대로 돈다. 배포된
+          곳에서만 실제로 보내고 로컬 개발에서는 아무것도 하지 않는다.
+
+          루트 레이아웃에 둔다. 여기가 로그인 화면까지 감싸는 유일한 자리라
+          `/i/[slug]` 아래에 붙이면 정작 사람들이 처음 닿는 화면이 빠진다.
+        */}
+        <Analytics />
+      </body>
     </html>
   );
 }

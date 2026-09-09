@@ -1219,6 +1219,10 @@ default privileges라 `prisma db push`로 표를 세우는 것만으로 PostgRES
   임계값 `[10,14,17]`을 코어 툴팁에서 읽어 계산한다
 - **DB 연결 완료** (Supabase 서울). 스키마 반영과 시드 실행까지 확인했다.
   기본 인스턴스 slug는 `main`이다
+- **Vercel 웹 애널리틱스**(`@vercel/analytics`). 루트 레이아웃에 `<Analytics />` 한 줄이다.
+  로그인 화면까지 감싸는 자리라 `/i/[slug]` 아래에 붙이지 않는다. 쿠키를 쓰지 않고
+  요청이 Vercel로만 가므로 **Supabase 무료 한도(2-4)와 겹치지 않는다.**
+  배포된 곳에서만 실제로 보내고 로컬에서는 아무것도 하지 않는다
 
 ### 환경
 
