@@ -1,11 +1,11 @@
 import "server-only";
 
-import { NO_ROSTER, goldEarnerIds } from "./goldEarners";
+import { NO_ROSTER, RAID_GOLD_LIMIT, goldEarnerIds } from "./goldEarners";
 import { compareHomeworkRows, goldAt } from "./homeworkOrder";
 import { prisma } from "./prisma";
-import { raidReward } from "./raidRewards";
+import { raidMinLevel, raidReward } from "./raidRewards";
 import { raidLabel } from "./raids";
-import { dayOffsetInWeek, getWeekStart, isUndecided } from "./week";
+import { compareWeekDay, dayOffsetInWeek, getWeekStart, isUndecided } from "./week";
 
 /**
  * 숙제 현황.
@@ -65,6 +65,39 @@ export interface HomeworkEntry {
   baseGold: number | null;
 }
 
+/**
+ * 채우지 못한 골드 자리에 넣을 만한 레이드.
+ *
+ * 골드는 캐릭터마다 **레이드 셋까지**다(goldEarners.ts). 셋을 못 채운 캐릭터는 남은
+ * 자리만큼 골드를 그냥 흘리는데, 카드에는 잡아 둔 줄만 서 있어 **비어 있다는 사실
+ * 자체가 화면에 없다.** 그래서 빈 자리에 후보를 세운다.
+ *
+ * **앱이 "가야 할 레이드"를 아는 것은 아니다.** 요일표에 슬롯이 있고, 이 캐릭터가
+ * 아직 안 들어갔고, 지금 들어갈 수 있는 것까지가 앱이 말할 수 있는 전부다. 요일표에
+ * 없는 레이드는 여기 뜨지 않는다 — 숙제는 편성표에서 나온다(CLAUDE.md 2-3).
+ *
+ * **요일과 시각을 단정하지 않는다.** 같은 레이드가 여러 요일에 동시에 서 있을 수
+ * 있어서, 하나를 골라 적으면 나머지 공대는 없는 것이 된다. 그래서 공대가 하나뿐일
+ * 때만 요일을 적고 여럿이면 개수만 말한다.
+ */
+export interface MissingRaid {
+  raidName: string;
+  /** "카멘 하드". 공대가 여럿이면 골드가 가장 큰 난이도의 이름이다 */
+  label: string;
+  /**
+   * 여기 들어가면 이 캐릭터가 받을 골드. 보상 표에 없으면 null.
+   *
+   * 골드를 못 받는 캐릭터는 0이다. 자리를 채워도 골드는 안 들어오지만 레이드는
+   * 가므로 후보에서 빼지는 않는다. 화면이 0을 보고 숫자를 감춘다.
+   */
+  clearGold: number | null;
+  /** 들어갈 자리가 남은 공대 수. 같은 레이드가 여러 요일에 있을 수 있다 */
+  openSlots: number;
+  /** 공대가 하나뿐일 때만 화면이 쓴다. 여럿이면 어느 날인지 말할 수 없다 */
+  dayOfWeek: number;
+  startTime: string;
+}
+
 export interface HomeworkCharacter {
   id: string;
   name: string;
@@ -87,6 +120,13 @@ export interface HomeworkCharacter {
   clearGold: number;
   /** 더보기를 모두 켰을 때 나가는 골드 합계 */
   moreCost: number;
+  /**
+   * 못 채운 골드 자리에 넣을 만한 레이드. 셋을 채웠으면 비어 있다.
+   *
+   * 빈 자리 수보다 많이 담지 않는다. 후보를 다 늘어놓으면 "아직 갈 수 있는 레이드
+   * 목록"이 되어, 이 카드가 말하려던 "여기 한 자리가 비었다"가 묻힌다.
+   */
+  missing: MissingRaid[];
 }
 
 export interface RaidSummary {
@@ -153,6 +193,98 @@ function raidPassed(weekStart: Date, dayOfWeek: number, startTime: string): bool
   at.setUTCHours(at.getUTCHours() - 6 + (hour || 0), minute || 0, 0, 0);
 
   return Date.now() >= at.getTime();
+}
+
+/** 후보를 고르기 전의 요일표 한 줄. 자리가 몇 개 찼는지까지 들고 온다. */
+interface CandidateSlot {
+  raidName: string;
+  difficulty: string | null;
+  dayOfWeek: number;
+  startTime: string;
+  partySize: number;
+  filled: number;
+}
+
+/**
+ * 못 채운 골드 자리에 넣을 만한 레이드를 고른다(`MissingRaid`).
+ *
+ * 걸러내는 것이 셋이다. 셋 다 **권해봐야 못 가는 자리**를 빼는 것이지 경고가 아니다.
+ *
+ * | 거르는 것 | 이유 |
+ * |---|---|
+ * | 자리가 다 찬 공대 | 8/8이면 들어갈 칸이 없다 |
+ * | 시각이 이미 지난 슬롯 | 금요일에 수요일 공대를 권해봐야 소용없다 |
+ * | 레벨컷 미달 | 게임이 입장에서 막는다. 칸의 자동완성과 같은 규칙이다 |
+ *
+ * **컷을 모르는 레이드와 스펙을 못 받아온 캐릭터는 지나간다.** 모르는 값으로 후보를
+ * 지우면 멀쩡한 레이드가 조용히 사라져, 자리가 비었는데 아무것도 안 뜨는 화면이 된다.
+ * 여기서도 3.4다 — 모르는 컷을 지어내지 않는다.
+ *
+ * **미정은 시각으로 거르지 않는다.** 잴 시각이 없어 판정 자체가 서지 않고(`raidPassed`),
+ * 그 주 내내 갈 수 있는 레이드다. 혼자 도는 자리라 오히려 빈 골드 자리를 메우기 좋다.
+ *
+ * **같은 레이드는 한 번만 담는다.** 한 캐릭터는 같은 레이드를 난이도가 달라도 한 주에
+ * 한 번만 가므로(CLAUDE.md 3.4-1), 노말과 하드를 나란히 세우면 둘 다 갈 수 있는 것처럼
+ * 읽힌다. 골드가 큰 쪽을 남긴다 — 어차피 하나만 갈 것이면 그쪽이 답이다.
+ */
+function missingRaids(
+  slots: readonly CandidateSlot[],
+  weekStart: Date,
+  itemLevel: number | null,
+  goldEarner: boolean,
+  taken: ReadonlySet<string>,
+  open: number,
+): MissingRaid[] {
+  if (open <= 0) return [];
+
+  const best = new Map<string, MissingRaid>();
+
+  for (const slot of slots) {
+    const raid = slot.raidName.trim();
+    if (taken.has(raid)) continue;
+    if (slot.filled >= slot.partySize) continue;
+    if (!isUndecided(slot.dayOfWeek) && raidPassed(weekStart, slot.dayOfWeek, slot.startTime)) {
+      continue;
+    }
+
+    const min = raidMinLevel(slot.raidName, slot.difficulty);
+    if (min !== null && itemLevel !== null && itemLevel < min) continue;
+
+    // 골드를 못 받는 캐릭터는 0이다. 줄에 찍히는 값과 같은 규칙이라야 어긋나지 않는다.
+    const clearGold = goldEarner ? (raidReward(slot.raidName, slot.difficulty)?.clearGold ?? null) : 0;
+
+    const found = best.get(raid);
+    if (!found) {
+      best.set(raid, {
+        raidName: raid,
+        label: raidLabel(slot.raidName, slot.difficulty),
+        clearGold,
+        openSlots: 1,
+        dayOfWeek: slot.dayOfWeek,
+        startTime: slot.startTime,
+      });
+      continue;
+    }
+
+    found.openSlots += 1;
+    // 보상을 모르는 난이도(-1)에 밀려 아는 값이 가려지지 않게 한다.
+    if ((clearGold ?? -1) > (found.clearGold ?? -1)) {
+      found.label = raidLabel(slot.raidName, slot.difficulty);
+      found.clearGold = clearGold;
+      found.dayOfWeek = slot.dayOfWeek;
+      found.startTime = slot.startTime;
+    }
+  }
+
+  return [...best.values()]
+    .sort((a, b) => {
+      // 큰 것부터. 빈 자리가 하나뿐일 때 가장 많이 벌 수 있는 쪽을 보여줘야 한다.
+      const gold = (b.clearGold ?? -1) - (a.clearGold ?? -1);
+      if (gold !== 0) return gold;
+      const day = compareWeekDay(a.dayOfWeek, b.dayOfWeek);
+      return day !== 0 ? day : a.startTime.localeCompare(b.startTime);
+    })
+    .slice(0, open);
 }
 
 /**
@@ -223,6 +355,37 @@ export async function getHomework(
       { combatPower: { sort: "desc", nulls: "last" } },
     ],
   });
+
+  /*
+   * 못 채운 골드 자리에 세울 후보(`missingRaids`).
+   *
+   * 요일표 전체를 한 번만 읽고 캐릭터마다 걸러 쓴다. 캐릭터별로 조회하면 원정대
+   * 크기만큼 쿼리가 늘어나는데, 슬롯은 길드 하나에 수십 줄이라 통째로 들고 오는 편이
+   * 훨씬 싸다.
+   *
+   * 자리 수는 관계 카운트로 함께 받는다. 배정 행을 다시 읽어 세면 이 화면에서 가장
+   * 큰 조회가 하나 더 붙는다.
+   */
+  const boardSlots = await prisma.raidSlot.findMany({
+    where: { instanceId, archivedAt: null },
+    select: {
+      raidName: true,
+      difficulty: true,
+      dayOfWeek: true,
+      startTime: true,
+      partySize: true,
+      _count: { select: { assignments: { where: { weekStart } } } },
+    },
+  });
+
+  const candidates: CandidateSlot[] = boardSlots.map((slot) => ({
+    raidName: slot.raidName,
+    difficulty: slot.difficulty,
+    dayOfWeek: slot.dayOfWeek,
+    startTime: slot.startTime,
+    partySize: slot.partySize,
+    filled: slot._count.assignments,
+  }));
 
   /*
    * 골드를 받는 캐릭터를 원정대마다 가린다.
@@ -352,6 +515,21 @@ export async function getHomework(
       remaining: entries.filter((e) => !e.done).length,
       clearGold: entries.reduce((sum, e) => sum + (e.clearGold ?? 0), 0),
       moreCost: entries.reduce((sum, e) => sum + (e.moreCost ?? 0), 0),
+      /*
+       * 남은 골드 자리에 후보를 세운다.
+       *
+       * 이미 간 레이드는 난이도를 빼고 이름으로 센다. 한 캐릭터는 같은 레이드를
+       * 난이도가 달라도 한 주에 한 번만 가므로(3.4-1), 벨가르딘 노말을 갔으면
+       * 하드도 후보가 아니다.
+       */
+      missing: missingRaids(
+        candidates,
+        weekStart,
+        character.itemLevel === null ? null : Number(character.itemLevel),
+        goldEarner,
+        new Set(entries.map((e) => e.raidName.trim())),
+        RAID_GOLD_LIMIT - entries.length,
+      ),
     };
   });
 

@@ -3,7 +3,7 @@
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
 import { RAID_GOLD_LIMIT } from "@/lib/goldEarners";
-import type { HomeworkEntry } from "@/lib/homework";
+import type { HomeworkEntry, MissingRaid } from "@/lib/homework";
 import { goldAt, isGoldCapped } from "@/lib/homeworkOrder";
 import { dayName, isUndecided } from "@/lib/week";
 
@@ -63,10 +63,18 @@ export function EntryList({
   slug,
   characterId,
   entries,
+  missing,
 }: {
   slug: string;
   characterId: string;
   entries: readonly HomeworkEntry[];
+  /**
+   * 못 채운 골드 자리에 세울 후보(homework.ts). 셋을 채웠으면 비어 있다.
+   *
+   * **끌 수 없고 저장에도 끼지 않는다.** 아직 편성에 없는 자리라 옮길 것이 없고,
+   * 순서를 굳히는 `commit`은 실제 배정(`rows`)만 보낸다.
+   */
+  missing: readonly MissingRaid[];
 }) {
   const [state, save, saving] = useActionState(reorderHomeworkAction, IDLE);
 
@@ -399,6 +407,68 @@ export function EntryList({
             </li>
           );
         })}
+
+        {/*
+          못 채운 골드 자리.
+
+          **잡아 둔 줄만 서 있으면 비어 있다는 사실 자체가 화면에 없다.** 골드는
+          캐릭터마다 레이드 셋까지인데(goldEarners.ts), 둘만 잡아 둔 카드는 합계가
+          작게 찍힐 뿐 왜 작은지를 말하지 않는다. 자리를 줄로 세워 두면 남은 칸이
+          번호로 보이고, 거기 들어갈 만한 레이드가 무엇인지도 같이 읽힌다.
+
+          **끌기에서 빼둔다.** `data-row`를 달지 않아 놓을 곳으로 잡히지 않고
+          (rowAt), 포인터 핸들러도 없다. 아직 편성에 없는 자리라 옮길 것이 없다.
+
+          후보가 없으면 줄도 없다. 갈 수 있는 레이드가 하나도 없는데 빈 줄만 세우면
+          카드만 길어지고 알려주는 것이 없다(homework.ts).
+        */}
+        {missing.map((raid, i) => (
+          <li
+            key={`missing:${raid.raidName}`}
+            className="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-1.5 text-sm"
+          >
+            {/* 실제 줄의 손잡이 자리를 비워 둔다. 없으면 번호가 왼쪽으로 어긋난다. */}
+            {movable && <span className="-mr-1 -ml-1.5 size-3.5 shrink-0" aria-hidden />}
+
+            {/*
+              번호는 이어서 매긴다. 이 자리가 몇 번째 골드 자리인지가 요점이다.
+              테두리만 두른 뱃지라 채워진 줄과 한눈에 갈린다.
+            */}
+            <span className="inline-flex h-4.5 min-w-4.5 shrink-0 items-center justify-center rounded border border-dashed border-border px-1 text-[11px] font-semibold tabular text-text-faint">
+              {rows.length + i + 1}
+            </span>
+
+            <span className="text-text-faint">비어 있음</span>
+
+            {/* 레이드 이름은 흐리게 둔다. 잡아 둔 줄과 같은 무게로 서면 간 것처럼 읽힌다. */}
+            <span className="text-text-dim">{raid.label}</span>
+
+            {/*
+              **요일을 단정하지 않는다.** 같은 레이드가 여러 요일에 동시에 서 있을 수
+              있어서, 하나를 골라 적으면 나머지 공대는 없는 것이 된다. 하나뿐일 때만
+              요일을 적고 여럿이면 개수만 말한다. 어느 날 갈지는 편성표에서 고른다.
+            */}
+            <span className="rounded bg-surface-2/60 px-1.5 py-0.5 text-[11px] tabular text-text-faint">
+              {raid.openSlots > 1
+                ? `공대 ${raid.openSlots}`
+                : isUndecided(raid.dayOfWeek)
+                  ? dayName(raid.dayOfWeek)
+                  : `${dayName(raid.dayOfWeek)} ${raid.startTime}`}
+            </span>
+
+            {/*
+              들어가면 붙는 골드. 파란색인 이유는 이 카드에서 악센트(금색)가 이미
+              "안 간 숙제"의 색이기 때문이다(badgeTone). 같은 색으로 두면 비어 있는
+              자리가 잡아 둔 숙제처럼 읽힌다.
+
+              골드를 못 받는 캐릭터는 0이라 감춘다. 표에 없는 레이드(null)도 마찬가지다
+              — `+- G`는 알려주는 것이 없다.
+            */}
+            <span className="ml-auto text-xs tabular text-support">
+              {raid.clearGold ? `+${gold.format(raid.clearGold)} G` : ""}
+            </span>
+          </li>
+        ))}
       </ul>
 
       {/*

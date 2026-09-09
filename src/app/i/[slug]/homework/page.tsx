@@ -180,7 +180,7 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
       <section className="space-y-2">
         <SectionTitle
           title="캐릭터별 숙제"
-          hint="줄을 끌어 옮기면 골드를 받을 세 개가 바뀝니다"
+          hint="줄을 끌어 옮기면 골드를 받을 세 개가 바뀝니다 · 빈 줄은 아직 안 잡은 자리입니다"
         />
 
         {/*
@@ -249,7 +249,12 @@ export default async function HomeworkPage({ params }: PageProps<"/i/[slug]/home
               </span>
             </div>
 
-            <EntryList slug={slug} characterId={character.id} entries={character.entries} />
+            <EntryList
+              slug={slug}
+              characterId={character.id}
+              entries={character.entries}
+              missing={character.missing}
+            />
             </li>
           ))}
         </ul>
