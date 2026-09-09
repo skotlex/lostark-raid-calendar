@@ -76,13 +76,14 @@ export interface HomeworkEntry {
  * 아직 안 들어갔고, 지금 들어갈 수 있는 것까지가 앱이 말할 수 있는 전부다. 요일표에
  * 없는 레이드는 여기 뜨지 않는다 — 숙제는 편성표에서 나온다(CLAUDE.md 2-3).
  *
- * **요일과 시각을 단정하지 않는다.** 같은 레이드가 여러 요일에 동시에 서 있을 수
- * 있어서, 하나를 골라 적으면 나머지 공대는 없는 것이 된다. 그래서 공대가 하나뿐일
- * 때만 요일을 적고 여럿이면 개수만 말한다.
+ * **요일도 시각도 담지 않는다.** 같은 레이드가 여러 요일에 동시에 서 있을 수 있어서,
+ * 하나를 골라 적으면 나머지 공대는 없는 것이 된다. 실제 줄에서 요일 뱃지가 서던
+ * 자리에는 `비어 있음`이 들어간다 — 이 줄이 말하려는 것은 어느 날이 아니라 자리가
+ * 비었다는 사실이고, 어느 날 갈지는 편성표에서 고른다.
  */
 export interface MissingRaid {
   raidName: string;
-  /** "카멘 하드". 공대가 여럿이면 골드가 가장 큰 난이도의 이름이다 */
+  /** "카멘 하드". 난이도가 여럿이면 골드가 가장 큰 쪽의 이름이다 */
   label: string;
   /**
    * 여기 들어가면 이 캐릭터가 받을 골드. 보상 표에 없으면 null.
@@ -91,11 +92,6 @@ export interface MissingRaid {
    * 가므로 후보에서 빼지는 않는다. 화면이 0을 보고 숫자를 감춘다.
    */
   clearGold: number | null;
-  /** 들어갈 자리가 남은 공대 수. 같은 레이드가 여러 요일에 있을 수 있다 */
-  openSlots: number;
-  /** 공대가 하나뿐일 때만 화면이 쓴다. 여럿이면 어느 날인지 말할 수 없다 */
-  dayOfWeek: number;
-  startTime: string;
 }
 
 export interface HomeworkCharacter {
@@ -195,6 +191,17 @@ function raidPassed(weekStart: Date, dayOfWeek: number, startTime: string): bool
   return Date.now() >= at.getTime();
 }
 
+/**
+ * 고르는 동안의 후보. 요일·시각은 **줄 세우기에만** 쓰고 화면에는 넘기지 않는다.
+ *
+ * 같은 레이드가 여러 요일에 서 있을 수 있어 하나를 골라 적을 수 없다(`MissingRaid`).
+ * 그래도 보상이 같은 둘 중 어느 것을 먼저 세울지는 정해야 해서 여기까지만 들고 있는다.
+ */
+interface Candidate extends MissingRaid {
+  dayOfWeek: number;
+  startTime: string;
+}
+
 /** 후보를 고르기 전의 요일표 한 줄. 자리가 몇 개 찼는지까지 들고 온다. */
 interface CandidateSlot {
   raidName: string;
@@ -237,7 +244,7 @@ function missingRaids(
 ): MissingRaid[] {
   if (open <= 0) return [];
 
-  const best = new Map<string, MissingRaid>();
+  const best = new Map<string, Candidate>();
 
   for (const slot of slots) {
     const raid = slot.raidName.trim();
@@ -259,14 +266,12 @@ function missingRaids(
         raidName: raid,
         label: raidLabel(slot.raidName, slot.difficulty),
         clearGold,
-        openSlots: 1,
         dayOfWeek: slot.dayOfWeek,
         startTime: slot.startTime,
       });
       continue;
     }
 
-    found.openSlots += 1;
     // 보상을 모르는 난이도(-1)에 밀려 아는 값이 가려지지 않게 한다.
     if ((clearGold ?? -1) > (found.clearGold ?? -1)) {
       found.label = raidLabel(slot.raidName, slot.difficulty);
@@ -284,7 +289,9 @@ function missingRaids(
       const day = compareWeekDay(a.dayOfWeek, b.dayOfWeek);
       return day !== 0 ? day : a.startTime.localeCompare(b.startTime);
     })
-    .slice(0, open);
+    .slice(0, open)
+    // 요일·시각은 여기서 떨군다. 화면이 쓸 수 없는 값이라 실어 보낼 이유가 없다.
+    .map(({ raidName, label, clearGold }) => ({ raidName, label, clearGold }));
 }
 
 /**
