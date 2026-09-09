@@ -1856,6 +1856,18 @@ button:disabled,
   color: var(--diff-nightmare);
 }
 
+/*
+ * 가라앉은 난이도 뱃지 — 숙제 카드의 다녀온 줄이 쓴다.
+ *
+ * 그 카드에서 눈이 찾는 것은 "어디까지 갔나"뿐이라 줄의 뱃지가 모두 흐려지는데
+ * (EntryList의 badgeTone), 난이도만 기본 회색으로 서면 한 칸 밝아 끝난 줄이 다시
+ * 떠오른다. 색을 빼는 것만으로는 모자라 톤까지 맞춘다.
+ */
+.slot-badge[data-dim] {
+  background: color-mix(in srgb, var(--surface-2) 60%, transparent);
+  color: var(--text-faint);
+}
+
 /* 자리가 다 찼다. 요일 하나에 슬롯이 여럿 늘어서므로 색으로 갈라야 눈에 걸린다. */
 .slot-badge[data-full] {
   background: color-mix(in srgb, var(--danger) 16%, transparent);

@@ -83,7 +83,9 @@ export interface HomeworkEntry {
  */
 export interface MissingRaid {
   raidName: string;
-  /** "카멘 하드". 난이도가 여럿이면 골드가 가장 큰 쪽의 이름이다 */
+  /** 난이도가 여럿이면 골드가 가장 큰 쪽이다. 화면이 뱃지로 두른다 */
+  difficulty: string | null;
+  /** "카멘 하드". 이름과 난이도를 붙인 값이라 읽어주는 글에만 쓴다 */
   label: string;
   /**
    * 여기 들어가면 이 캐릭터가 받을 골드. 보상 표에 없으면 null.
@@ -264,6 +266,7 @@ function missingRaids(
     if (!found) {
       best.set(raid, {
         raidName: raid,
+        difficulty: slot.difficulty,
         label: raidLabel(slot.raidName, slot.difficulty),
         clearGold,
         dayOfWeek: slot.dayOfWeek,
@@ -274,6 +277,7 @@ function missingRaids(
 
     // 보상을 모르는 난이도(-1)에 밀려 아는 값이 가려지지 않게 한다.
     if ((clearGold ?? -1) > (found.clearGold ?? -1)) {
+      found.difficulty = slot.difficulty;
       found.label = raidLabel(slot.raidName, slot.difficulty);
       found.clearGold = clearGold;
       found.dayOfWeek = slot.dayOfWeek;
@@ -291,7 +295,12 @@ function missingRaids(
     })
     .slice(0, open)
     // 요일·시각은 여기서 떨군다. 화면이 쓸 수 없는 값이라 실어 보낼 이유가 없다.
-    .map(({ raidName, label, clearGold }) => ({ raidName, label, clearGold }));
+    .map(({ raidName, difficulty, label, clearGold }) => ({
+      raidName,
+      difficulty,
+      label,
+      clearGold,
+    }));
 }
 
 /**

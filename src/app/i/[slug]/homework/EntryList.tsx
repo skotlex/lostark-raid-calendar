@@ -5,6 +5,7 @@ import { startTransition, useActionState, useEffect, useRef, useState } from "re
 import { RAID_GOLD_LIMIT } from "@/lib/goldEarners";
 import type { HomeworkEntry, MissingRaid } from "@/lib/homework";
 import { goldAt, isGoldCapped } from "@/lib/homeworkOrder";
+import { difficultyTone } from "@/lib/raids";
 import { dayName, isUndecided } from "@/lib/week";
 
 import { GripIcon } from "../icons";
@@ -34,6 +35,34 @@ const HOLD_SLOP = 8;
  */
 function badgeTone(done: boolean) {
   return done ? "bg-surface-2/60 text-text-faint" : "bg-accent/15 text-accent";
+}
+
+/**
+ * 난이도 뱃지. 편성표 머리글과 같은 모양이다(`slot-badge`).
+ *
+ * 이름 뒤에 글자로 붙여 두면(`벨가르딘 나이트메어`) 이름의 일부로 읽혀, 같은 레이드가
+ * 난이도만 다르게 두 줄 서 있을 때 뒷글자를 읽어야 갈린다. 색을 입히면 훑는 것만으로
+ * 걸린다. 모르는 난이도는 `data-diff`가 비어 회색으로 선다(raids.ts).
+ *
+ * **다녀온 줄에서는 가라앉힌다.** 이 카드에서 눈이 찾는 것은 "어디까지 갔나"라
+ * 나머지 뱃지가 모두 흐려지는데(badgeTone), 난이도만 색을 달고 있으면 끝난 줄이
+ * 다시 떠오른다. 색만 빼면 기본 회색이 옆 뱃지보다 한 칸 밝아서, `data-dim`으로
+ * 톤까지 맞춘다(globals.css).
+ *
+ * 이름과 한 덩어리로 묶어 두는 것은 부르는 쪽 몫이다. 줄이 접힐 때 난이도만 떨어져
+ * 나가면 어느 레이드의 난이도인지 알 수 없다.
+ */
+function DifficultyBadge({ difficulty, dim }: { difficulty: string | null; dim?: boolean }) {
+  if (!difficulty) return null;
+  return (
+    <span
+      className="slot-badge"
+      data-diff={dim ? undefined : difficultyTone(difficulty)}
+      data-dim={dim ? "" : undefined}
+    >
+      {difficulty}
+    </span>
+  );
 }
 
 /** 배열에서 하나를 뽑아 다른 자리에 꽂는다. 원본은 그대로 둔다. */
@@ -353,8 +382,15 @@ export function EntryList({
                   {position + 1}
                 </span>
 
-                {/* 레이드 이름은 흐리게 둔다. 잡아 둔 줄과 같은 무게로 서면 간 것처럼 읽힌다. */}
-                <span className="text-text-dim">{raid.label}</span>
+                {/*
+                  레이드 이름은 흐리게 둔다. 잡아 둔 줄과 같은 무게로 서면 간 것처럼
+                  읽힌다. 난이도 뱃지는 색을 그대로 둔다 — 아직 안 간 자리이기도 하고,
+                  노말이냐 하드냐가 곧 얼마를 더 버느냐라 이 줄에서 읽어야 할 값이다.
+                */}
+                <span className="flex items-center gap-x-2 text-text-dim">
+                  {raid.raidName}
+                  <DifficultyBadge difficulty={raid.difficulty} />
+                </span>
 
                 {/*
                   실제 줄이 요일 뱃지를 다는 자리다. **여기에 요일을 적을 수 없다** — 같은
@@ -438,8 +474,18 @@ export function EntryList({
                 {position + 1}
               </span>
 
-              <span className={entry.done ? "line-through" : "font-medium"}>
-                {entry.label}
+              {/*
+                이름과 난이도는 한 덩어리다. 줄이 접힐 때 난이도만 다음 줄로 떨어지면
+                어느 레이드의 난이도인지 알 수 없다. 편성표 머리글과 같은 이유다.
+
+                취소선은 이름에만 긋는다. 뱃지를 가로지르면 상자에 금이 간 것처럼
+                보이고, 난이도 글자도 읽기 어려워진다.
+              */}
+              <span className="flex items-center gap-x-2">
+                <span className={entry.done ? "line-through" : "font-medium"}>
+                  {entry.raidName}
+                </span>
+                <DifficultyBadge difficulty={entry.difficulty} dim={entry.done} />
               </span>
 
               {/*
