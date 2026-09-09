@@ -93,7 +93,17 @@ export default async function PinnedPage({ params }: PageProps<"/i/[slug]/pinned
           </span>
         </div>
       ) : (
-        <ul className="space-y-3">
+        /*
+          한 줄에 한 슬롯씩 세우면 넓은 화면에서 카드가 통째로 가로를 다 먹고, 자리
+          서너 개짜리 카드가 세로로만 쌓여 화면이 이유 없이 길어진다. 읽을 것은 슬롯
+          이름과 자리 몇 줄뿐이라 옆으로 채운다. 폭에 따라 열 수가 알아서 정해지므로
+          (auto-fill) 좁은 화면은 지금과 같은 한 줄이다. 숙제 카드와 같은 방식이다.
+
+          items-start를 두는 이유는 자리 수가 카드마다 달라서다. 늘리면 자리 하나짜리
+          카드가 옆 카드 높이에 맞춰 아래가 텅 빈다. 숙제 카드와 달리 바닥에 세울
+          합계가 없다.
+        */
+        <ul className="grid items-start gap-3 grid-cols-[repeat(auto-fill,minmax(20rem,1fr))]">
           {list.map((slot) => (
             <li key={slot.slotId} className="rounded border border-border bg-surface">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-border px-3 py-2">
