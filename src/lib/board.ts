@@ -1,9 +1,11 @@
 import "server-only";
 
 import {
+  ASSIGN_SYNC_TTL_MS,
   type CharacterView,
   CharacterError,
   registerCharacter,
+  syncCharacter,
   toCharacterView,
 } from "./characters";
 import { SYSTEM_ACTOR, logEvent } from "./history";
@@ -489,7 +491,7 @@ function requireEditable(weekStart: Date, dayOfWeek: number) {
 /**
  * 칸에 캐릭터를 넣는다. **이 앱의 주 입력 경로다.**
  *
- * 닉네임만 받아서, 등록돼 있으면 그대로 쓰고 없으면 그 자리에서 로아 API로 조회해
+ * 닉네임만 받아서, 등록돼 있으면 그 자리에서 스펙을 갱신하고 없으면 로아 API로 조회해
  * 등록까지 한 번에 처리한다. 시트에서 칸에 닉네임을 치던 것과 같은 동작이라
  * "먼저 캐릭터를 등록하고 그다음 배치"라는 단계를 사용자가 겪지 않는다.
  */
@@ -510,7 +512,6 @@ export async function assignByName(params: {
   // 4인 슬롯에 2파티 자리가 들어오면 화면에 나오지 않는 유령 배정이 된다.
   if (!isValidPosition(position, slot.partySize)) throw new BoardError("잘못된 자리입니다");
 
-  // 이미 등록된 캐릭터면 API를 부르지 않는다. 분당 100회 한도를 아낀다.
   const existing = await prisma.character.findFirst({
     where: { instanceId, name: { equals: name, mode: "insensitive" } },
     select: characterSelect,
@@ -519,7 +520,22 @@ export async function assignByName(params: {
   let character: CharacterView;
   let created = false;
   if (existing) {
-    character = toCharacterView(existing);
+    /*
+     * **넣는 김에 스펙도 다시 받아온다.**
+     *
+     * 칸에 이름을 치는 순간이 그 캐릭터를 실제로 보는 시점이라, 여기서 굳은 값을 그대로
+     * 쓰면 어제 바꾼 각인·템레벨이 그대로 서서 편성의 근거가 되지 못한다. 화면이 열릴 때
+     * 도는 자동 갱신(AutoSync)은 6시간짜리라 방금 바뀐 것을 잡지 못한다.
+     *
+     * 몇 분 안에 다시 넣는 것은 건너뛴다(ASSIGN_SYNC_TTL_MS). 자리를 옮기고 되돌리는
+     * 일이 흔한데 armory는 접속을 끊을 때 굳는 값이라 그새 새로워지지 않는다.
+     *
+     * 조회에 실패해도 배치는 그대로 간다. syncCharacter가 던지지 않고 syncError만
+     * 남기며 **기존 스펙을 지우지 않는다**(CLAUDE.md 3.2).
+     */
+    character = await syncCharacter(instanceId, existing.id, {
+      maxAgeMs: ASSIGN_SYNC_TTL_MS,
+    });
   } else {
     try {
       character = await registerCharacter(instanceId, name);

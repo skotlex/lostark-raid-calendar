@@ -15,6 +15,18 @@ import { type Role, resolveRole } from "./synergy";
 export const SYNC_TTL_MS = 6 * 60 * 60 * 1000;
 
 /**
+ * 편성 칸에 넣을 때 쓰는 짧은 캐시(`board.ts`의 `assignByName`).
+ *
+ * **칸에 이름을 치는 순간이 그 캐릭터를 실제로 보는 시점이다.** 6시간짜리 캐시로는
+ * 어제 바꾼 각인이 그대로 서 있어, 편성을 짜면서 보는 숫자가 편성의 근거가 되지 못한다.
+ *
+ * 그렇다고 매번 부르지는 않는다. 자리를 옮기고 다시 넣는 일이 몇 초 사이에 흔한데,
+ * **로아 armory는 캐릭터가 접속을 끊을 때 굳는 값**이라 분 단위로 다시 물어봐야
+ * 새로워지지 않는다. 분당 100회 한도만 축낸다(CLAUDE.md 3.2).
+ */
+export const ASSIGN_SYNC_TTL_MS = 5 * 60 * 1000;
+
+/**
  * 화면에 넘기는 캐릭터 형태.
  *
  * Prisma의 Decimal과 JsonValue는 클라이언트 컴포넌트로 그대로 넘길 수 없다.
@@ -349,11 +361,14 @@ export async function registerCharacter(
  *
  * 실패해도 **기존 스펙을 지우지 않는다.** `syncError`만 남긴다.
  * 시트의 `#REF!`처럼 값이 조용히 사라지는 상황을 만들지 않기 위해서다.
+ *
+ * 얼마나 묵은 것을 다시 부를지는 부르는 쪽이 정한다. 기본은 `SYNC_TTL_MS`(6시간)이고,
+ * 편성 칸은 더 짧은 값을 넘긴다(`ASSIGN_SYNC_TTL_MS`). `force`는 캐시를 통째로 무시한다.
  */
 export async function syncCharacter(
   instanceId: string,
   characterId: string,
-  options: { force?: boolean } = {},
+  options: { force?: boolean; maxAgeMs?: number } = {},
 ): Promise<CharacterView> {
   const existing = await prisma.character.findFirst({
     where: { id: characterId, instanceId },
@@ -361,9 +376,9 @@ export async function syncCharacter(
   });
   if (!existing) throw new CharacterError("캐릭터를 찾을 수 없습니다");
 
-  const fresh =
-    existing.syncedAt && Date.now() - existing.syncedAt.getTime() < SYNC_TTL_MS;
-  if (fresh && !options.force) return toCharacterView(existing);
+  const maxAge = options.force ? 0 : (options.maxAgeMs ?? SYNC_TTL_MS);
+  const fresh = existing.syncedAt && Date.now() - existing.syncedAt.getTime() < maxAge;
+  if (fresh) return toCharacterView(existing);
 
   try {
     const spec = toCharacterSpec(await fetchArmory(existing.name));
