@@ -208,15 +208,32 @@ function specRole(spec: CharacterSpec) {
  * 노드에는 자버프 문장이 길게 섞여 있어 잘못 읽을 여지만 늘어난다.
  *
  * 같은 종류가 양쪽에 다 있으면 트라이포드가 이긴다. 실제로 찍은 것이기 때문이다.
+ *
+ * **스킬을 아예 못 받았으면 null이다.** 서포터라도 노드만으로 채우지 않는다 — 그러면
+ * "받아봤다"는 뜻의 값이 되어, 노드에 없는 종류가 안 찍은 것으로 굳는다.
  */
-function specSynergies(spec: CharacterSpec, role: Role): SkillSynergy[] {
-  if (role !== "SUPPORT") return spec.skillSynergies;
+function specSynergies(spec: CharacterSpec, role: Role): SkillSynergy[] | null {
+  const tripod = spec.skillSynergies;
+  if (tripod === null) return null;
+  if (role !== "SUPPORT") return tripod;
 
-  const fromTripod = new Set(spec.skillSynergies.map((s) => s.kind));
-  return [
-    ...spec.skillSynergies,
-    ...spec.arkPassiveSynergies.filter((s) => !fromTripod.has(s.kind)),
-  ];
+  const fromTripod = new Set(tripod.map((s) => s.kind));
+  return [...tripod, ...spec.arkPassiveSynergies.filter((s) => !fromTripod.has(s.kind))];
+}
+
+/**
+ * 저장할 때 시너지 칸에 넣을 것.
+ *
+ * **모를 때는 칸을 건드리지 않는다.** 응답에서 `ArmorySkills`가 빠지는 일이 있는데,
+ * 그때 빈 배열로 덮으면 멀쩡히 찍고 온 캐릭터에 "트라이포드를 안 찍었다" 경고가 선다.
+ * 조회 실패가 기존 스펙을 지우지 않는 것과 같은 태도다(CLAUDE.md 3.2).
+ */
+function synergyPatch(spec: CharacterSpec, role: Role) {
+  const synergies = specSynergies(spec, role);
+  // 빈 배열은 그대로 넣는다. null과 뜻이 다르다(schema.prisma 참조).
+  return synergies === null
+    ? {}
+    : { skillSynergies: synergies as unknown as Prisma.InputJsonValue };
 }
 
 function resolveClassEngraving(spec: CharacterSpec): string | null {
@@ -288,8 +305,7 @@ export async function registerCharacter(
     arkPassive: toJson(spec.arkPassive),
     engravings: toJson(spec.engravings),
     arkGrid: toJson(spec.arkGrid),
-    // 빈 배열도 그대로 넣는다. null과 뜻이 다르다(schema.prisma 참조).
-    skillSynergies: specSynergies(spec, role) as unknown as Prisma.InputJsonValue,
+    ...synergyPatch(spec, role),
     syncedAt: new Date(),
     syncError: null,
   };
@@ -367,7 +383,7 @@ export async function syncCharacter(
         arkPassive: toJson(spec.arkPassive),
         engravings: toJson(spec.engravings),
         arkGrid: toJson(spec.arkGrid),
-        skillSynergies: specSynergies(spec, role) as unknown as Prisma.InputJsonValue,
+        ...synergyPatch(spec, role),
         syncedAt: new Date(),
         syncError: null,
         // 아크패시브로 판정하므로 동기화가 항상 최신 세팅을 따라간다.

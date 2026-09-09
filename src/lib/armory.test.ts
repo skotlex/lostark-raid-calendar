@@ -486,8 +486,8 @@ describe("트라이포드 시너지", () => {
         ],
       },
     ];
-    expect(normalizeSkillSynergies(블래스터)[0]?.value).toBe("12%");
-    expect(normalizeSkillSynergies(환수사)[0]?.value).toBe("12%");
+    expect(normalizeSkillSynergies(블래스터)?.[0]?.value).toBe("12%");
+    expect(normalizeSkillSynergies(환수사)?.[0]?.value).toBe("12%");
   });
 
   it("자기 방어력을 깎는 디메리트는 방깍이 아니다", () => {
@@ -594,9 +594,14 @@ describe("트라이포드 시너지", () => {
     expect(normalizeSkillSynergies(skills)).toHaveLength(1);
   });
 
-  it("스킬이 없으면 빈 배열", () => {
-    expect(normalizeSkillSynergies(null)).toEqual([]);
-    expect(normalizeSkillSynergies(undefined)).toEqual([]);
+  // 빈 배열은 "받아봤는데 안 찍었다"라 칸에 경고가 선다. 못 받은 것과 갈라야 한다.
+  it("스킬을 못 받았으면 빈 배열이 아니라 null", () => {
+    expect(normalizeSkillSynergies(null)).toBeNull();
+    expect(normalizeSkillSynergies(undefined)).toBeNull();
+  });
+
+  it("스킬은 받았는데 찍은 것이 없으면 빈 배열", () => {
+    expect(normalizeSkillSynergies([])).toEqual([]);
   });
 });
 

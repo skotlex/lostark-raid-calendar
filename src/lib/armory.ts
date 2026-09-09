@@ -290,8 +290,12 @@ export interface CharacterSpec {
   /** 전투 각인. 상세에서 보여준다 */
   engravings: EngravingData | null;
   arkGrid: ArkGridData | null;
-  /** 스킬 트라이포드에서 읽은 파티 시너지. 클래스 표보다 정확하다 */
-  skillSynergies: SkillSynergy[];
+  /**
+   * 스킬 트라이포드에서 읽은 파티 시너지. 클래스 표보다 정확하다.
+   *
+   * **null이면 스킬을 못 받은 것이다.** 빈 배열과 뜻이 다르다(`normalizeSkillSynergies`).
+   */
+  skillSynergies: SkillSynergy[] | null;
   /** 아크패시브 노드에서 읽은 파티 시너지. 서포터만 쓴다(`characters.ts`) */
   arkPassiveSynergies: SkillSynergy[];
 }
@@ -447,16 +451,6 @@ function formatPercent(raw: string): string {
 }
 
 /**
- * 찍은 트라이포드에서 파티 시너지를 뽑는다.
- *
- * **거르는 일은 규칙이 직접 한다.** 예전에는 "파티원"이 없는 툴팁을 통째로 버렸는데,
- * 적에게 거는 디버프에는 그 말이 나오지 않아 방깍 직업이 전부 빠졌다. 자버프를 걸러내는
- * 일은 `SYNERGY_RULES`가 대상까지 물고 있는 것으로 대신한다.
- *
- * 툴팁 자체는 저장하지 않는다. 스킬까지 받으면 응답이 두 배가 되는데 대부분이 툴팁이고,
- * 이 앱이 쓰는 것은 여기서 뽑은 결과뿐이다.
- */
-/**
  * 툴팁 문장들을 규칙에 걸어 시너지를 뽑는다.
  *
  * 트라이포드와 아크패시브 노드가 같은 말투로 시너지를 적으므로 규칙도 하나로 쓴다.
@@ -485,10 +479,27 @@ function collectSynergies(entries: { text: string; source: string }[]): SkillSyn
   return [...found.values()];
 }
 
+/**
+ * 찍은 트라이포드에서 파티 시너지를 뽑는다.
+ *
+ * **거르는 일은 규칙이 직접 한다.** 예전에는 "파티원"이 없는 툴팁을 통째로 버렸는데,
+ * 적에게 거는 디버프에는 그 말이 나오지 않아 방깍 직업이 전부 빠졌다. 자버프를 걸러내는
+ * 일은 `SYNERGY_RULES`가 대상까지 물고 있는 것으로 대신한다.
+ *
+ * 툴팁 자체는 저장하지 않는다. 스킬까지 받으면 응답이 두 배가 되는데 대부분이 툴팁이고,
+ * 이 앱이 쓰는 것은 여기서 뽑은 결과뿐이다.
+ *
+ * **스킬을 못 받았으면 빈 배열이 아니라 null이다.**
+ *
+ * 빈 배열은 "받아봤는데 안 찍었다"는 뜻이라 칸에 경고가 서고 클래스 표로도 떨어지지
+ * 않는다(`synergy.ts`의 `missingSynergy`). `ArmorySkills`는 필터에 넣어도 응답에서
+ * 통째로 빠질 수 있는 값이라, 그때 빈 배열로 굳히면 멀쩡히 찍고 온 사람에게
+ * "트라이포드를 안 찍었다"가 뜬다. 모르는 것은 모른다고 남긴다.
+ */
 export function normalizeSkillSynergies(
   skills: ArmorySkill[] | null | undefined,
-): SkillSynergy[] {
-  if (!Array.isArray(skills)) return [];
+): SkillSynergy[] | null {
+  if (!Array.isArray(skills)) return null;
 
   const entries: { text: string; source: string }[] = [];
   for (const skill of skills) {
