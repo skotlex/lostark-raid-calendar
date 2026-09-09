@@ -47,14 +47,30 @@ export function KnownNamesProvider({
  *
  * `taken`은 이미 같은 레이드에 들어가 있는 캐릭터다. 한 캐릭터는 같은 레이드를 한 주에
  * 한 번만 가므로(3.4-1) 애초에 후보로 두지 않는다.
+ *
+ * `minLevel`은 게임이 정한 입장 템레벨이다(raidRewards.ts). 미달 캐릭터도 같은 이유로
+ * 후보에서 뺀다 — 권해봐야 넣는 순간 경고가 붙을 이름이다.
+ *
+ * **거르는 것은 후보뿐이고 입력을 막지는 않는다**(CLAUDE.md 3.4). 이름을 직접 치면
+ * 그대로 들어가고 칸에 경고가 선다. 그날까지 올려 오기로 하고 미리 자리를 잡아 두는
+ * 일이 흔하다.
+ *
+ * 템레벨을 모르는 캐릭터(`null`)와 컷을 모르는 레이드(`minLevel`이 `null`)는 그냥
+ * 지나간다. 모르는 값으로 후보를 지우면 멀쩡한 이름이 목록에서 사라져, 등록되지 않은
+ * 이름을 친 것과 화면이 똑같아진다.
  */
 function suggest(
   characters: readonly KnownCharacter[],
   query: string,
   taken: ReadonlySet<string>,
+  minLevel: number | null,
 ): KnownCharacter[] {
   const q = query.trim().toLowerCase();
-  const pool = characters.filter((c) => !taken.has(c.name));
+  const pool = characters.filter(
+    (c) =>
+      !taken.has(c.name) &&
+      (minLevel === null || c.itemLevel === null || c.itemLevel >= minLevel),
+  );
 
   if (!q) return pool.filter((c) => c.mine).slice(0, 8);
 
@@ -100,6 +116,7 @@ export function NameInput({
   resetOn,
   error,
   taken,
+  minLevel,
   placeholder,
   className,
   autoFocus,
@@ -114,6 +131,8 @@ export function NameInput({
   error?: string | null;
   /** 이미 같은 레이드에 들어간 캐릭터. 후보에서 뺀다 */
   taken?: readonly string[];
+  /** 이 레이드의 입장 템레벨. 미달 캐릭터를 후보에서 뺀다. 직접 입력은 막지 않는다 */
+  minLevel?: number | null;
   placeholder?: string;
   /** 표에서는 테두리 없는 칸으로 쓴다. 기본은 카드 안의 입력창이다. */
   className?: string;
@@ -169,8 +188,8 @@ export function NameInput({
 
   const takenSet = useMemo(() => new Set(taken ?? []), [taken]);
   const items = useMemo(
-    () => suggest(characters, value, takenSet),
-    [characters, value, takenSet],
+    () => suggest(characters, value, takenSet, minLevel ?? null),
+    [characters, value, takenSet, minLevel],
   );
   const showing = open && !pending && items.length > 0;
 

@@ -50,6 +50,7 @@ export function SlotCard({
             week={week}
             party={party}
             taken={slot.takenNames}
+            minLevel={slot.minLevel}
             // 파티가 하나뿐인 4인 레이드에 "1파티"는 알려주는 것이 없다.
             showLabel={slot.parties.length > 1}
             editable={editable}
@@ -71,6 +72,7 @@ function Party({
   week,
   party,
   taken,
+  minLevel,
   showLabel,
   editable,
 }: {
@@ -79,6 +81,7 @@ function Party({
   week: string;
   party: PartyView;
   taken: string[];
+  minLevel: number | null;
   showLabel: boolean;
   editable: boolean;
 }) {
@@ -125,6 +128,7 @@ function Party({
             week={week}
             cell={cell}
             taken={taken}
+            minLevel={minLevel}
             editable={editable}
           />
         ))}

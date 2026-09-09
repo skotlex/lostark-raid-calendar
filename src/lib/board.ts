@@ -83,6 +83,16 @@ export interface BoardSlotView extends SlotView {
    * 칸의 자동완성에서 미리 빼두면 경고가 뜰 편성을 애초에 만들지 않는다.
    */
   takenNames: string[];
+  /**
+   * 게임이 정한 입장 템레벨. 표에 없으면 `null`이다(raidRewards.ts).
+   *
+   * 칸의 자동완성이 미달 캐릭터를 후보에서 빼는 데 쓴다. `takenNames`와 같은 이유로
+   * 서버에서 미리 구해 싣는다 — 보상 표를 브라우저 번들에 딸려 보내지 않으려는 것이고,
+   * 슬롯 하나에 숫자 하나라 실어 보내는 값도 작다.
+   *
+   * **막는 값이 아니다.** 후보에서만 빠지고 직접 친 이름은 그대로 들어간다(3.4).
+   */
+  minLevel: number | null;
 }
 
 /** 한 캐릭터가 이번 주 같은 레이드에 앉은 자리. 중복 경고에 위치를 적으려고 모은다. */
@@ -428,6 +438,7 @@ export async function getBoard(
       ...view,
       parties,
       takenNames: [...(raidRoster.get(view.raidName.trim()) ?? [])],
+      minLevel: raidMinLevel(view.raidName, view.difficulty),
       filled: parties.reduce(
         (sum, party) => sum + party.cells.filter((c) => c.character).length,
         0,

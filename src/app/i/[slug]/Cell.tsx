@@ -86,6 +86,7 @@ export function Cell({
   week,
   cell,
   taken,
+  minLevel,
   editable,
 }: {
   slug: string;
@@ -94,6 +95,8 @@ export function Cell({
   cell: CellView;
   /** 이 레이드에 이미 들어간 캐릭터. 자동완성에서 뺀다 */
   taken: string[];
+  /** 이 레이드의 입장 템레벨. 미달 캐릭터를 자동완성에서 뺀다(NameInput) */
+  minLevel: number | null;
   editable: boolean;
 }) {
   const [assignState, assign, assigning] = useActionState(assignAction, IDLE);
@@ -213,6 +216,7 @@ export function Cell({
               resetOn={assignState.status === "ok" ? assignState : null}
               error={error?.message}
               taken={taken}
+              minLevel={minLevel}
             />
           </form>
         )}
