@@ -19,6 +19,7 @@ import { CloseIcon, PinIcon } from "./icons";
 import { NameInput } from "./NameInput";
 import { CellPresence, presenceColor, useCellViewers, useFocusReport } from "./Presence";
 import { PortraitCard } from "./Portrait";
+import { useReveal } from "./Reveal";
 import {
   type CellState,
   assignAction,
@@ -343,14 +344,7 @@ export function Cell({
 
           <div className="char-id-text">
             {character.title && <div className="char-title">{character.title}</div>}
-            {/*
-              긴 닉네임은 칸 폭에 걸려 잘린다. 잘린 글자를 되살릴 자리가 카드에 없으므로
-              제목으로 붙여 올려둔다. 이름 줄에만 건다. 묶음에 걸면 칭호에 올려도 뜨는데,
-              그때 나오는 글이 가리키고 있는 글자와 달라 무엇을 읽은 것인지 흐려진다.
-            */}
-            <div className="char-name truncate" title={character.name}>
-              {character.name}
-            </div>
+            <CardName name={character.name} />
           </div>
         </div>
 
@@ -401,6 +395,33 @@ export function Cell({
         </ul>
       )}
     </div>
+  );
+}
+
+/**
+ * 카드의 닉네임.
+ *
+ * 긴 닉네임은 칸 폭에 걸려 잘린다. 마우스에는 제목(title)이 답해 왔지만 터치에는
+ * hover가 없어 끝까지 읽을 길이 아예 없었다. 잘렸을 때만 눌러서 펼친다(Reveal.tsx).
+ *
+ * **버튼으로 만들지 않는다.** 카드는 통째로 끄는 자리라, 폼 요소를 한가운데 얹으면
+ * 그 위에서 시작한 끌기가 브라우저마다 다르게 처리된다. 눌러서 펼친다는 것은 잘렸을
+ * 때 서는 손 모양 커서가 말한다(globals.css).
+ *
+ * 제목은 그대로 둔다. 마우스에는 이미 답하고 있던 방법이라 뺄 이유가 없다.
+ * 이름 줄에만 건다 — 묶음에 걸면 칭호에 올려도 뜨는데, 그때 나오는 글이 가리키고
+ * 있는 글자와 달라 무엇을 읽은 것인지 흐려진다.
+ */
+function CardName({ name }: { name: string }) {
+  const reveal = useReveal(name);
+
+  return (
+    <>
+      <span {...reveal.props} className="char-name block truncate">
+        {name}
+      </span>
+      {reveal.bubble}
+    </>
   );
 }
 

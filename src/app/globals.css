@@ -1852,15 +1852,18 @@ button:disabled,
 }
 
 /*
- * 경고 말풍선.
+ * 눌러서 여는 말풍선.
  *
  * 표가 overflow-x: auto 안에 있어 칸에 붙이면 잘린다. 화면 기준(fixed)으로 띄우고
- * 좌표는 아이콘에서 읽는다(CompactSlot.tsx의 WarnBadge). 3초 뒤에 저절로 닫힌다.
+ * 좌표는 누른 것에서 읽는다(Reveal.tsx). 3초 뒤에 저절로 닫힌다.
  *
  * 줄 바꿈을 허용하되 폭을 묶는다. 칸과 달리 문장을 그대로 보여주는 자리라 한 줄을
  * 고집하면 화면 절반을 가로지른다.
+ *
+ * 경고와 잘린 글자가 함께 쓴다. 경고만 색을 입는다 — 글자를 펼친 것은 알림이 아니라
+ * 방금 누른 그 글자라, 색이 붙으면 없던 뜻이 생긴다.
  */
-.board-warn-bubble {
+.tip-bubble {
   position: fixed;
   z-index: 40;
   transform: translateX(-50%);
@@ -1876,6 +1879,10 @@ button:disabled,
   line-height: 1.4;
   white-space: normal;
   text-align: left;
+  color: var(--text);
+}
+
+.tip-bubble[data-tone="danger"] {
   color: var(--danger);
 }
 
@@ -1885,7 +1892,7 @@ button:disabled,
  * 말풍선이 화면 안으로 밀리면 그만큼 되돌려 아이콘을 계속 가리킨다(--tail).
  * 테두리는 위 두 변에만 두어야 말풍선 몸통과 이어진 한 덩어리로 보인다.
  */
-.board-warn-bubble::before {
+.tip-bubble::before {
   content: "";
   position: absolute;
   top: -4px;
@@ -1903,8 +1910,9 @@ button:disabled,
  * 좁은 화면 — 파티를 위아래로 쌓는다.
  *
  * 넷이면 폭에 들어간다. min-width를 걷어내면 표가 화면에 맞춰 줄어들어 가로로 밀 것이
- * 없어진다. 대신 칸이 좁아지므로 이름과 시너지는 줄을 접어 끝까지 보여준다 — 표 한 줄이
- * 통째로 두꺼워지는 것이라 칸끼리 어긋나지는 않는다.
+ * 없어진다. 대신 칸이 좁아져 긴 닉네임과 시너지가 말줄임으로 끊긴다. 줄을 접어 보여준
+ * 적이 있는데, 한 줄이 두세 줄이 되면서 표가 화면 한 장을 넘겼다. 끊어 두고 눌러서
+ * 펼치는 쪽이 낫다(Reveal.tsx).
  *
  * 경계는 탭 이름이 아이콘만 남는 폭과 같다. 그보다 넓으면 두 파티가 나란히 서도
  * 칸 하나가 100px 안팎이라 읽을 만하다.
@@ -1970,22 +1978,25 @@ button:disabled,
     grid-template-columns: 1fr auto;
   }
 
-  /*
-   * 이름과 시너지는 접어서 끝까지 보여준다.
-   *
-   * 말줄임으로 두면 칸이 좁아 두세 글자만 남는다. 이 표에서 가장 먼저 읽는 값이
-   * 이름이라, 줄이 한 칸 두꺼워지는 것보다 읽히지 않는 쪽이 나쁘다.
-   * 한국어 이름에는 띄어쓰기가 없어 아무 데서나 꺾어야 한다.
-   */
-  .board-cell--name,
-  .board-cell--wrap,
-  .board-cell--name .truncate,
-  .board-cell--name .board-name-edit {
-    overflow: visible;
-    white-space: normal;
-    text-overflow: clip;
-    overflow-wrap: anywhere;
-  }
+}
+
+/*
+ * 잘린 글자를 눌러서 펼치는 자리(Reveal.tsx).
+ *
+ * **잘렸을 때만 손 모양이 된다.** 다 보이는 글자에까지 커서가 바뀌면 눌러도 아무 일이
+ * 없는 자리가 화면에 널린다.
+ *
+ * 꾹 누르는 자리(표의 이름 칸)는 커서를 건드리지 않는다. 거기서 짧게 누르면 편집이
+ * 열리므로 글자를 고치는 자리라는 표시(cursor: text)가 먼저다. 대신 길게 눌러도
+ * 글자가 잡히거나 브라우저 메뉴가 뜨지 않게 막는다 — 그 동작 자리를 말풍선이 쓴다.
+ */
+[data-reveal][data-clipped]:not([data-hold]) {
+  cursor: pointer;
+}
+
+[data-reveal][data-hold] {
+  -webkit-touch-callout: none;
+  user-select: none;
 }
 
 /* 드롭을 받는 칸. 어디에 놓이는지 손이 알아채게 한다(카드의 표식과 같은 역할). */

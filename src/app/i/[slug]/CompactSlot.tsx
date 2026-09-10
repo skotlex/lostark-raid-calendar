@@ -3,14 +3,9 @@
 import {
   type CSSProperties,
   type DragEvent,
-  type MouseEvent,
   type ReactNode,
   startTransition,
   useActionState,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
   useState,
 } from "react";
 
@@ -21,6 +16,7 @@ import { positionLabel } from "@/lib/positions";
 import { getSynergies, synergyLabel } from "@/lib/synergy";
 
 import { NameInput } from "./NameInput";
+import { useBubble, useReveal } from "./Reveal";
 import { presenceColor, useCellViewers, useFocusReport } from "./Presence";
 import { SlotHeader } from "./SlotHeader";
 import {
@@ -157,21 +153,20 @@ function PartyTable({
             ))}
           </tr>
 
-          <Row label="클래스" cells={cells} render={(c) => <ClassName cell={c} />} />
           <Row
-            label="템레벨"
+            label="클래스"
             cells={cells}
-            render={(c) => format(c.character?.itemLevel)}
-            tabular
+            text={(c) => c.character?.className ?? ""}
+            render={(c) => <ClassName cell={c} />}
           />
+          <Row label="템레벨" cells={cells} text={(c) => format(c.character?.itemLevel)} tabular />
           <Row
             label="전투력"
             cells={cells}
-            render={(c) => format(c.character?.combatPower)}
+            text={(c) => format(c.character?.combatPower)}
             tabular
           />
-          {/* 좁은 화면에서는 이 줄만 접힌다. 한 줄이 통째로 두꺼워지므로 칸은 어긋나지 않는다. */}
-          <Row label="시너지" cells={cells} render={synergyText} wrap />
+          <Row label="시너지" cells={cells} text={synergyText} />
         </tbody>
       </table>
     </div>
@@ -195,30 +190,55 @@ function synergyText(cell: CellView): string {
 function Row({
   label,
   cells,
+  text,
   render,
   tabular,
-  wrap,
 }: {
   label: string;
   cells: CellView[];
-  /** 대부분은 글자지만 클래스 줄만 문장 아이콘을 함께 그린다. */
-  render: (cell: CellView) => ReactNode;
+  /** 칸에 들어가는 글자 전체. 잘렸을 때 말풍선이 이걸 띄운다 */
+  text: (cell: CellView) => string;
+  /** 대부분은 글자 그대로지만 클래스 줄만 문장 아이콘을 함께 그린다 */
+  render?: (cell: CellView) => ReactNode;
   tabular?: boolean;
-  /** 좁은 화면에서 줄을 접어도 되는 줄. 넓은 화면에서는 여기도 한 줄이다 */
-  wrap?: boolean;
 }) {
   return (
     <tr>
       <th className="board-label">{label}</th>
       {cells.map((cell) => (
-        <td
+        <ValueCell
           key={cell.position}
-          className={`board-cell ${tabular ? "tabular" : ""} ${wrap ? "board-cell--wrap" : ""}`}
-        >
-          {render(cell)}
-        </td>
+          text={text(cell)}
+          tabular={tabular}
+          render={render ? render(cell) : undefined}
+        />
       ))}
     </tr>
+  );
+}
+
+/**
+ * 값 칸 하나. 잘려 있으면 눌러서 펼친다(Reveal.tsx).
+ *
+ * 이 칸들에는 누르는 일이 따로 없어 탭을 그대로 쓴다. 이름 칸만 다르다 — 거기는
+ * 탭이 편집을 여는 자리라 꾹 누르는 쪽으로 비켜 둔다.
+ */
+function ValueCell({
+  text,
+  render,
+  tabular,
+}: {
+  text: string;
+  render?: ReactNode;
+  tabular?: boolean;
+}) {
+  const reveal = useReveal(text);
+
+  return (
+    <td {...reveal.props} className={`board-cell ${tabular ? "tabular" : ""}`}>
+      {render ?? text}
+      {reveal.bubble}
+    </td>
   );
 }
 
@@ -498,49 +518,68 @@ function NameCell({
     );
   }
 
-  const warned = cell.warnings.length > 0;
-
   return (
     <td className="board-cell board-cell--name" {...focusProps}>
-      {/*
-        경고 표시는 이름 양옆에 같은 것이 하나씩 선다. 한쪽에만 두면 그 칸의 이름만
-        반대쪽으로 밀려, 여덟 칸의 이름이 저마다 다른 자리에서 시작한다. 표는 같은
-        항목이 한 줄에 늘어서는 것으로 읽는 보기라 그 어긋남이 그대로 눈에 걸린다.
-        어느 쪽을 눌러도 같은 말풍선이 뜬다.
-      */}
-      <div className="board-name">
-        {warned && <WarnBadge warnings={cell.warnings} />}
-        {editable ? (
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            className="board-name-edit truncate"
-            title={`${character!.name} — 눌러서 다른 캐릭터로 바꿉니다`}
-          >
-            {character!.name}
-          </button>
-        ) : (
-          <span className="truncate" title={character!.name}>
-            {character!.name}
-          </span>
-        )}
-        {warned && <WarnBadge warnings={cell.warnings} />}
-      </div>
+      <CharacterName
+        name={character!.name}
+        warnings={cell.warnings}
+        onEdit={editable ? () => setEditing(true) : undefined}
+      />
     </td>
   );
 }
 
-/** 말풍선이 화면 가장자리에 남겨야 할 여백. */
-const BUBBLE_MARGIN = 8;
-
 /**
- * 열려 있는 말풍선은 화면에 하나뿐이다.
+ * 이름 줄 — 이름과 경고 표시.
  *
- * 경고 아이콘은 한 이름의 양옆에 같은 것이 둘 서고 둘이 같은 문장을 띄운다(위).
- * 각자 자기 상태만 보면 왼쪽을 누른 뒤 오른쪽을 누를 때 같은 말풍선이 반 칸
- * 어긋나 두 겹으로 선다. 여는 쪽이 나머지를 닫는다.
+ * **잘린 이름은 꾹 눌러 펼친다.** 짧게 누르는 것은 이미 편집 열기에 쓰이고 있어 그
+ * 자리를 뺏을 수 없다. 좁은 화면에서는 칸이 한 뼘이라 긴 닉네임이 몇 글자로 끊기는데,
+ * 터치에는 hover가 없어 그대로 두면 끝까지 읽을 길이 아예 없다(Reveal.tsx).
+ *
+ * 고칠 수 없는 화면(굳은 주차)에서는 탭이 비어 있으므로 짧게 눌러 펼친다.
  */
-const openBubbles = new Set<() => void>();
+function CharacterName({
+  name,
+  warnings,
+  onEdit,
+}: {
+  name: string;
+  warnings: string[];
+  /** 없으면 고칠 수 없는 화면이다. 그때는 탭이 곧 펼치기다 */
+  onEdit?: () => void;
+}) {
+  const reveal = useReveal(name, onEdit ? "hold" : "tap");
+  const warned = warnings.length > 0;
+
+  return (
+    /*
+      경고 표시는 이름 양옆에 같은 것이 하나씩 선다. 한쪽에만 두면 그 칸의 이름만
+      반대쪽으로 밀려, 여덟 칸의 이름이 저마다 다른 자리에서 시작한다. 표는 같은
+      항목이 한 줄에 늘어서는 것으로 읽는 보기라 그 어긋남이 그대로 눈에 걸린다.
+      어느 쪽을 눌러도 같은 말풍선이 뜬다.
+    */
+    <div className="board-name">
+      {warned && <WarnBadge warnings={warnings} />}
+      {onEdit ? (
+        <button
+          {...reveal.props}
+          type="button"
+          onClick={reveal.guard(onEdit)}
+          className="board-name-edit truncate"
+          title={`${name} — 눌러서 다른 캐릭터로 바꿉니다`}
+        >
+          {name}
+        </button>
+      ) : (
+        <span {...reveal.props} className="truncate">
+          {name}
+        </span>
+      )}
+      {warned && <WarnBadge warnings={warnings} />}
+      {reveal.bubble}
+    </div>
+  );
+}
 
 /**
  * 경고 — 이름 옆의 표시와 눌러서 여는 말풍선.
@@ -550,103 +589,32 @@ const openBubbles = new Set<() => void>();
  * 이 보기를 쓰는 이유가 없어진다. 그래서 있다는 것만 아이콘으로 알리고 문장은 눌렀을
  * 때 띄운다. 경고는 막는 것이 아니라 알리는 것이라(CLAUDE.md 3.4) 늘 펼쳐 둘 것도 아니다.
  *
- * **말풍선은 fixed다.** 표가 overflow-x: auto 안에 있어 칸에 붙여 그리면 잘리거나
- * 없던 가로 스크롤이 생긴다. 화면 기준으로 띄우면 그 상자를 벗어난다.
+ * 말풍선은 잘린 글자를 펼치는 것과 같은 장치다(Reveal.tsx). 화면 기준(fixed)으로
+ * 띄우고, 3초 뒤에 닫히고, 하나가 열리면 나머지는 닫힌다.
  */
 function WarnBadge({ warnings }: { warnings: string[] }) {
-  /** 누른 아이콘의 화면 좌표. null이면 닫혀 있다. */
-  const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
-  const [left, setLeft] = useState(0);
-  const bubble = useRef<HTMLDivElement>(null);
-
-  // 화면 밖으로 나가면 안으로 민다. 표가 가로로 넓어 양끝 칸이 특히 위험하다.
-  // 그리기 전에 옮겨야 말풍선이 한 번 튀지 않는다.
-  useLayoutEffect(() => {
-    const width = bubble.current?.offsetWidth;
-    if (!anchor || !width) return;
-
-    const half = width / 2;
-    const min = BUBBLE_MARGIN + half;
-    const max = Math.max(window.innerWidth - BUBBLE_MARGIN - half, min);
-    setLeft(Math.min(Math.max(anchor.x, min), max));
-  }, [anchor]);
-
-  const close = useCallback(() => setAnchor(null), []);
-
-  useEffect(() => {
-    if (!anchor) return;
-
-    // 열려 있는 동안만 목록에 든다. 닫힌 것을 남겨두면 여는 쪽이 아무 일도 하지
-    // 않는 닫기를 매번 훑는다.
-    openBubbles.add(close);
-
-    // 3초 뒤에 저절로 닫힌다. 닫는 법을 따로 알려주지 않아도 되고, 좁은 표에서
-    // 오래 떠 있으면 아래 줄을 가린다.
-    const timer = setTimeout(close, 3000);
-
-    // 굴리면 바로 닫는다. 말풍선은 fixed라 표가 움직여도 제자리에 남아, 가리키던
-    // 아이콘은 이미 지나갔는데 화면에는 쪽지가 따라다니는 꼴이 된다. 표 안쪽
-    // 스크롤도 잡아야 하므로 캡처로 듣는다(scroll은 버블링하지 않는다).
-    window.addEventListener("scroll", close, { passive: true, capture: true });
-    window.addEventListener("resize", close);
-
-    return () => {
-      openBubbles.delete(close);
-      clearTimeout(timer);
-      window.removeEventListener("scroll", close, true);
-      window.removeEventListener("resize", close);
-    };
-  }, [anchor, close]);
-
-  function toggle(e: MouseEvent<HTMLButtonElement>) {
-    // 열려 있는데 또 누르면 닫는다. 3초를 기다리게 하지 않는다.
-    if (anchor) {
-      close();
-      return;
-    }
-
-    for (const other of openBubbles) other();
-
-    const box = e.currentTarget.getBoundingClientRect();
-    const x = box.left + box.width / 2;
-    // 첫 그림도 아이콘 아래에서 시작한다. 0에서 시작하면 왼쪽 끝에서 미끄러져 온다.
-    setLeft(x);
-    setAnchor({ x, y: box.bottom + 6 });
-  }
+  const bubble = useBubble();
 
   return (
     <span className="board-warn">
       <button
         type="button"
-        onClick={toggle}
+        onClick={(e) => bubble.toggle(e.currentTarget)}
         className="board-warn-icon"
         title="경고 보기"
         aria-label="경고 보기"
-        aria-expanded={anchor !== null}
+        aria-expanded={bubble.isOpen}
       >
         <WarnIcon />
       </button>
 
-      {anchor && (
-        <div
-          ref={bubble}
-          role="status"
-          className="board-warn-bubble"
-          style={
-            {
-              left: left + "px",
-              top: anchor.y + "px",
-              // 꼬리는 말풍선이 밀린 만큼 되돌려 아이콘을 가리킨다.
-              "--tail": anchor.x - left + "px",
-            } as CSSProperties
-          }
-        >
-          {warnings.map((warning) => (
-            <span key={warning} className="block">
-              {warning}
-            </span>
-          ))}
-        </div>
+      {bubble.render(
+        warnings.map((warning) => (
+          <span key={warning} className="block">
+            {warning}
+          </span>
+        )),
+        "danger",
       )}
     </span>
   );
