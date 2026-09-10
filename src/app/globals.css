@@ -1559,13 +1559,19 @@ button:disabled,
  * 바깥 테두리는 카드가 이미 그린다. 표까지 그리면 두 줄이 붙어 2px로 보인다.
  *
  * 두 표 사이에서도 같은 일이 벌어진다. border-collapse는 한 표 안에서만 도는 규칙이라
- * 이웃한 두 표의 선은 겹치지 않고 나란히 선다. 뒤 표의 왼쪽을 지워 한 줄만 남긴다 —
+ * 이웃한 두 표의 선은 겹치지 않고 나란히 선다. 앞 표의 오른쪽을 지워 한 줄만 남긴다 —
  * 그 한 줄이 파티 경계가 된다.
+ *
+ * **지우는 쪽이 뒤 표의 왼쪽이면 안 된다.** 뒤 표의 첫 칸은 감춰 둔 항목 이름 열이다.
+ * :first-child는 감춘 칸에도 걸리므로, 정작 선을 그리는 첫 자리 칸은 그대로 남아
+ * 경계가 2px가 된다. 실제로 그렇게 나왔다.
+ *
+ * 4인의 사선 덩어리 앞에서는 지우지 않는다(:has). 그 선이 표와 안 쓰는 자리를 가른다.
  */
-.board-party:first-child tr > *:first-child,
-.board-party + .board-party tr > *:first-child {
+.board-party:first-child tr > *:first-child {
   border-left: none;
 }
+.board-party:has(+ .board-party) tr > *:last-child,
 .board-party:last-child tr > *:last-child {
   border-right: none;
 }
