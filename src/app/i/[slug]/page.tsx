@@ -307,8 +307,8 @@ export default async function BoardPage({
         <KnownNamesProvider characters={knownCharacters}>
           <div className="space-y-4">
             {slots.map((slot) =>
-              // 4인은 카드로도 한 줄에 들어간다. 초상까지 보이는 편이 낫다.
-              view === "compact" && slot.partySize === 8 ? (
+              // 4인도 같은 표를 쓴다. 파티 하나짜리 표가 될 뿐이다(CompactSlot).
+              view === "compact" ? (
                 <CompactSlot
                   key={slot.id}
                   slug={slug}

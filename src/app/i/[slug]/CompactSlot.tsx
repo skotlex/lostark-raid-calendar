@@ -15,7 +15,7 @@ import {
 } from "react";
 
 // board.ts는 server-only다. 타입만 가져온다.
-import type { BoardSlotView, CellView } from "@/lib/board";
+import type { BoardSlotView, CellView, PartyView } from "@/lib/board";
 import { classEmblem } from "@/lib/classEmblems";
 import { positionLabel } from "@/lib/positions";
 import { getSynergies, synergyLabel } from "@/lib/synergy";
@@ -37,16 +37,23 @@ import { CloseIcon, GripIcon, PinIcon, WarnIcon } from "./icons";
 const IDLE: CellState = { status: "idle", message: "" };
 
 /**
- * 간략 보기 — 8인이 한 줄에 들어가는 표.
+ * 간략 보기 — 한 파티가 한 줄에 들어가는 표.
  *
- * 카드는 초상·각인·아크그리드까지 보여주는 대신 8인이 두 줄로 갈린다. 편성을 짤 때는
- * 여덟을 한눈에 놓고 시너지를 맞추는 편이 빠르다. 시트에서 쓰던 모양이기도 하다.
+ * 카드는 초상·각인·아크그리드까지 보여주는 대신 여덟이 두 줄로 갈린다. 편성을 짤 때는
+ * 한눈에 놓고 시너지를 맞추는 편이 빠르다. 시트에서 쓰던 모양이기도 하다.
  *
  * 세로가 항목, 가로가 자리다. 같은 항목이 한 줄에 늘어서므로 템레벨이 낮은 사람이나
  * 시너지가 겹치는 자리가 눈으로 잡힌다. 카드로는 칸마다 위치가 달라 그게 안 된다.
  *
- * **4인 레이드는 이 보기를 쓰지 않는다.** 넷은 카드로도 한 줄에 들어가고, 초상까지
- * 보이는 편이 낫다(page.tsx에서 가른다).
+ * **파티마다 표가 하나다.** 시너지가 4인 파티 단위로 걸리므로(CLAUDE.md 2-1) 그 경계가
+ * 보이는 편이 맞고, 4인 레이드는 그 표 하나가 그대로 답이 된다. 넷은 카드로도 한 줄에
+ * 들어가지만, 간략 보기를 골랐는데 어떤 레이드만 카드로 남으면 한 화면에 두 모양이 섞여
+ * 무엇을 고른 것인지가 흐려진다.
+ *
+ * 좁은 화면에서는 두 파티가 위아래로 쌓인다(globals.css). 여덟 칸을 한 줄에 밀어 넣으면
+ * 가로로 밀어야 하는데, 미는 동안에도 눈에 들어오는 것은 어차피 넷씩이다. 그럴 바에는
+ * 파티 경계에서 접는 편이 낫다 — 시너지를 세는 단위가 그것이라 넷이 한 화면에 들어오면
+ * 그 파티는 온전히 읽힌다.
  */
 export function CompactSlot({
   slug,
@@ -59,67 +66,103 @@ export function CompactSlot({
   slot: BoardSlotView;
   editable: boolean;
 }) {
-  const cells = slot.parties.flatMap((party) => party.cells);
-
   return (
     <section className="rounded border border-border bg-surface">
       <SlotHeader slug={slug} week={week} slot={slot} editable={editable} />
 
-      {/* 좁은 화면에서는 표가 가로로 스크롤된다. 칸을 더 줄여 뭉개는 것보다 낫다. */}
-      <div className="overflow-x-auto">
-        <table className="board-table">
-          <thead>
-            <tr>
-              <th className="board-head">구분</th>
-              {cells.map((cell) => (
-                <HeadCell
-                  key={cell.position}
-                  slug={slug}
-                  slotId={slot.id}
-                  week={week}
-                  cell={cell}
-                  editable={editable}
-                />
-              ))}
-            </tr>
-          </thead>
-
-          <tbody>
-            <tr>
-              <th className="board-label">캐릭터</th>
-              {cells.map((cell) => (
-                <NameCell
-                  key={cell.position}
-                  slug={slug}
-                  slotId={slot.id}
-                  week={week}
-                  cell={cell}
-                  taken={slot.takenNames}
-                  minLevel={slot.minLevel}
-                  editable={editable}
-                />
-              ))}
-            </tr>
-
-            <Row label="클래스" cells={cells} render={(c) => <ClassName cell={c} />} />
-            <Row
-              label="템레벨"
-              cells={cells}
-              render={(c) => format(c.character?.itemLevel)}
-              tabular
-            />
-            <Row
-              label="전투력"
-              cells={cells}
-              render={(c) => format(c.character?.combatPower)}
-              tabular
-            />
-            <Row label="시너지" cells={cells} render={synergyText} />
-          </tbody>
-        </table>
+      <div className="board-parties">
+        {slot.parties.map((party) => (
+          <PartyTable
+            key={party.index}
+            slug={slug}
+            week={week}
+            slot={slot}
+            party={party}
+            editable={editable}
+          />
+        ))}
       </div>
-
     </section>
+  );
+}
+
+/**
+ * 파티 하나의 표.
+ *
+ * 항목 이름 열(`구분`·`캐릭터`…)은 두 파티가 나란히 설 때 첫 표에만 남는다. 지우지 않고
+ * 감추는 이유는 위아래로 쌓이는 폭에서는 두 표 모두 그 열이 있어야 하기 때문이다.
+ * 폭으로 갈리는 값이라 서버가 미리 정할 수 없다(globals.css).
+ */
+function PartyTable({
+  slug,
+  week,
+  slot,
+  party,
+  editable,
+}: {
+  slug: string;
+  week: string;
+  slot: BoardSlotView;
+  party: PartyView;
+  editable: boolean;
+}) {
+  const cells = party.cells;
+
+  return (
+    /* 그래도 좁으면 그 파티만 가로로 밀린다. 칸을 더 줄여 뭉개는 것보다 낫다. */
+    <div className="board-party">
+      <table className="board-table">
+        <thead>
+          <tr>
+            <th className="board-head board-head--first">구분</th>
+            {cells.map((cell) => (
+              <HeadCell
+                key={cell.position}
+                slug={slug}
+                slotId={slot.id}
+                week={week}
+                cell={cell}
+                editable={editable}
+              />
+            ))}
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr>
+            <th className="board-label">캐릭터</th>
+            {cells.map((cell) => (
+              <NameCell
+                key={cell.position}
+                slug={slug}
+                slotId={slot.id}
+                week={week}
+                cell={cell}
+                taken={slot.takenNames}
+                minLevel={slot.minLevel}
+                editable={editable}
+              />
+            ))}
+          </tr>
+
+          <Row label="클래스" cells={cells} render={(c) => <ClassName cell={c} />} />
+          <Row
+            label="템레벨"
+            cells={cells}
+            render={(c) => format(c.character?.itemLevel)}
+            tabular
+          />
+          <Row
+            label="전투력"
+            cells={cells}
+            render={(c) => format(c.character?.combatPower)}
+            tabular
+          />
+          {/* 좁은 화면에서는 이 줄만 접힌다. 한 줄이 통째로 두꺼워지므로 칸은 어긋나지 않는다. */}
+          <Row label="시너지" cells={cells} render={synergyText} wrap />
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -142,18 +185,24 @@ function Row({
   cells,
   render,
   tabular,
+  wrap,
 }: {
   label: string;
   cells: CellView[];
   /** 대부분은 글자지만 클래스 줄만 문장 아이콘을 함께 그린다. */
   render: (cell: CellView) => ReactNode;
   tabular?: boolean;
+  /** 좁은 화면에서 줄을 접어도 되는 줄. 넓은 화면에서는 여기도 한 줄이다 */
+  wrap?: boolean;
 }) {
   return (
     <tr>
       <th className="board-label">{label}</th>
       {cells.map((cell) => (
-        <td key={cell.position} className={`board-cell ${tabular ? "tabular" : ""}`}>
+        <td
+          key={cell.position}
+          className={`board-cell ${tabular ? "tabular" : ""} ${wrap ? "board-cell--wrap" : ""}`}
+        >
           {render(cell)}
         </td>
       ))}
