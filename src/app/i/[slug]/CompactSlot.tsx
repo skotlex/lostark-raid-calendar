@@ -81,6 +81,18 @@ export function CompactSlot({
             editable={editable}
           />
         ))}
+
+        {/*
+          4인 레이드의 빈 오른쪽 절반.
+
+          칸을 늘려 폭을 채우지 않는다. 늘리면 같은 화면의 8인 표와 칸 크기가 달라져
+          위아래로 늘어선 레이드가 저마다 다른 격자를 갖는다. 넷은 왼쪽 절반에 8인과
+          같은 폭으로 서고, 남는 자리는 사선을 그어 쓰지 않는 곳임을 말한다 — 그냥
+          비워두면 아직 안 그려진 칸처럼 읽힌다.
+        */}
+        {slot.parties.length === 1 && (
+          <div className="board-unused" aria-hidden title="4인 레이드입니다. 2파티가 없습니다" />
+        )}
       </div>
     </section>
   );
