@@ -13,6 +13,7 @@ import {
   registerCharacter,
   registerCharacters,
   type BulkProgress,
+  type SyncScope,
   syncAllBatch,
   syncCharacter,
 } from "@/lib/characters";
@@ -352,11 +353,38 @@ export async function syncAllAction(
   slug: string,
   startedAt: string,
 ): Promise<BulkProgress> {
+  return syncBatch(slug, startedAt, null);
+}
+
+/**
+ * 원정대 하나만 다시 조회한다. 탭 단위 갱신이다.
+ *
+ * 전체 갱신은 길드 전원을 돌아 몇 분이 걸린다. 부캐 스펙을 바꾸고 온 사람이 자기
+ * 원정대만 되살리려고 그 시간을 기다릴 이유가 없고, 남의 캐릭터까지 한도를 축낼
+ * 이유도 없다. 경계는 원정대 삭제와 같다(`deleteRosterAction`).
+ *
+ * `roster`가 비어 있으면 그 사람의 **원정대 미지정** 묶음이다.
+ */
+export async function syncRosterAction(
+  slug: string,
+  startedAt: string,
+  label: string,
+  roster: string,
+): Promise<BulkProgress> {
+  return syncBatch(slug, startedAt, { memberLabel: label, rosterId: roster || null });
+}
+
+/** 두 갱신이 같은 회차 구조를 쓴다. 범위만 다르다. */
+async function syncBatch(
+  slug: string,
+  startedAt: string,
+  scope: SyncScope | null,
+): Promise<BulkProgress> {
   const { instanceId } = await authorize(slug);
   const started = new Date(startedAt);
   if (Number.isNaN(started.getTime())) throw new CharacterError("잘못된 요청입니다");
 
-  const progress = await syncAllBatch(instanceId, started);
+  const progress = await syncAllBatch(instanceId, started, scope);
   // 회차마다 부르면 남은 회차가 도는 동안 이 무거운 화면이 그만큼 다시 그려지고,
   // 그동안 다음 회차가 늦어진다. 화면에 남는 것은 마지막 상태뿐이라 끝에 한 번만 한다.
   if (progress.remaining === 0) refresh(slug);

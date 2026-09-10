@@ -6,6 +6,7 @@ import type { CharacterView } from "@/lib/characters";
 
 import { CharacterCard } from "./CharacterCard";
 import { DeleteGroupButton, DeleteRosterButton } from "./DeleteGroupButton";
+import { SyncRosterButton } from "./SyncRosterButton";
 
 export interface RosterGroup {
   /** Roster.id. 원정대가 아직 안 붙은 묶음은 빈 문자열이다 */
@@ -48,6 +49,14 @@ export function CharacterGroup({
           {label || "소속 미지정"}
         </span>
         <span className="text-xs text-text-faint tabular">{total}</span>
+        {/*
+          탭이 없으면 이 줄이 곧 그 원정대다. 갱신 버튼도 여기 선다 — 탭이 서면
+          원정대 단위 조작은 모두 탭 줄로 내려가므로, 여기 남는 것은 묶음 전체를
+          지우는 버튼뿐이다.
+        */}
+        {!tabbed && (
+          <SyncRosterButton slug={slug} label={label} rosterId={group.id} count={total} />
+        )}
         {/* 원정대를 골라 등록하면 부캐가 한 번에 여럿 들어온다. 무를 때도 한 번에. */}
         <DeleteGroupButton slug={slug} label={label} count={total} tabbed={tabbed} />
       </h2>
@@ -66,8 +75,15 @@ export function CharacterGroup({
               <span className="day-badge">{roster.characters.length}</span>
             </button>
           ))}
-          {/* 지금 보고 있는 탭만 지운다. 전체 삭제는 제목 줄에 따로 서 있다. */}
-          <div className="ml-auto pb-1">
+          {/* 지금 보고 있는 탭에만 걸린다. 묶음 전체 삭제는 제목 줄에 따로 서 있다. */}
+          <div className="ml-auto flex items-center gap-1 pb-1">
+            <SyncRosterButton
+              slug={slug}
+              label={label}
+              rosterId={group.id}
+              count={group.characters.length}
+              tabbed
+            />
             <DeleteRosterButton
               slug={slug}
               label={label}

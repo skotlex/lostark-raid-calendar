@@ -604,6 +604,51 @@ export interface BulkProgress extends BulkResult {
 }
 
 /**
+ * 갱신할 범위. 없으면 인스턴스 전체다.
+ *
+ * 경계가 삭제와 같다(`deleteRosterCharacters`). 화면에서 원정대 탭 하나를 잡고 도는
+ * 기능이라 그 탭이 지우는 것과 같은 무리를 집어야 한다.
+ */
+export interface SyncScope {
+  /** 사람 이름. 빈 문자열이면 소속 없는 캐릭터 묶음이다 */
+  memberLabel: string;
+  /** Roster.id. null이면 그 사람의 원정대 미지정 묶음이다 */
+  rosterId: string | null;
+}
+
+/**
+ * 범위를 캐릭터 조건으로 바꾼다.
+ *
+ * **화면이 보낸 id를 그대로 믿지 않는다.** 갱신은 지우는 일이 아니라 위험이 작지만,
+ * 남의 원정대 id를 넣으면 그 사람 캐릭터가 대신 돌아 한도만 축낸다. 삭제와 같은
+ * 방식으로 사람과 원정대가 맞물리는지 확인한다.
+ */
+async function resolveScope(
+  instanceId: string,
+  scope: SyncScope,
+): Promise<{ memberId: string | null; rosterId: string | null }> {
+  const label = scope.memberLabel.trim();
+  // 소속 없는 묶음. 원정대가 붙을 수 없으므로 둘 다 null이다.
+  if (!label) return { memberId: null, rosterId: null };
+
+  const member = await prisma.member.findFirst({
+    where: { instanceId, label },
+    select: { id: true },
+  });
+  if (!member) throw new CharacterError("원정대를 찾을 수 없습니다");
+
+  if (scope.rosterId) {
+    const roster = await prisma.roster.findFirst({
+      where: { id: scope.rosterId, instanceId, memberId: member.id },
+      select: { id: true },
+    });
+    if (!roster) throw new CharacterError("원정대를 찾을 수 없습니다");
+  }
+
+  return { memberId: member.id, rosterId: scope.rosterId };
+}
+
+/**
  * 등록된 캐릭터를 전부 다시 조회한다. **한 회차씩 끊어서** 돈다.
  *
  * 스펙이 바뀐 것도 반영하지만, **정규화 형식이 바뀌었을 때 옛 데이터를 되살리는**
@@ -613,14 +658,20 @@ export interface BulkProgress extends BulkResult {
  * 어디까지 했는지는 `syncedAt`이 안다. 갱신하면 그 값이 `startedAt` 뒤로 밀리므로
  * 다음 회차는 자연히 아직 안 한 캐릭터만 집는다. 실패한 캐릭터도 `syncedAt`이 갱신되니
  * 같은 회차를 맴돌지 않는다.
+ *
+ * `scope`를 주면 그 원정대만 돈다. 원정대 하나는 대개 몇 개뿐이라 한두 회차에 끝나지만,
+ * 회차를 나누는 구조는 그대로 쓴다 — 계정 하나에 부캐가 스물 넘게 있는 사람이 있고,
+ * 나눠 도는 쪽이 실행 시간에 걸릴 걱정이 없다.
  */
 export async function syncAllBatch(
   instanceId: string,
   startedAt: Date,
+  scope: SyncScope | null = null,
   limit = SYNC_ALL_BATCH,
 ): Promise<BulkProgress> {
   const pending = {
     instanceId,
+    ...(scope ? await resolveScope(instanceId, scope) : {}),
     OR: [{ syncedAt: null }, { syncedAt: { lt: startedAt } }],
   };
 
