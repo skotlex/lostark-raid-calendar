@@ -16,6 +16,7 @@ import {
   ScheduleIcon,
 } from "./icons";
 import { MainScroll } from "./MainScroll";
+import { QuickMenu } from "./QuickMenu";
 import { TabLink } from "./lastDay";
 
 // Prisma로 DB를 읽으므로 빌드 시점에 미리 굽지 않는다.
@@ -129,6 +130,9 @@ export default async function InstanceLayout({ children, params }: LayoutProps<"
       </header>
 
       <MainScroll>{children}</MainScroll>
+
+      {/* 어느 화면에서든 같은 자리에 선다. 편성과 상관없이 레이드 중에 꺼내 쓰는 도구다. */}
+      <QuickMenu />
     </div>
   );
 }

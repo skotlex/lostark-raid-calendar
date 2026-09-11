@@ -14,6 +14,9 @@ import { useEffect, useRef, type ReactNode } from "react";
  *
  * 주소의 물음표만 바뀌는 이동(요일 탭, 주차 넘기기)은 경로가 그대로라 걸리지 않는다.
  * 같은 화면 안에서 옮겨 다니는 것이라 보던 자리를 지키는 편이 맞다.
+ *
+ * 아래 여백이 위보다 넓은 것은 우측 하단에 떠 있는 도구 버튼(QuickMenu) 때문이다.
+ * 끝까지 내렸을 때 마지막 줄이 그 밑에 깔리지 않게 버튼 키만큼 더 비운다.
  */
 export function MainScroll({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLElement>(null);
@@ -25,7 +28,7 @@ export function MainScroll({ children }: { children: ReactNode }) {
 
   return (
     <main ref={ref} className="page-scroll min-h-0 flex-1">
-      <div className="mx-auto w-full max-w-6xl px-4 py-6">{children}</div>
+      <div className="mx-auto w-full max-w-6xl px-4 pb-20 pt-6">{children}</div>
     </main>
   );
 }
