@@ -1,6 +1,32 @@
 import { describe, expect, it } from "vitest";
 
-import { bidPrice, formatGold, formatGoldInput, goldCaret, goldDigitCount, parseGold } from "./auction";
+import {
+  bidPrice,
+  breakEvenPrice,
+  formatGold,
+  formatGoldInput,
+  goldCaret,
+  goldDigitCount,
+  parseGold,
+} from "./auction";
+
+describe("손익분기점", () => {
+  it("수수료를 떼고 나머지 인원 몫을 뺀다", () => {
+    expect(breakEvenPrice(108_000, 4)).toBe(76_950);
+    expect(breakEvenPrice(108_000, 8)).toBe(89_775);
+  });
+
+  it("반올림하지 않고 내린다", () => {
+    // 16인은 96,187.5다. 올리면 분기점에 사서 1골드를 잃는다.
+    expect(breakEvenPrice(108_000, 16)).toBe(96_187);
+  });
+
+  it("적정가는 분기점보다 낮다", () => {
+    for (const size of [4, 8, 16] as const) {
+      expect(bidPrice(108_000, size)).toBeLessThan(breakEvenPrice(108_000, size));
+    }
+  });
+});
 
 describe("입찰 적정가", () => {
   it("기준으로 삼은 계산기와 골드 단위까지 같다", () => {
@@ -13,6 +39,11 @@ describe("입찰 적정가", () => {
   it("반올림하지 않고 내린다", () => {
     // 4인은 정확히 70,024.5다. 소수를 곱하면 이 경계가 흔들린다.
     expect(bidPrice(108_000, 4)).not.toBe(70_025);
+  });
+
+  it("내린 분기점에 다시 곱하지 않는다", () => {
+    // 분기점 7,125.71…을 먼저 내리고 곱하면 6,483이 된다.
+    expect(bidPrice(10_001, 4)).toBe(6_484);
   });
 
   it("인원이 많을수록 높게 부른다", () => {

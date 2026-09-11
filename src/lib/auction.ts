@@ -40,7 +40,19 @@ export const GOLD_SEPARATOR = ",";
 const MAX_DIGITS = 9;
 
 /**
- * 입찰 적정가.
+ * 손익분기점. 이 값에 낙찰받으면 분배금만 받는 것과 똑같다.
+ *
+ * 내린다. 올리면 분기점이라고 알려준 값에 사서 1골드를 잃는다.
+ */
+export function breakEvenPrice(price: number, size: AuctionPartySize): number {
+  return Math.floor((price * 95 * (size - 1)) / (size * 100));
+}
+
+/**
+ * 입찰 적정가. 손익분기점의 0.91배다.
+ *
+ * `breakEvenPrice`를 받아 곱하지 않는다. 분기점을 먼저 내리고 곱하면 내림이 두 번
+ * 걸려 1골드씩 어긋나는 시세가 있다(10,001 4인: 6,484가 6,483이 된다).
  *
  * 소수를 곱하지 않고 정수로 푼다. `108000 * 0.95`부터 이미 정확히 떨어지지 않아,
  * 70,024.5 같은 경계에서 내림이 한 칸 어긋날 수 있다.

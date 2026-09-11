@@ -122,7 +122,7 @@ export function QuickMenu() {
         <div
           role="dialog"
           aria-label={tool?.label ?? "도구"}
-          className="absolute bottom-full right-0 mb-2 w-72 max-w-[calc(100vw-2.5rem)] overflow-hidden rounded-lg border border-border bg-surface shadow-lg"
+          className="absolute bottom-full right-0 mb-2 w-80 max-w-[calc(100vw-2.5rem)] overflow-hidden rounded-lg border border-border bg-surface shadow-lg"
         >
           {tool ? (
             <>
