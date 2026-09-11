@@ -24,16 +24,24 @@ function CloseIcon() {
   );
 }
 
-/** 경매 계산기. 망치 — 낙찰을 두드리는 그것. */
-function AuctionIcon() {
+/**
+ * 계산기. 몸통 · 표시창 · 버튼 여섯.
+ *
+ * 망치(낙찰)로 먼저 그렸는데 20px에서는 무엇인지 읽히지 않았다. 계산기는 누구나 아는
+ * 모양이라 누르면 무엇이 뜨는지 설명이 필요 없다.
+ *
+ * 버튼은 길이 0에 가까운 선을 둥근 끝으로 찍어 점으로 만든다. 원을 그리면 테두리
+ * 굵기가 더해져 몸통 선보다 무겁게 선다.
+ */
+function CalculatorIcon() {
   return (
     <svg {...ICON_PROPS}>
-      {/* 머리와 자루를 세워 그리고 통째로 기울인다. 자루 끝이 왼쪽 아래 받침으로 향한다 */}
-      <g transform="rotate(45 14 9)">
-        <rect x="10" y="6.5" width="8" height="5" rx="1" />
-        <path d="M14 11.5v9" />
-      </g>
-      <path d="M3.5 20.5h9" />
+      <rect x="5" y="2.5" width="14" height="19" rx="2.2" />
+      <rect x="8" y="5.5" width="8" height="3.5" rx="0.8" />
+      <path
+        d="M8.8 13h.01M12 13h.01M15.2 13h.01M8.8 17h.01M12 17h.01M15.2 17h.01"
+        strokeWidth={2.4}
+      />
     </svg>
   );
 }
@@ -87,7 +95,7 @@ export function QuickMenu() {
         둥근 버튼 하나. 본문 위에 떠 있어 무엇이든 가릴 수 있으므로 작게 두고, 가리는
         만큼 본문 아래에 여백을 비워 둔다(MainScroll).
 
-        닫힌 버튼에는 망치를 그린다. 누르면 무엇이 뜨는지 그림이 말한다.
+        닫힌 버튼에는 계산기를 그린다. 누르면 무엇이 뜨는지 그림이 말한다.
       */}
       <button
         type="button"
@@ -102,7 +110,7 @@ export function QuickMenu() {
             : "border-border bg-surface text-text-dim hover:border-border-strong hover:text-text"
         }`}
       >
-        {open ? <CloseIcon /> : <AuctionIcon />}
+        {open ? <CloseIcon /> : <CalculatorIcon />}
       </button>
     </div>
   );
